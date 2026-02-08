@@ -31,6 +31,7 @@ pycparser==3.0
 pydantic==2.12.5
 pydantic_core==2.41.5
 Pygments==2.19.2
+pyodbc==5.3.0
 pytest==9.0.2
 python-dateutil==2.9.0.post0
 pytz==2025.2

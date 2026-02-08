@@ -1,7 +1,8 @@
 """Unit tests for database models."""
 import pytest
+from datetime import date
 from sqlalchemy.exc import IntegrityError
-from app.models import Ticker, MonthlyPrice
+from app.models import Ticker, MonthlyPrice, Dividend
 
 
 class TestTickerModel:
@@ -88,8 +89,7 @@ class TestMonthlyPriceModel:
         price = MonthlyPrice(
             ticker_id=ticker.id,
             year=2024, month=1,
-            high=195.0, low=180.0, close=190.0,
-            dividend=0.24
+            high=195.0, low=180.0, close=190.0, adj_close=189.5
         )
         db_session.add(price)
         db_session.commit()
@@ -100,7 +100,20 @@ class TestMonthlyPriceModel:
         assert result.high == 195.0
         assert result.low == 180.0
         assert result.close == 190.0
-        assert result.dividend == 0.24
+        assert result.adj_close == 189.5
+
+    def test_adj_close_nullable(self, db_session):
+        """Adjusted close can be null."""
+        ticker = self._create_ticker(db_session)
+        price = MonthlyPrice(
+            ticker_id=ticker.id, year=2024, month=1,
+            high=195.0, low=180.0, close=190.0
+        )
+        db_session.add(price)
+        db_session.commit()
+
+        result = db_session.query(MonthlyPrice).first()
+        assert result.adj_close is None
 
     def test_no_duplicate_ticker_year_month(self, db_session):
         """Same ticker + year + month combination is rejected."""
@@ -152,19 +165,6 @@ class TestMonthlyPriceModel:
         count = db_session.query(MonthlyPrice).count()
         assert count == 2
 
-    def test_dividend_defaults_to_zero(self, db_session):
-        """Dividend defaults to 0.0 if not provided."""
-        ticker = self._create_ticker(db_session)
-        price = MonthlyPrice(
-            ticker_id=ticker.id, year=2024, month=3,
-            high=150.0, low=140.0, close=145.0
-        )
-        db_session.add(price)
-        db_session.commit()
-
-        result = db_session.query(MonthlyPrice).first()
-        assert result.dividend == 0.0
-
     def test_relationship_ticker_to_prices(self, db_session):
         """Ticker.prices returns related MonthlyPrice records."""
         ticker = self._create_ticker(db_session)
@@ -194,7 +194,7 @@ class TestMonthlyPriceModel:
         db_session.refresh(price)
         assert price.ticker.symbol == "AAPL"
 
-    def test_cascade_delete(self, db_session):
+    def test_cascade_delete_prices(self, db_session):
         """Deleting a ticker removes its prices."""
         ticker = self._create_ticker(db_session)
         db_session.add(MonthlyPrice(
@@ -216,3 +216,128 @@ class TestMonthlyPriceModel:
             ticker_id=ticker.id, year=2024, month=1, close=190.0
         )
         assert "2024" in repr(price)
+
+
+class TestDividendModel:
+    """Tests for the Dividend model."""
+
+    def _create_ticker(self, db_session, symbol="AAPL"):
+        """Helper to create and return a ticker."""
+        ticker = Ticker(symbol=symbol, name=f"{symbol} Inc.")
+        db_session.add(ticker)
+        db_session.commit()
+        return ticker
+
+    def test_create_dividend(self, db_session):
+        """A dividend record can be created."""
+        ticker = self._create_ticker(db_session)
+        div = Dividend(
+            ticker_id=ticker.id,
+            pay_date=date(2024, 2, 15),
+            amount=0.24
+        )
+        db_session.add(div)
+        db_session.commit()
+
+        result = db_session.query(Dividend).first()
+        assert result.pay_date == date(2024, 2, 15)
+        assert result.amount == 0.24
+
+    def test_no_duplicate_ticker_pay_date(self, db_session):
+        """Same ticker + pay_date combination is rejected."""
+        ticker = self._create_ticker(db_session)
+
+        db_session.add(Dividend(
+            ticker_id=ticker.id, pay_date=date(2024, 2, 15), amount=0.24
+        ))
+        db_session.commit()
+
+        db_session.add(Dividend(
+            ticker_id=ticker.id, pay_date=date(2024, 2, 15), amount=0.30
+        ))
+        with pytest.raises(IntegrityError):
+            db_session.commit()
+
+    def test_different_pay_dates_allowed(self, db_session):
+        """Same ticker can have dividends on different dates."""
+        ticker = self._create_ticker(db_session)
+        db_session.add(Dividend(
+            ticker_id=ticker.id, pay_date=date(2024, 2, 15), amount=0.24
+        ))
+        db_session.add(Dividend(
+            ticker_id=ticker.id, pay_date=date(2024, 5, 16), amount=0.25
+        ))
+        db_session.add(Dividend(
+            ticker_id=ticker.id, pay_date=date(2024, 8, 15), amount=0.25
+        ))
+        db_session.add(Dividend(
+            ticker_id=ticker.id, pay_date=date(2024, 11, 14), amount=0.25
+        ))
+        db_session.commit()
+
+        count = db_session.query(Dividend).filter_by(ticker_id=ticker.id).count()
+        assert count == 4
+
+    def test_different_tickers_same_date_allowed(self, db_session):
+        """Different tickers can have dividends on the same date."""
+        t1 = self._create_ticker(db_session, "AAPL")
+        t2 = self._create_ticker(db_session, "MSFT")
+
+        db_session.add(Dividend(
+            ticker_id=t1.id, pay_date=date(2024, 2, 15), amount=0.24
+        ))
+        db_session.add(Dividend(
+            ticker_id=t2.id, pay_date=date(2024, 2, 15), amount=0.75
+        ))
+        db_session.commit()
+
+        count = db_session.query(Dividend).count()
+        assert count == 2
+
+    def test_relationship_ticker_to_dividends(self, db_session):
+        """Ticker.dividends returns related Dividend records."""
+        ticker = self._create_ticker(db_session)
+        db_session.add(Dividend(
+            ticker_id=ticker.id, pay_date=date(2024, 2, 15), amount=0.24
+        ))
+        db_session.add(Dividend(
+            ticker_id=ticker.id, pay_date=date(2024, 5, 16), amount=0.25
+        ))
+        db_session.commit()
+
+        db_session.refresh(ticker)
+        assert len(ticker.dividends) == 2
+
+    def test_relationship_dividend_to_ticker(self, db_session):
+        """Dividend.ticker returns the parent Ticker."""
+        ticker = self._create_ticker(db_session)
+        div = Dividend(
+            ticker_id=ticker.id, pay_date=date(2024, 2, 15), amount=0.24
+        )
+        db_session.add(div)
+        db_session.commit()
+
+        db_session.refresh(div)
+        assert div.ticker.symbol == "AAPL"
+
+    def test_cascade_delete_dividends(self, db_session):
+        """Deleting a ticker removes its dividends."""
+        ticker = self._create_ticker(db_session)
+        db_session.add(Dividend(
+            ticker_id=ticker.id, pay_date=date(2024, 2, 15), amount=0.24
+        ))
+        db_session.commit()
+
+        db_session.delete(ticker)
+        db_session.commit()
+
+        count = db_session.query(Dividend).count()
+        assert count == 0
+
+    def test_dividend_repr(self, db_session):
+        """Dividend has a useful string representation."""
+        ticker = self._create_ticker(db_session)
+        div = Dividend(
+            ticker_id=ticker.id, pay_date=date(2024, 2, 15), amount=0.24
+        )
+        assert "0.24" in repr(div)
