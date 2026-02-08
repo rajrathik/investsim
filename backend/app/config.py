@@ -19,3 +19,6 @@ TEST_DATABASE_URL = "sqlite:///:memory:"
 
 # Ticker limits
 MAX_TICKERS = 50
+
+# How many years of history to fetch in full mode
+FULL_HISTORY_YEARS = 30
