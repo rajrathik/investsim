@@ -22,3 +22,6 @@ MAX_TICKERS = 50
 
 # How many years of history to fetch in full mode
 FULL_HISTORY_YEARS = 30
+
+# Set to True when ready to allow POST/PUT/DELETE from API
+ENABLE_WRITE_API = False
