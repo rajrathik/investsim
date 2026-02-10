@@ -14,7 +14,8 @@ if os.path.exists(env_path):
 
 from app.config import DATABASE_URL, DB_SERVER, DB_NAME, DB_USER
 from app.database import engine, init_db, SessionLocal
-from app.models import Ticker, MonthlyPrice
+from app.models import Ticker, MonthlyPrice, Dividend
+from app.mm_rates import MonthlyMoneyMarketRate, AnnualMoneyMarketRate
 from sqlalchemy import inspect, text
 
 print(f"Server:   {DB_SERVER}")
@@ -48,6 +49,9 @@ for table in inspector.get_table_names():
 db = SessionLocal()
 print(f"\nTickers count:        {db.query(Ticker).count()}")
 print(f"Monthly Prices count: {db.query(MonthlyPrice).count()}")
+print(f"Dividends count:      {db.query(Dividend).count()}")
+print(f"Monthly MM Rates:     {db.query(MonthlyMoneyMarketRate).count()}")
+print(f"Annual MM Rates:      {db.query(AnnualMoneyMarketRate).count()}")
 db.close()
 
 print("\nAll good! Database is ready.")

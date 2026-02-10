@@ -625,6 +625,82 @@ def get_simulation_data(
 
 
 # ===========================================
+# MONEY MARKET RATE ENDPOINTS
+# ===========================================
+
+class MonthlyRateResponse(BaseModel):
+    year: int
+    month: int
+    rate: float
+
+    class Config:
+        from_attributes = True
+
+
+class AnnualRateResponse(BaseModel):
+    year: int
+    avg_rate: float
+
+    class Config:
+        from_attributes = True
+
+
+@app.get("/api/mm-rates/monthly", response_model=list[MonthlyRateResponse])
+def get_monthly_mm_rates(
+    start_year: Optional[int] = Query(None),
+    end_year: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+):
+    """Get monthly average money market rates."""
+    from app.mm_rates import MonthlyMoneyMarketRate
+
+    start_year = validate_year(start_year, "start_year")
+    end_year = validate_year(end_year, "end_year")
+
+    query = db.query(MonthlyMoneyMarketRate)
+    if start_year:
+        query = query.filter(MonthlyMoneyMarketRate.year >= start_year)
+    if end_year:
+        query = query.filter(MonthlyMoneyMarketRate.year <= end_year)
+
+    return query.order_by(MonthlyMoneyMarketRate.year, MonthlyMoneyMarketRate.month).all()
+
+
+@app.get("/api/mm-rates/annual", response_model=list[AnnualRateResponse])
+def get_annual_mm_rates(
+    start_year: Optional[int] = Query(None),
+    end_year: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+):
+    """Get annual average money market rates."""
+    from app.mm_rates import AnnualMoneyMarketRate
+
+    start_year = validate_year(start_year, "start_year")
+    end_year = validate_year(end_year, "end_year")
+
+    query = db.query(AnnualMoneyMarketRate)
+    if start_year:
+        query = query.filter(AnnualMoneyMarketRate.year >= start_year)
+    if end_year:
+        query = query.filter(AnnualMoneyMarketRate.year <= end_year)
+
+    return query.order_by(AnnualMoneyMarketRate.year).all()
+
+
+@app.get("/api/mm-rates/annual/{year}", response_model=AnnualRateResponse)
+def get_annual_mm_rate_by_year(year: int, db: Session = Depends(get_db)):
+    """Get money market rate for a specific year."""
+    from app.mm_rates import AnnualMoneyMarketRate
+
+    year = validate_year(year, "year")
+
+    rate = db.query(AnnualMoneyMarketRate).filter(AnnualMoneyMarketRate.year == year).first()
+    if not rate:
+        raise HTTPException(status_code=404, detail=f"No money market rate for year {year}")
+    return rate
+
+
+# ===========================================
 # BATCH ENDPOINTS (async via background thread)
 # ===========================================
 

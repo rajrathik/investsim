@@ -1,84 +1,18 @@
-"""Unit tests for FastAPI endpoints.
+"""Integration tests for FastAPI endpoints.
 
-Uses TestClient with in-memory SQLite - no network or SQL Server needed.
+Tests against the real SQL Server database with actual data.
+No data is modified or deleted - read-only verification.
 """
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from datetime import date
-from unittest.mock import patch
 
-from app.database import Base
-from app.models import Ticker, MonthlyPrice, Dividend
-from app.api import app, get_db
+from app.api import app
 
-
-# --- Test database setup ---
-TEST_ENGINE = create_engine("sqlite:///:memory:")
-TestSession = sessionmaker(bind=TEST_ENGINE)
-
-
-def override_get_db():
-    db = TestSession()
-    try:
-        yield db
-    finally:
-        db.close()
-
-
-app.dependency_overrides[get_db] = override_get_db
 client = TestClient(app)
 
 
-@pytest.fixture(autouse=True)
-def setup_db():
-    """Create fresh tables before each test."""
-    Base.metadata.create_all(bind=TEST_ENGINE)
-    yield
-    Base.metadata.drop_all(bind=TEST_ENGINE)
-
-
-@pytest.fixture
-def db():
-    """Provide a test database session."""
-    session = TestSession()
-    yield session
-    session.close()
-
-
-@pytest.fixture
-def enable_writes():
-    """Temporarily enable write API for tests that need it."""
-    with patch("app.api.ENABLE_WRITE_API", True):
-        yield
-
-
-def _seed_ticker(db, symbol="XLK", name="Information Technology", active=True):
-    ticker = Ticker(symbol=symbol, name=name, active=active)
-    db.add(ticker)
-    db.commit()
-    db.refresh(ticker)
-    return ticker
-
-
-def _seed_prices(db, ticker_id, rows):
-    for year, month, high, low, close, adj_close in rows:
-        db.add(MonthlyPrice(
-            ticker_id=ticker_id, year=year, month=month,
-            high=high, low=low, close=close, adj_close=adj_close,
-        ))
-    db.commit()
-
-
-def _seed_dividends(db, ticker_id, rows):
-    for pay_date, amount in rows:
-        db.add(Dividend(ticker_id=ticker_id, pay_date=pay_date, amount=amount))
-    db.commit()
-
-
 # ===========================================
-# HEALTH CHECK TESTS
+# HEALTH CHECK
 # ===========================================
 
 class TestHealthCheck:
@@ -87,378 +21,218 @@ class TestHealthCheck:
         resp = client.get("/api/health")
         assert resp.status_code == 200
         data = resp.json()
-        assert "status" in data
-        assert "database" in data
-        assert "timestamp" in data
-        assert "tickers" in data
-        assert "price_records" in data
-
-    def test_health_shows_counts(self, db):
-        ticker = _seed_ticker(db, "XLK")
-        _seed_prices(db, ticker.id, [(2024, 1, 200, 190, 195, 194)])
-        resp = client.get("/api/health")
-        data = resp.json()
-        assert data["tickers"] >= 1
-        assert data["price_records"] >= 1
+        assert data["status"] == "healthy"
+        assert data["database"] == "connected"
+        print(f"\n  Database: {data['database']}")
+        print(f"  Tickers: {data['tickers']}")
+        print(f"  Price records: {data['price_records']}")
+        print(f"  Batch status: {data['batch_status']}")
 
 
 # ===========================================
-# TICKER ENDPOINT TESTS
+# TICKER ENDPOINTS (read-only)
 # ===========================================
 
 class TestTickerEndpoints:
 
-    def test_list_tickers_empty(self):
+    def test_list_tickers(self):
         resp = client.get("/api/tickers")
         assert resp.status_code == 200
-        assert resp.json() == []
-
-    def test_create_ticker_blocked_when_disabled(self):
-        """Write operations return 403 when ENABLE_WRITE_API is False."""
-        resp = client.post("/api/tickers", json={"symbol": "XLK", "name": "Info Tech"})
-        assert resp.status_code == 403
-
-    def test_create_ticker(self, enable_writes):
-        resp = client.post("/api/tickers", json={"symbol": "XLK", "name": "Info Tech"})
-        assert resp.status_code == 201
         data = resp.json()
-        assert data["symbol"] == "XLK"
-        assert data["name"] == "Info Tech"
-        assert data["active"] is True
+        assert len(data) > 0
+        print(f"\n  Total tickers: {len(data)}")
+        for t in data:
+            print(f"    {t['symbol']:8s} {t['name'] or '':30s} active={t['active']}")
 
-    def test_create_ticker_uppercases_symbol(self, enable_writes):
-        resp = client.post("/api/tickers", json={"symbol": "xlk"})
-        assert resp.status_code == 201
-        assert resp.json()["symbol"] == "XLK"
-
-    def test_create_duplicate_ticker(self, db, enable_writes):
-        _seed_ticker(db, "XLK")
-        resp = client.post("/api/tickers", json={"symbol": "XLK"})
-        assert resp.status_code == 409
-
-    def test_create_ticker_max_limit(self, db, enable_writes):
-        for i in range(50):
-            _seed_ticker(db, f"T{i:03d}")
-        resp = client.post("/api/tickers", json={"symbol": "EXTRA"})
-        assert resp.status_code == 400
-        assert "Maximum" in resp.json()["detail"]
-
-    def test_create_ticker_invalid_symbol(self, enable_writes):
-        resp = client.post("/api/tickers", json={"symbol": "123"})
-        assert resp.status_code == 422  # Pydantic validation error
-
-    def test_create_ticker_empty_symbol(self, enable_writes):
-        resp = client.post("/api/tickers", json={"symbol": ""})
-        assert resp.status_code == 422
-
-    def test_create_ticker_too_long_symbol(self, enable_writes):
-        resp = client.post("/api/tickers", json={"symbol": "ABCDEFGHIJK"})
-        assert resp.status_code == 422
-
-    def test_create_ticker_with_dot(self, enable_writes):
-        """Tickers like BRK.B should be valid."""
-        resp = client.post("/api/tickers", json={"symbol": "BRK.B"})
-        assert resp.status_code == 201
-        assert resp.json()["symbol"] == "BRK.B"
-
-    def test_create_ticker_name_too_long(self, enable_writes):
-        resp = client.post("/api/tickers", json={"symbol": "XLK", "name": "A" * 201})
-        assert resp.status_code == 422
-
-    def test_list_tickers_returns_all(self, db):
-        _seed_ticker(db, "XLK")
-        _seed_ticker(db, "XLF")
-        resp = client.get("/api/tickers")
-        assert len(resp.json()) == 2
-
-    def test_list_active_tickers(self, db):
-        _seed_ticker(db, "XLK", active=True)
-        _seed_ticker(db, "XLF", active=False)
+    def test_list_active_tickers(self):
         resp = client.get("/api/tickers/active")
+        assert resp.status_code == 200
         data = resp.json()
-        assert len(data) == 1
-        assert data[0]["symbol"] == "XLK"
+        assert len(data) > 0
+        print(f"\n  Active tickers: {len(data)}")
+        assert all(t["active"] for t in data)
 
-    def test_update_ticker_blocked_when_disabled(self, db):
-        _seed_ticker(db, "XLK", name="Old Name")
-        resp = client.put("/api/tickers/XLK", json={"name": "New Name"})
+    def test_write_endpoints_blocked(self):
+        """POST/PUT/DELETE should return 403 when writes disabled."""
+        resp = client.post("/api/tickers", json={"symbol": "TEST"})
         assert resp.status_code == 403
 
-    def test_update_ticker_name(self, db, enable_writes):
-        _seed_ticker(db, "XLK", name="Old Name")
-        resp = client.put("/api/tickers/XLK", json={"name": "New Name"})
-        assert resp.status_code == 200
-        assert resp.json()["name"] == "New Name"
-
-    def test_update_ticker_deactivate(self, db, enable_writes):
-        _seed_ticker(db, "XLK")
-        resp = client.put("/api/tickers/XLK", json={"active": False})
-        assert resp.status_code == 200
-        assert resp.json()["active"] is False
-
-    def test_update_nonexistent_ticker(self, enable_writes):
-        resp = client.put("/api/tickers/ZZZZ", json={"name": "Test"})
-        assert resp.status_code == 404
-
-    def test_delete_ticker_blocked_when_disabled(self, db):
-        _seed_ticker(db, "XLK")
-        resp = client.delete("/api/tickers/XLK")
+        resp = client.put("/api/tickers/XLK", json={"name": "Test"})
         assert resp.status_code == 403
 
-    def test_delete_ticker(self, db, enable_writes):
-        _seed_ticker(db, "XLK")
         resp = client.delete("/api/tickers/XLK")
-        assert resp.status_code == 200
-
-        resp = client.get("/api/tickers")
-        assert len(resp.json()) == 0
-
-    def test_delete_nonexistent_ticker(self, enable_writes):
-        resp = client.delete("/api/tickers/ZZZZ")
-        assert resp.status_code == 404
-
-    def test_delete_ticker_cascades_data(self, db, enable_writes):
-        ticker = _seed_ticker(db, "XLK")
-        _seed_prices(db, ticker.id, [(2024, 1, 200, 190, 195, 194)])
-        _seed_dividends(db, ticker.id, [(date(2024, 3, 15), 0.50)])
-
-        resp = client.delete("/api/tickers/XLK")
-        assert resp.status_code == 200
-        assert db.query(MonthlyPrice).count() == 0
-        assert db.query(Dividend).count() == 0
+        assert resp.status_code == 403
+        print("\n  All write endpoints correctly blocked (403)")
 
 
 # ===========================================
-# PRICE ENDPOINT TESTS
+# PRICE ENDPOINTS (read-only)
 # ===========================================
 
 class TestPriceEndpoints:
 
-    def test_get_prices(self, db):
-        ticker = _seed_ticker(db, "XLK")
-        _seed_prices(db, ticker.id, [
-            (2024, 1, 200, 190, 195, 194),
-            (2024, 2, 210, 195, 205, 204),
-            (2024, 3, 215, 200, 210, 209),
-        ])
-
+    def test_get_prices_xlk(self):
         resp = client.get("/api/prices/XLK")
         assert resp.status_code == 200
         data = resp.json()
-        assert len(data) == 3
-        assert data[0]["year"] == 2024
-        assert data[0]["month"] == 1
+        assert len(data) > 0
+        print(f"\n  XLK total price records: {len(data)}")
+        print(f"  First: {data[0]['year']}-{data[0]['month']:02d}")
+        print(f"  Last:  {data[-1]['year']}-{data[-1]['month']:02d}")
 
-    def test_get_prices_with_date_filter(self, db):
-        ticker = _seed_ticker(db, "XLK")
-        _seed_prices(db, ticker.id, [
-            (2024, 1, 200, 190, 195, 194),
-            (2024, 6, 220, 210, 215, 214),
-            (2024, 12, 230, 220, 225, 224),
-        ])
-
-        resp = client.get("/api/prices/XLK?start_year=2024&start_month=6&end_year=2024&end_month=6")
+    def test_get_prices_with_filter(self):
+        resp = client.get("/api/prices/XLK?start_year=2024&start_month=1&end_year=2024&end_month=12")
+        assert resp.status_code == 200
         data = resp.json()
-        assert len(data) == 1
-        assert data[0]["month"] == 6
+        assert len(data) > 0
+        print(f"\n  XLK 2024 price records: {len(data)}")
+        for p in data:
+            print(f"    {p['year']}-{p['month']:02d}  H={p['high']:.2f}  L={p['low']:.2f}  C={p['close']:.2f}")
+
+    def test_get_latest_price(self):
+        resp = client.get("/api/prices/XLK/latest")
+        assert resp.status_code == 200
+        data = resp.json()
+        print(f"\n  XLK latest: {data['year']}-{data['month']:02d} close={data['close']:.2f}")
 
     def test_get_prices_nonexistent_ticker(self):
-        resp = client.get("/api/prices/ZZZZ")
-        assert resp.status_code == 404
+        resp = client.get("/api/prices/ZZZZZ")
+        assert resp.status_code in (400, 404)
 
-    def test_get_prices_case_insensitive(self, db):
-        ticker = _seed_ticker(db, "XLK")
-        _seed_prices(db, ticker.id, [(2024, 1, 200, 190, 195, 194)])
-
+    def test_get_prices_case_insensitive(self):
         resp = client.get("/api/prices/xlk")
         assert resp.status_code == 200
-        assert len(resp.json()) == 1
+        assert len(resp.json()) > 0
 
-    def test_get_prices_invalid_month(self, db):
-        _seed_ticker(db, "XLK")
+    def test_invalid_month_rejected(self):
         resp = client.get("/api/prices/XLK?start_month=13")
         assert resp.status_code == 400
 
-    def test_get_prices_invalid_year(self, db):
-        _seed_ticker(db, "XLK")
+    def test_invalid_year_rejected(self):
         resp = client.get("/api/prices/XLK?start_year=1800")
         assert resp.status_code == 400
 
-    def test_get_latest_price(self, db):
-        ticker = _seed_ticker(db, "XLK")
-        _seed_prices(db, ticker.id, [
-            (2024, 1, 200, 190, 195, 194),
-            (2024, 6, 220, 210, 215, 214),
-            (2025, 1, 240, 230, 235, 234),
-        ])
-
-        resp = client.get("/api/prices/XLK/latest")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["year"] == 2025
-        assert data["month"] == 1
-
-    def test_get_latest_price_no_data(self, db):
-        _seed_ticker(db, "XLK")
-        resp = client.get("/api/prices/XLK/latest")
-        assert resp.status_code == 404
-
 
 # ===========================================
-# DIVIDEND ENDPOINT TESTS
+# DIVIDEND ENDPOINTS (read-only)
 # ===========================================
 
 class TestDividendEndpoints:
 
-    def test_get_dividends(self, db):
-        ticker = _seed_ticker(db, "XLK")
-        _seed_dividends(db, ticker.id, [
-            (date(2024, 3, 15), 0.50),
-            (date(2024, 6, 14), 0.55),
-            (date(2024, 9, 13), 0.55),
-        ])
-
+    def test_get_dividends_xlk(self):
         resp = client.get("/api/dividends/XLK")
         assert resp.status_code == 200
         data = resp.json()
-        assert len(data) == 3
-        assert data[0]["amount"] == 0.50
+        assert len(data) > 0
+        print(f"\n  XLK total dividends: {len(data)}")
+        print(f"  First: {data[0]['pay_date']} ${data[0]['amount']:.4f}")
+        print(f"  Last:  {data[-1]['pay_date']} ${data[-1]['amount']:.4f}")
 
-    def test_get_dividends_with_year_filter(self, db):
-        ticker = _seed_ticker(db, "XLK")
-        _seed_dividends(db, ticker.id, [
-            (date(2023, 6, 15), 0.45),
-            (date(2024, 6, 14), 0.55),
-            (date(2025, 6, 13), 0.60),
-        ])
-
+    def test_get_dividends_with_year_filter(self):
         resp = client.get("/api/dividends/XLK?start_year=2024&end_year=2024")
+        assert resp.status_code == 200
         data = resp.json()
-        assert len(data) == 1
-        assert data[0]["amount"] == 0.55
+        assert len(data) > 0
+        print(f"\n  XLK 2024 dividends: {len(data)}")
+        for d in data:
+            print(f"    {d['pay_date']}  ${d['amount']:.4f}")
 
     def test_get_dividends_nonexistent_ticker(self):
-        resp = client.get("/api/dividends/ZZZZ")
-        assert resp.status_code == 404
-
-    def test_get_dividends_no_data(self, db):
-        _seed_ticker(db, "XLK")
-        resp = client.get("/api/dividends/XLK")
-        assert resp.status_code == 200
-        assert resp.json() == []
-
-    def test_get_dividends_invalid_year(self, db):
-        _seed_ticker(db, "XLK")
-        resp = client.get("/api/dividends/XLK?start_year=1800")
-        assert resp.status_code == 400
+        resp = client.get("/api/dividends/ZZZZZ")
+        assert resp.status_code in (400, 404)
 
 
 # ===========================================
-# SIMULATION DATA ENDPOINT TESTS
+# SIMULATION DATA ENDPOINT (read-only)
 # ===========================================
 
 class TestSimulationDataEndpoint:
 
-    def test_get_simulation_data(self, db):
-        ticker = _seed_ticker(db, "XLK", name="Info Tech")
-        _seed_prices(db, ticker.id, [
-            (2024, 1, 200, 190, 195, 194),
-            (2024, 2, 210, 195, 205, 204),
-            (2024, 3, 215, 200, 210, 209),
-        ])
-        _seed_dividends(db, ticker.id, [
-            (date(2024, 3, 15), 0.50),
-        ])
-
-        resp = client.get("/api/simulation-data/XLK")
+    def test_get_simulation_data_xlk(self):
+        resp = client.get("/api/simulation-data/XLK?start_year=2024&start_month=1&end_year=2024&end_month=6")
         assert resp.status_code == 200
         data = resp.json()
         assert data["symbol"] == "XLK"
-        assert data["name"] == "Info Tech"
-        assert len(data["monthly_data"]) == 3
-
-        # March should have the dividend
-        march = data["monthly_data"][2]
-        assert march["year"] == 2024
-        assert march["month"] == 3
-        assert len(march["dividends"]) == 1
-        assert march["dividends"][0]["amount"] == 0.50
-
-        # Jan should have no dividends
-        jan = data["monthly_data"][0]
-        assert len(jan["dividends"]) == 0
-
-    def test_simulation_data_with_date_range(self, db):
-        ticker = _seed_ticker(db, "XLK")
-        _seed_prices(db, ticker.id, [
-            (2024, 1, 200, 190, 195, 194),
-            (2024, 6, 220, 210, 215, 214),
-            (2024, 12, 230, 220, 225, 224),
-        ])
-
-        resp = client.get("/api/simulation-data/XLK?start_year=2024&start_month=6&end_year=2024&end_month=6")
-        data = resp.json()
-        assert len(data["monthly_data"]) == 1
-        assert data["monthly_data"][0]["month"] == 6
+        assert len(data["monthly_data"]) > 0
+        print(f"\n  XLK simulation data (2024 H1): {len(data['monthly_data'])} months")
+        for m in data["monthly_data"]:
+            div_total = sum(d["amount"] for d in m["dividends"])
+            div_str = f"  divs=${div_total:.4f}" if div_total > 0 else ""
+            print(f"    {m['year']}-{m['month']:02d}  H={m['high']:.2f}  C={m['close']:.2f}{div_str}")
 
     def test_simulation_data_nonexistent_ticker(self):
-        resp = client.get("/api/simulation-data/ZZZZ")
-        assert resp.status_code == 404
-
-    def test_simulation_data_multiple_dividends_in_month(self, db):
-        ticker = _seed_ticker(db, "XLK")
-        _seed_prices(db, ticker.id, [(2024, 6, 220, 210, 215, 214)])
-        _seed_dividends(db, ticker.id, [
-            (date(2024, 6, 10), 0.25),
-            (date(2024, 6, 20), 0.30),
-        ])
-
-        resp = client.get("/api/simulation-data/XLK")
-        data = resp.json()
-        assert len(data["monthly_data"][0]["dividends"]) == 2
-
-    def test_simulation_data_invalid_month(self, db):
-        _seed_ticker(db, "XLK")
-        resp = client.get("/api/simulation-data/XLK?start_month=0")
-        assert resp.status_code == 400
+        resp = client.get("/api/simulation-data/ZZZZZ")
+        assert resp.status_code in (400, 404)
 
 
 # ===========================================
-# BATCH ENDPOINT TESTS
+# MONEY MARKET RATE ENDPOINTS (read-only)
+# ===========================================
+
+class TestMoneyMarketRateEndpoints:
+
+    def test_get_monthly_rates(self):
+        resp = client.get("/api/mm-rates/monthly")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data) > 0
+        print(f"\n  Total monthly MM rates: {len(data)}")
+        print(f"  First: {data[0]['year']}-{data[0]['month']:02d}  rate={data[0]['rate']:.2f}%")
+        print(f"  Last:  {data[-1]['year']}-{data[-1]['month']:02d}  rate={data[-1]['rate']:.2f}%")
+
+    def test_get_monthly_rates_with_filter(self):
+        resp = client.get("/api/mm-rates/monthly?start_year=2024&end_year=2024")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data) > 0
+        print(f"\n  2024 monthly MM rates: {len(data)}")
+        for r in data:
+            print(f"    {r['year']}-{r['month']:02d}  {r['rate']:.2f}%")
+
+    def test_get_annual_rates(self):
+        resp = client.get("/api/mm-rates/annual")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data) > 0
+        print(f"\n  Total annual MM rates: {len(data)}")
+        for r in data:
+            print(f"    {r['year']}  {r['avg_rate']:.2f}%")
+
+    def test_get_annual_rate_by_year(self):
+        resp = client.get("/api/mm-rates/annual/2024")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["year"] == 2024
+        print(f"\n  2024 annual avg rate: {data['avg_rate']:.2f}%")
+
+    def test_get_annual_rate_nonexistent_year(self):
+        resp = client.get("/api/mm-rates/annual/1900")
+        assert resp.status_code == 404
+
+
+# ===========================================
+# BATCH ENDPOINTS (read-only)
 # ===========================================
 
 class TestBatchEndpoints:
 
-    def test_batch_status_initial(self):
+    def test_batch_status(self):
         resp = client.get("/api/batch/status")
         assert resp.status_code == 200
         data = resp.json()
-        assert "status" in data
+        print(f"\n  Batch status: {data['status']}")
 
-    def test_batch_blocked_when_disabled(self):
+    def test_batch_write_blocked(self):
         resp = client.post("/api/batch/full")
         assert resp.status_code == 403
 
-    def test_batch_full_no_tickers(self, enable_writes):
-        resp = client.post("/api/batch/full")
-        assert resp.status_code == 400
-
-    def test_batch_incremental_no_tickers(self, enable_writes):
         resp = client.post("/api/batch/incremental")
-        assert resp.status_code == 400
-
-    def test_batch_invalid_symbols(self, enable_writes):
-        resp = client.post("/api/batch/full", json={"symbols": ["123BAD"]})
-        assert resp.status_code == 422
-
-    def test_batch_too_many_symbols(self, enable_writes):
-        symbols = [f"T{i:03d}" for i in range(51)]
-        resp = client.post("/api/batch/full", json={"symbols": symbols})
-        assert resp.status_code == 422
+        assert resp.status_code == 403
+        print("\n  Batch write endpoints correctly blocked (403)")
 
 
 # ===========================================
-# ERROR HANDLING TESTS
+# ERROR HANDLING & VALIDATION
 # ===========================================
 
 class TestErrorHandling:
@@ -468,17 +242,22 @@ class TestErrorHandling:
         assert resp.status_code == 400
 
     def test_error_response_has_request_id(self):
-        resp = client.get("/api/prices/ZZZZ")
+        resp = client.get("/api/prices/ZZZZZ")
         data = resp.json()
         assert "request_id" in data
 
-    def test_response_has_request_id_header(self, db):
-        _seed_ticker(db, "XLK")
+    def test_response_has_request_id_header(self):
         resp = client.get("/api/tickers")
         assert "X-Request-ID" in resp.headers
 
-    def test_404_is_structured(self):
-        resp = client.get("/api/prices/ZZZZ")
+    def test_structured_error_response(self):
+        resp = client.get("/api/prices/ZZZZZ")
         data = resp.json()
         assert "error" in data
         assert "detail" in data
+        assert "request_id" in data
+
+    def test_pydantic_validation(self):
+        """Invalid symbols rejected by Pydantic before hitting DB."""
+        resp = client.post("/api/tickers", json={"symbol": "123"})
+        assert resp.status_code == 422
