@@ -15,7 +15,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:32px}
 .grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
 .grid-5{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:24px}
-@media(max-width:900px){.grid-2,.grid-4,.grid-5{grid-template-columns:1fr}}
+@media(max-width:900px){.grid-2,.grid-4,.grid-5,.grid-6{grid-template-columns:1fr}}
 
 /* Cards */
 .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px}
@@ -94,3 +94,17 @@ td.clickable-cell{cursor:pointer;transition:background .15s;border-radius:4px}td
 .section-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.1em;margin:12px 0 6px;font-family:'JetBrains Mono',monospace}
 .row-hint{font-size:10px;color:var(--text3);margin-bottom:8px;font-style:italic;text-align:center}
 .redist-note{font-size:11px;color:var(--blue);background:var(--blue-dim);padding:6px 10px;border-radius:6px;margin-top:2px;display:inline-block}
+
+/* Chart tooltip */
+.chart-wrap{position:relative}
+.chart-tooltip{position:absolute;pointer-events:none;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-size:12px;line-height:1.6;color:var(--text1);box-shadow:0 8px 24px rgba(0,0,0,.5);z-index:50;white-space:nowrap;opacity:0;transition:opacity .15s}
+.chart-tooltip.show{opacity:1}
+.chart-tooltip .ct-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;font-family:'JetBrains Mono',monospace}
+.chart-tooltip .ct-row{display:flex;justify-content:space-between;gap:16px}
+.chart-tooltip .ct-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle}
+.chart-crosshair{position:absolute;top:0;bottom:0;width:1px;background:var(--text3);opacity:.3;pointer-events:none;z-index:40}
+
+/* Summary grid 6 columns */
+.grid-6{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-bottom:24px}
+@media(max-width:1100px){.grid-6{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:600px){.grid-6{grid-template-columns:1fr}}

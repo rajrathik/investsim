@@ -121,11 +121,13 @@ When user clicks "Run Simulation", the browser executes this flow:
 
 **6. Apply money market interest** — Prior month's accumulated dividend balance grows at that month's federal funds rate ÷ 12 (monthly compounding). New dividends are then added. This models parking dividends in a money market fund.
 
-**7. Value portfolio** — At month end: `portfolio_value = Σ (shares_held × close_price)` across all tickers.
+**7. Compute MM-only benchmark** — A separate running balance tracks what would happen if the entire monthly investment went into money market instead of ETFs. Each month: prior balance grows at MM rate ÷ 12, then the monthly investment is added. This provides a "what if you didn't invest in ETFs at all" comparison.
 
-**8. Store snapshots** — Each month's per-ticker detail (shares bought, running totals, dividends, effective allocation, dividend balance with MM interest) is stored for the drill-down modals.
+**8. Value portfolio** — At month end: `portfolio_value = Σ (shares_held × close_price)` across all tickers.
 
-**9. Render results** — Summary cards (5 tiles including Div + MM Interest), growth chart (canvas), and clickable monthly breakdown table with Div Value column.
+**9. Store snapshots** — Each month's per-ticker detail (shares bought, running totals, dividends, effective allocation, dividend balance with MM interest, MM-only balance) is stored for the drill-down modals.
+
+**10. Render results** — Summary cards (6 tiles including Div + MM Interest and MM Only Benchmark), two interactive charts (Growth Over Time with portfolio/invested/MM-only lines, and Dividend Balance Growth), and clickable monthly breakdown table with Div Value and MM Only columns. Charts show tooltips on hover with values at that point in time.
 
 ---
 
@@ -134,6 +136,8 @@ When user clicks "Run Simulation", the browser executes this flow:
 - **Buy at monthly high**: Conservative — simulates worst-case dollar-cost averaging entry each month.
 - **Dividends as cash**: Not reinvested into equities — tracked separately so user sees true cash generation.
 - **Dividends earn money market interest**: Accumulated dividends are modeled as invested in a money market fund at the federal funds rate (monthly compounding). The "Div Value" column and summary tile show the impact.
+- **MM-only benchmark**: A separate calculation shows what the same monthly investment would grow to if invested entirely in money market (no ETFs). Helps answer "was the ETF strategy worth the risk?"
+- **Interactive charts**: Charts respond to mouse hover — a crosshair tracks position and a tooltip shows values at that point. No click needed, just hover.
 - **Proportional redistribution**: When a ticker has no data for a month, its allocation flows to available tickers proportionally, ensuring 100% of monthly investment is always deployed.
 - **Read-only API**: Write endpoints disabled by default. Data loads only through CLI batch scripts.
 - **Split frontend**: HTML, CSS, and JS in separate files — no build tools, no Node.js — just open the HTML file in a browser.
