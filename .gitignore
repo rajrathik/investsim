@@ -1,24 +1,4 @@
-# Python
-__pycache__/
-*.py[cod]
-*.egg-info/
-venv/
-.venv/
-
-# Database
-*.db
-
-# IDE
-.vscode/
-.idea/
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Environment
-.env
-*.env
-
-# Claude Code
-.claude/
+venv/ 
+__pycache__/ 
+*.pyc 
+.pytest_cache/ 
