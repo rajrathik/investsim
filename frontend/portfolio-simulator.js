@@ -4,13 +4,15 @@ const MO=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec
 let allTickers=[],selected=[],alloc={},selAmt=1000,selYr=10;
 let snapshots=null,breakdownData=null;
 
-/* Column info tooltips — shown on hover of the ⓘ icon in table headers */
+/* Column info tooltips — shown on hover of the * icon in table headers */
 const COL_INFO={
   invested:'Monthly amount allocated per your % split. Bought at the monthly high price (worst-case entry).',
   shares:'Shares purchased = $ invested ÷ monthly high price. Click to see per-ticker breakdown.',
   dividends:'Cash dividends received based on shares held × dividend per share. Not reinvested.',
+  divvalue:'Accumulated dividends invested in money market. Each month\'s balance grows at the federal funds rate ÷ 12.',
   portfolio:'Total shares held × monthly close price for each ticker, summed across all holdings.'
 };
+let mmRates={}; /* key: "YYYY-MM" → annual rate as decimal e.g. 0.05 */
 
 function $(id){return document.getElementById(id)}
 function fmt(n){return(n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}
@@ -183,6 +185,20 @@ function showDivSummary(){
   $('modalOverlay').classList.add('show');
 }
 
+/* Summary card: Div + MM Interest — shows dividends earned vs current value with interest */
+function showDivValueSummary(){
+  if(!snapshots||!snapshots.length||!window._lastResults)return;
+  const r=window._lastResults;
+  $('modalTitle').textContent='Dividends + Money Market Interest';
+  $('modalSub').textContent='Dividends invested at monthly federal funds rate';
+  let h='';
+  h+='<div class="detail-row"><div><div class="d-sym" style="color:var(--gold)">Dividends Earned</div><div class="d-name">Total cash received from all holdings</div></div><div class="d-nums"><div class="d-val" style="color:var(--gold)">$'+fmt(r.tDiv)+'</div></div></div>';
+  h+='<div class="detail-row"><div><div class="d-sym" style="color:var(--accent)">MM Interest Earned</div><div class="d-name">Growth from money market rate</div></div><div class="d-nums"><div class="d-val" style="color:var(--accent)">$'+fmt(r.divBal-r.tDiv)+'</div></div></div>';
+  h+='<div class="detail-total" style="background:var(--gold-dim);border-color:rgba(245,158,11,.25)"><div><div class="dt-label" style="color:var(--gold)">Current Dividend Value</div><div style="font-size:11px;color:var(--text2);margin-top:1px">Dividends + accumulated interest</div></div><div class="dt-val" style="color:var(--gold)">$'+fmt(r.divBal)+'</div></div>';
+  $('modalBody').innerHTML=h;
+  $('modalOverlay').classList.add('show');
+}
+
 /* Summary card: Total Value + Dividends — portfolio value + cash breakdown */
 function showTotalSummary(){
   if(!snapshots||!snapshots.length||!window._lastResults)return;
@@ -195,11 +211,13 @@ function showTotalSummary(){
   syms.forEach(s=>{const d=snap.tickers[s],t=getTk(s);tv+=d.value;
     h+='<div class="detail-row"><div><div class="d-sym">'+s+'</div><div class="d-name">'+(t?.name||'')+'</div></div><div class="d-nums"><div class="d-val" style="color:var(--accent)">$'+fmt(d.value)+'</div><div class="d-sub">'+d.totalShares.toFixed(2)+' × $'+fmt(d.closePrice)+'</div></div></div>'});
   h+='<div class="detail-total"><div class="dt-label">Holdings Subtotal</div><div class="dt-val">$'+fmt(tv)+'</div></div>';
-  h+='<div class="section-label" style="margin-top:16px">Dividends Cash</div>';
+  h+='<div class="section-label" style="margin-top:16px">Dividends + MM Interest</div>';
   syms.forEach(s=>{const d=snap.tickers[s],t=getTk(s);td+=d.totalDivs;
     if(d.totalDivs>0)h+='<div class="detail-row"><div><div class="d-sym">'+s+'</div><div class="d-name">'+(t?.name||'')+'</div></div><div class="d-nums"><div class="d-val" style="color:var(--gold)">$'+fmt(d.totalDivs)+'</div></div></div>'});
-  h+='<div class="detail-total" style="background:var(--gold-dim);border-color:rgba(245,158,11,.25)"><div class="dt-label" style="color:var(--gold)">Dividends Subtotal</div><div class="dt-val" style="color:var(--gold)">$'+fmt(td)+'</div></div>';
-  h+='<div class="detail-total" style="margin-top:10px;background:var(--blue-dim);border-color:rgba(59,130,246,.25)"><div><div class="dt-label" style="color:var(--blue)">Grand Total</div><div style="font-size:11px;color:var(--text2);margin-top:1px">Invested: $'+fmt(r.tInv)+'</div></div><div class="dt-val" style="color:var(--blue)">$'+fmt(tv+td)+'</div></div>';
+  const mmInt=r.divBal-r.tDiv;
+  h+='<div class="detail-row"><div><div class="d-sym" style="color:var(--accent)">MM Interest</div><div class="d-name">Earned on dividend balance</div></div><div class="d-nums"><div class="d-val" style="color:var(--accent)">$'+fmt(mmInt)+'</div></div></div>';
+  h+='<div class="detail-total" style="background:var(--gold-dim);border-color:rgba(245,158,11,.25)"><div class="dt-label" style="color:var(--gold)">Dividend Value (incl. MM)</div><div class="dt-val" style="color:var(--gold)">$'+fmt(r.divBal)+'</div></div>';
+  h+='<div class="detail-total" style="margin-top:10px;background:var(--blue-dim);border-color:rgba(59,130,246,.25)"><div><div class="dt-label" style="color:var(--blue)">Grand Total</div><div style="font-size:11px;color:var(--text2);margin-top:1px">Invested: $'+fmt(r.tInv)+'</div></div><div class="dt-val" style="color:var(--blue)">$'+fmt(tv+r.divBal)+'</div></div>';
   $('modalBody').innerHTML=h;
   $('modalOverlay').classList.add('show');
 }
@@ -212,15 +230,29 @@ async function simulate(){
     const now=new Date(),ey=now.getFullYear(),em=now.getMonth()+1,sd=new Date(now);sd.setFullYear(sd.getFullYear()-selYr);
     const sy=sd.getFullYear(),sm=sd.getMonth()+1;
     const active=selected.map(s=>[s,alloc[s]]).filter(([,p])=>p>0);
-    const data=await Promise.all(active.map(([s])=>fetch(API+'/simulation-data/'+s+'?start_year='+sy+'&start_month='+sm+'&end_year='+ey+'&end_month='+em).then(r=>r.json())));
+
+    /* Fetch ticker data AND money market rates in parallel */
+    const [mmData, ...data] = await Promise.all([
+      fetch(API+'/mm-rates/monthly?start_year='+sy+'&end_year='+ey).then(r=>r.json()),
+      ...active.map(([s])=>fetch(API+'/simulation-data/'+s+'?start_year='+sy+'&start_month='+sm+'&end_year='+ey+'&end_month='+em).then(r=>r.json()))
+    ]);
+
+    /* Build MM rate lookup: key "YYYY-MM" → annual rate as decimal (e.g. 5.33 → 0.0533) */
+    mmRates={};
+    if(Array.isArray(mmData)){mmData.forEach(r=>{mmRates[r.year+'-'+String(r.month).padStart(2,'0')]=r.rate/100})}
+
     const months=new Set();data.forEach(d=>d.monthly_data?.forEach(m=>months.add(m.year+'-'+String(m.month).padStart(2,'0'))));
     const sorted=[...months].sort();
     const st={};active.forEach(([s,p],i)=>{st[s]={p,sh:0,d:{},totalDivs:0};data[i].monthly_data?.forEach(m=>st[s].d[m.year+'-'+String(m.month).padStart(2,'0')]=m)});
 
-    let tInv=0,tDiv=0;const bk=[];snapshots=[];
+    let tInv=0,tDiv=0,divBal=0;const bk=[];snapshots=[];
     for(const k of sorted){
       const[y,m]=k.split('-').map(Number);let mI=0,mD=0,mS=0;
       const monthSnap={tickers:{},redistributed:false};
+
+      /* Step 0: Apply MM interest on prior dividend balance BEFORE adding new dividends */
+      const monthRate=mmRates[k]||0; /* annual rate as decimal */
+      divBal=Math.round((divBal*(1+monthRate/12))*100)/100;
 
       // Step 1: Find which tickers have valid data this month
       const available=[],unavailable=[];
@@ -264,14 +296,17 @@ async function simulate(){
         monthSnap.tickers[s]={boughtThisMonth:0,investedThisMonth:0,buyPrice:0,totalShares:x.sh,closePrice:closeP,value:x.sh*closeP,divsThisMonth:divsThis,totalDivs:x.totalDivs,origPct:x.p,effectivePct:0};
       }
 
+      /* Add this month's new dividends to the balance (after interest was applied) */
+      divBal=Math.round((divBal+mD)*100)/100;
+
       tInv+=mI;
       let pv=0;for(const[s,x]of Object.entries(st)){const d=x.d[k];if(d&&d.close)pv+=x.sh*d.close}
-      bk.push({year:y,month:m,invested:mI,shares:mS,divs:mD,tInv,tDiv,pv});
+      bk.push({year:y,month:m,invested:mI,shares:mS,divs:mD,tInv,tDiv,pv,divBal,mmRate:monthRate});
       snapshots.push(monthSnap);
     }
     breakdownData=bk;
     const last=bk[bk.length-1],ret=last.pv-tInv,retP=(ret/tInv)*100,wDiv=last.pv+tDiv,wDivP=((wDiv-tInv)/tInv)*100;
-    showResults({tInv,pv:last.pv,tDiv,ret,retP,wDiv,wDivP,n:bk.length,bk,active});
+    showResults({tInv,pv:last.pv,tDiv,ret,retP,wDiv,wDivP,divBal:last.divBal,n:bk.length,bk,active});
   }catch(e){$('err').textContent='Simulation failed: '+e.message}
   finally{btn.textContent='▶ Run Simulation';updBudget()}
 }
@@ -280,17 +315,19 @@ function showResults(r){
   /* Store results globally for summary card modals */
   window._lastResults=r;
   const el=$('results');
+  const divGain=r.divBal-r.tDiv;
   const cards=[
     {l:'Total Invested',v:'$'+fmt(r.tInv),s:r.n+' months × $'+fmt(selAmt),c:'var(--text1)',i:'$',ck:''},
     {l:'Portfolio Value',v:'$'+fmt(r.pv),s:(r.retP>=0?'+':'')+r.retP.toFixed(1)+'% return',c:r.pv>=r.tInv?'var(--accent)':'var(--red)',i:'◆',ck:' clickable-val" onclick="openModal()" title="Click for per-ticker breakdown'},
     {l:'Dividends Earned',v:'$'+fmt(r.tDiv),s:'Cash accumulated',c:'var(--gold)',i:'★',ck:' clickable-val" onclick="showDivSummary()" title="Click for per-ticker dividends'},
-    {l:'Total Value + Dividends',v:'$'+fmt(r.wDiv),s:r.wDivP.toFixed(1)+'% total return',c:'var(--blue)',i:'∑',ck:' clickable-val" onclick="showTotalSummary()" title="Click for breakdown'},
+    {l:'Div + MM Interest',v:'$'+fmt(r.divBal),s:'MM earned: $'+fmt(divGain),c:'var(--gold)',i:'%',ck:' clickable-val" onclick="showDivValueSummary()" title="Click for details'},
+    {l:'Total Value + Dividends',v:'$'+fmt(r.pv+r.divBal),s:((((r.pv+r.divBal)-r.tInv)/r.tInv)*100).toFixed(1)+'% total return',c:'var(--blue)',i:'∑',ck:' clickable-val" onclick="showTotalSummary()" title="Click for breakdown'},
   ];
-  let h='<div class="grid-4">';cards.forEach((c,i)=>h+='<div class="card sc fade-up" style="animation-delay:'+i*.1+'s"><div class="icon">'+c.i+'</div><div class="sl">'+c.l+'</div><div class="sv'+c.ck+'" style="color:'+c.c+'">'+c.v+'</div><div class="ss">'+c.s+'</div></div>');h+='</div>';
+  let h='<div class="grid-5">';cards.forEach((c,i)=>h+='<div class="card sc fade-up" style="animation-delay:'+i*.1+'s"><div class="icon">'+c.i+'</div><div class="sl">'+c.l+'</div><div class="sv'+c.ck+'" style="color:'+c.c+'">'+c.v+'</div><div class="ss">'+c.s+'</div></div>');h+='</div>';
   h+='<div class="card fade-up" style="animation-delay:.2s;padding:24px;margin-bottom:24px"><h3 class="space" style="font-size:16px;font-weight:600;margin-bottom:16px">Your Allocation</h3><div class="tags">';r.active.forEach(([s,p])=>h+='<div class="tag">'+s+' '+p+'%</div>');h+='</div></div>';
   h+='<div class="card fade-up" style="animation-delay:.3s;padding:24px;margin-bottom:24px"><h3 class="space" style="font-size:18px;font-weight:600;margin-bottom:16px">Growth Over Time</h3><canvas id="chart" style="width:100%;height:300px"></canvas></div>';
   h+='<div class="card fade-up" style="animation-delay:.4s;padding:24px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><h3 class="space" style="font-size:18px;font-weight:600">Monthly Breakdown</h3><button class="btn-sm mono" style="background:var(--accent-dim);color:var(--accent)" onclick="togTbl()">Show All ('+r.bk.length+')</button></div>';
-  h+='<div style="overflow-x:auto"><table><thead><tr><th style="text-align:left;cursor:pointer" onclick="toggleSortOrder()" id="thMonth">Month ▼</th>'+thWithInfo('Invested','invested')+thWithInfo('Shares','shares')+thWithInfo('Dividends','dividends')+thWithInfo('Portfolio Value','portfolio')+'</tr></thead><tbody id="tblBody"></tbody></table></div></div>';
+  h+='<div style="overflow-x:auto"><table><thead><tr><th style="text-align:left;cursor:pointer" onclick="toggleSortOrder()" id="thMonth">Month ▼</th>'+thWithInfo('Invested','invested')+thWithInfo('Shares','shares')+thWithInfo('Dividends','dividends')+thWithInfo('Div Value','divvalue')+thWithInfo('Portfolio Value','portfolio')+'</tr></thead><tbody id="tblBody"></tbody></table></div></div>';
   el.innerHTML=h;window._bk=r.bk;window._exp=false;window._sortAsc=false;fillTbl(r.bk.slice(-24),r.bk.length-24);setTimeout(()=>drawChart(r.bk),100);el.scrollIntoView({behavior:'smooth',block:'start'});
 }
 function fillTbl(rows,startIdx){
@@ -298,7 +335,7 @@ function fillTbl(rows,startIdx){
   /* Build display list with original indices, then apply sort */
   let display=rows.map((r,i)=>({r,gi:startIdx+i}));
   if(!window._sortAsc) display=[...display].reverse();
-  $('tblBody').innerHTML=display.map(({r,gi})=>'<tr><td style="color:var(--text2)">'+MO[r.month-1]+' '+r.year+'</td><td class="clickable-cell" onclick="openModal('+gi+',\'invested\')">$'+fmt(r.invested)+'</td><td class="clickable-cell" onclick="openModal('+gi+',\'shares\')" style="color:var(--text2)">'+r.shares.toFixed(4)+'</td><td class="clickable-cell" onclick="openModal('+gi+',\'dividends\')" style="color:'+(r.divs>0?'var(--gold)':'var(--text3)')+'">$'+fmt(r.divs)+'</td><td class="clickable-cell" onclick="openModal('+gi+',\'portfolio\')" style="color:var(--accent);font-weight:600">$'+fmt(r.pv)+'</td></tr>').join('');
+  $('tblBody').innerHTML=display.map(({r,gi})=>'<tr><td style="color:var(--text2)">'+MO[r.month-1]+' '+r.year+'</td><td class="clickable-cell" onclick="openModal('+gi+',\'invested\')">$'+fmt(r.invested)+'</td><td class="clickable-cell" onclick="openModal('+gi+',\'shares\')" style="color:var(--text2)">'+r.shares.toFixed(4)+'</td><td class="clickable-cell" onclick="openModal('+gi+',\'dividends\')" style="color:'+(r.divs>0?'var(--gold)':'var(--text3)')+'">$'+fmt(r.divs)+'</td><td style="color:var(--gold)">$'+fmt(r.divBal)+'</td><td class="clickable-cell" onclick="openModal('+gi+',\'portfolio\')" style="color:var(--accent);font-weight:600">$'+fmt(r.pv)+'</td></tr>').join('');
 }
 function togTbl(){window._exp=!window._exp;if(window._exp)fillTbl(window._bk,0);else fillTbl(window._bk.slice(-24),window._bk.length-24)}
 function toggleSortOrder(){

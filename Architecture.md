@@ -99,6 +99,7 @@ Key endpoints the frontend uses:
 |----------|---------------|
 | `GET /api/tickers/active` | Populates ticker dropdown on page load |
 | `GET /api/simulation-data/{symbol}?start_year&start_month&end_year&end_month` | Returns monthly prices + dividends merged for a ticker. Called once per allocated ticker when simulation runs |
+| `GET /api/mm-rates/monthly?start_year&end_year` | Returns monthly federal funds rates. Used to compute money market interest on accumulated dividends |
 
 Write endpoints (POST/PUT/DELETE) are disabled via `ENABLE_WRITE_API = False` in config.
 
@@ -108,7 +109,7 @@ Write endpoints (POST/PUT/DELETE) are disabled via `ENABLE_WRITE_API = False` in
 
 When user clicks "Run Simulation", the browser executes this flow:
 
-**1. Fetch data** — For each allocated ticker, calls `/api/simulation-data/{symbol}` with the date range. All fetches run in parallel via `Promise.all`.
+**1. Fetch data** — For each allocated ticker, calls `/api/simulation-data/{symbol}` with the date range. Also fetches `/api/mm-rates/monthly` for money market rates. All fetches run in parallel via `Promise.all`.
 
 **2. Build timeline** — Collects all unique year-month keys across all tickers, sorts chronologically.
 
@@ -116,20 +117,23 @@ When user clicks "Run Simulation", the browser executes this flow:
 
 **4. Buy shares** — For each ticker with data, calculates: `shares = (monthly_amount × effective_%) / high_price`. Uses the monthly high price (worst-case entry point). Accumulates shares in running total.
 
-**5. Calculate dividends** — For each dividend payment in the month, calculates: `dividend_cash = dividend_per_share × total_shares_held`. Accumulated as cash (not reinvested).
+**5. Calculate dividends** — For each dividend payment in the month, calculates: `dividend_cash = dividend_per_share × total_shares_held`. Accumulated as cash (not reinvested into equities).
 
-**6. Value portfolio** — At month end: `portfolio_value = Σ (shares_held × close_price)` across all tickers.
+**6. Apply money market interest** — Prior month's accumulated dividend balance grows at that month's federal funds rate ÷ 12 (monthly compounding). New dividends are then added. This models parking dividends in a money market fund.
 
-**7. Store snapshots** — Each month's per-ticker detail (shares bought, running totals, dividends, effective allocation) is stored for the drill-down modals.
+**7. Value portfolio** — At month end: `portfolio_value = Σ (shares_held × close_price)` across all tickers.
 
-**8. Render results** — Summary cards, growth chart (canvas), and clickable monthly breakdown table.
+**8. Store snapshots** — Each month's per-ticker detail (shares bought, running totals, dividends, effective allocation, dividend balance with MM interest) is stored for the drill-down modals.
+
+**9. Render results** — Summary cards (5 tiles including Div + MM Interest), growth chart (canvas), and clickable monthly breakdown table with Div Value column.
 
 ---
 
 ## Key Design Decisions
 
 - **Buy at monthly high**: Conservative — simulates worst-case dollar-cost averaging entry each month.
-- **Dividends as cash**: Not reinvested — tracked separately so user sees true cash generation.
+- **Dividends as cash**: Not reinvested into equities — tracked separately so user sees true cash generation.
+- **Dividends earn money market interest**: Accumulated dividends are modeled as invested in a money market fund at the federal funds rate (monthly compounding). The "Div Value" column and summary tile show the impact.
 - **Proportional redistribution**: When a ticker has no data for a month, its allocation flows to available tickers proportionally, ensuring 100% of monthly investment is always deployed.
 - **Read-only API**: Write endpoints disabled by default. Data loads only through CLI batch scripts.
-- **Single HTML frontend**: No build tools, no Node.js — just open the file in a browser.
+- **Split frontend**: HTML, CSS, and JS in separate files — no build tools, no Node.js — just open the HTML file in a browser.

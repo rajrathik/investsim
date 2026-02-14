@@ -33,7 +33,9 @@ C:\Raj\python\portfolio-simulator\
 │   └── pytest.ini                  ← Pytest config
 │
 ├── frontend\                       ← Browser-based UI
-│   └── portfolio-simulator.html    ← Single-file simulator dashboard
+│   ├── portfolio-simulator.html    ← HTML structure
+│   ├── portfolio-simulator.css     ← Styles
+│   └── portfolio-simulator.js      ← Application logic & simulation engine
 │
 └── venv\                           ← Python virtual environment
 ```
@@ -113,5 +115,5 @@ git commit -m "Your commit message"
 | Database | SQL Server (local), SQLAlchemy ORM |
 | Backend | Python 3.12, FastAPI, Uvicorn |
 | Data Sources | Yahoo Finance (prices/dividends), FRED (federal funds rate) |
-| Frontend | Single HTML file, vanilla JS, Canvas charts |
+| Frontend | HTML + CSS + JS (vanilla, no build tools), Canvas charts |
 | Tests | Pytest (read-only integration tests against real DB) |
