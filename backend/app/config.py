@@ -25,3 +25,9 @@ FULL_HISTORY_YEARS = 30
 
 # Set to True when ready to allow POST/PUT/DELETE from API
 ENABLE_WRITE_API = False
+
+# Auth0 settings
+AUTH0_DOMAIN = os.getenv("AUTH0_DOMAIN", "")
+AUTH0_CLIENT_ID = os.getenv("AUTH0_CLIENT_ID", "")
+AUTH0_AUDIENCE = os.getenv("AUTH0_AUDIENCE", "")
+AUTH0_ALGORITHMS = os.getenv("AUTH0_ALGORITHMS", "RS256").split(",")

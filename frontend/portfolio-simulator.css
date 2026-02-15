@@ -8,6 +8,12 @@ input[type=range]{-webkit-appearance:none;appearance:none;background:var(--borde
 input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;background:var(--accent);border-radius:50%;cursor:pointer;box-shadow:0 0 10px var(--accent-glow)}
 ::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
 
+/* Auth overlay — blocks simulator until login */
+.auth-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(10,14,23,0.95);backdrop-filter:blur(8px);z-index:1000;display:flex;align-items:center;justify-content:center;transition:opacity 0.3s}
+.auth-overlay.hidden{opacity:0;pointer-events:none}
+.auth-card{text-align:center;padding:48px;background:var(--card);border:1px solid var(--border);border-radius:20px;max-width:400px}
+.auth-section{display:flex;align-items:center}
+
 /* Layout */
 .header{border-bottom:1px solid var(--border);padding:20px 32px;display:flex;justify-content:space-between;align-items:center}
 .header h1{font-size:24px;font-weight:700}

@@ -91,3 +91,23 @@ class Dividend(Base):
             f"<Dividend(ticker_id={self.ticker_id}, "
             f"pay_date={self.pay_date}, amount={self.amount})>"
         )
+
+
+class UserLogin(Base):
+    """Track user login events from Auth0.
+
+    Each row = one login event.  auth0_user_id is the stable user
+    identifier ('sub' claim) for associating future saved simulations.
+    """
+    __tablename__ = "user_logins"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    auth0_user_id = Column(String(255), nullable=False, index=True)
+    email = Column(String(255), nullable=True)
+    name = Column(String(255), nullable=True)
+    login_time = Column(DateTime, default=_utcnow, nullable=False)
+    ip_address = Column(String(45), nullable=True)
+    user_agent = Column(String(500), nullable=True)
+
+    def __repr__(self):
+        return f"<UserLogin(user={self.email}, time={self.login_time})>"

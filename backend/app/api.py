@@ -44,9 +44,14 @@ from sqlalchemy import and_, text, extract
 from pydantic import BaseModel, field_validator
 from typing import Optional
 
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+import pathlib
+
 from app.database import SessionLocal, init_db, engine
-from app.models import Ticker, MonthlyPrice, Dividend
+from app.models import Ticker, MonthlyPrice, Dividend, UserLogin
 from app.config import MAX_TICKERS, ENABLE_WRITE_API
+from app.auth import get_current_user
 
 # Configure logging
 logging.basicConfig(
@@ -393,23 +398,70 @@ def health_check():
 
 
 # ===========================================
+# AUTH ENDPOINTS
+# ===========================================
+
+@app.get("/api/auth/config")
+def get_auth_config():
+    """Return Auth0 config for frontend SPA SDK initialization.
+
+    Intentionally unauthenticated — frontend needs this before login.
+    """
+    from app.config import AUTH0_DOMAIN, AUTH0_CLIENT_ID, AUTH0_AUDIENCE
+    return {
+        "domain": AUTH0_DOMAIN,
+        "clientId": AUTH0_CLIENT_ID,
+        "audience": AUTH0_AUDIENCE,
+    }
+
+
+@app.post("/api/auth/login-event")
+def log_login_event(
+    request: Request,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Record a login event after successful Auth0 authentication.
+
+    Called by the frontend after redirect callback completes.
+    Returns the user_id for session association.
+    """
+    login = UserLogin(
+        auth0_user_id=user.get("sub", "unknown"),
+        email=user.get("email") or user.get("nickname", ""),
+        name=user.get("name", ""),
+        ip_address=request.client.host if request.client else None,
+        user_agent=(request.headers.get("user-agent", "") or "")[:500],
+    )
+    db.add(login)
+    db.commit()
+    logger.info(f"Login event: {login.email} ({login.auth0_user_id})")
+    return {
+        "status": "ok",
+        "user_id": login.auth0_user_id,
+        "email": login.email,
+        "login_id": login.id,
+    }
+
+
+# ===========================================
 # TICKER ENDPOINTS
 # ===========================================
 
 @app.get("/api/tickers", response_model=list[TickerResponse])
-def list_tickers(db: Session = Depends(get_db)):
+def list_tickers(user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
     """List all tickers."""
     return db.query(Ticker).order_by(Ticker.symbol).all()
 
 
 @app.get("/api/tickers/active", response_model=list[TickerResponse])
-def list_active_tickers(db: Session = Depends(get_db)):
+def list_active_tickers(user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
     """List only active tickers."""
     return db.query(Ticker).filter(Ticker.active == True).order_by(Ticker.symbol).all()
 
 
 @app.post("/api/tickers", response_model=TickerResponse, status_code=201)
-def create_ticker(data: TickerCreate, db: Session = Depends(get_db)):
+def create_ticker(data: TickerCreate, user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
     """Add a new ticker."""
     require_write_enabled()
     symbol = data.symbol  # Already validated and uppercased by Pydantic
@@ -433,7 +485,7 @@ def create_ticker(data: TickerCreate, db: Session = Depends(get_db)):
 
 
 @app.put("/api/tickers/{symbol}", response_model=TickerResponse)
-def update_ticker(symbol: str, data: TickerUpdate, db: Session = Depends(get_db)):
+def update_ticker(symbol: str, data: TickerUpdate, user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
     """Update ticker name or active status."""
     require_write_enabled()
     ticker = get_ticker_or_404(db, symbol)
@@ -450,7 +502,7 @@ def update_ticker(symbol: str, data: TickerUpdate, db: Session = Depends(get_db)
 
 
 @app.delete("/api/tickers/{symbol}", status_code=200)
-def delete_ticker(symbol: str, db: Session = Depends(get_db)):
+def delete_ticker(symbol: str, user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
     """Delete a ticker and all its price/dividend data."""
     require_write_enabled()
     ticker = get_ticker_or_404(db, symbol)
@@ -473,6 +525,7 @@ def get_prices(
     start_month: Optional[int] = Query(None, description="Filter from month (1-12)"),
     end_year: Optional[int] = Query(None, description="Filter to year"),
     end_month: Optional[int] = Query(None, description="Filter to month (1-12)"),
+    user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Get monthly prices for a ticker, optionally filtered by date range."""
@@ -507,7 +560,7 @@ def get_prices(
 
 
 @app.get("/api/prices/{symbol}/latest", response_model=PriceResponse)
-def get_latest_price(symbol: str, db: Session = Depends(get_db)):
+def get_latest_price(symbol: str, user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
     """Get the most recent month's price for a ticker."""
     ticker = get_ticker_or_404(db, symbol)
 
@@ -533,6 +586,7 @@ def get_dividends(
     symbol: str,
     start_year: Optional[int] = Query(None),
     end_year: Optional[int] = Query(None),
+    user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Get dividends for a ticker, optionally filtered by year range."""
@@ -567,6 +621,7 @@ def get_simulation_data(
     start_month: Optional[int] = Query(1),
     end_year: Optional[int] = Query(None),
     end_month: Optional[int] = Query(12),
+    user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Get combined price + dividend data for portfolio simulation.
@@ -649,6 +704,7 @@ class AnnualRateResponse(BaseModel):
 def get_monthly_mm_rates(
     start_year: Optional[int] = Query(None),
     end_year: Optional[int] = Query(None),
+    user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Get monthly average money market rates."""
@@ -670,6 +726,7 @@ def get_monthly_mm_rates(
 def get_annual_mm_rates(
     start_year: Optional[int] = Query(None),
     end_year: Optional[int] = Query(None),
+    user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Get annual average money market rates."""
@@ -688,7 +745,7 @@ def get_annual_mm_rates(
 
 
 @app.get("/api/mm-rates/annual/{year}", response_model=AnnualRateResponse)
-def get_annual_mm_rate_by_year(year: int, db: Session = Depends(get_db)):
+def get_annual_mm_rate_by_year(year: int, user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
     """Get money market rate for a specific year."""
     from app.mm_rates import AnnualMoneyMarketRate
 
@@ -744,7 +801,7 @@ def _run_batch_in_background(symbols: list[str], mode: str):
 
 
 @app.post("/api/batch/full", response_model=BatchResponse)
-def run_batch_full(data: BatchRequest = BatchRequest(), db: Session = Depends(get_db)):
+def run_batch_full(data: BatchRequest = BatchRequest(), user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
     """Trigger a full history data load (runs in background)."""
     require_write_enabled()
     # Check if a batch is already running
@@ -772,7 +829,7 @@ def run_batch_full(data: BatchRequest = BatchRequest(), db: Session = Depends(ge
 
 
 @app.post("/api/batch/incremental", response_model=BatchResponse)
-def run_batch_incremental(data: BatchRequest = BatchRequest(), db: Session = Depends(get_db)):
+def run_batch_incremental(data: BatchRequest = BatchRequest(), user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
     """Trigger an incremental data load (runs in background)."""
     require_write_enabled()
     current = _get_batch_status()
@@ -801,3 +858,18 @@ def run_batch_incremental(data: BatchRequest = BatchRequest(), db: Session = Dep
 def get_batch_status():
     """Get the status of the last batch run."""
     return _get_batch_status()
+
+
+# ===========================================
+# SERVE FRONTEND (must be LAST — catch-all)
+# ===========================================
+
+_frontend_dir = pathlib.Path(__file__).resolve().parent.parent.parent / "frontend"
+
+if _frontend_dir.exists():
+    @app.get("/")
+    def serve_index():
+        """Redirect root to the main HTML page."""
+        return FileResponse(str(_frontend_dir / "portfolio-simulator.html"))
+
+    app.mount("/", StaticFiles(directory=str(_frontend_dir)), name="frontend")

@@ -1,8 +1,83 @@
-const API="http://localhost:8000/api";
+const API="/api";
 const AMTS=[500,1000,2000,5000];
 const MO=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 let allTickers=[],selected=[],alloc={},selAmt=1000,selYr=10;
 let snapshots=null,breakdownData=null;
+
+/* ========== AUTH0 INTEGRATION ========== */
+let auth0Client=null,currentUser=null;
+
+async function initAuth(){
+  try{
+    const config=await fetch(API+'/auth/config').then(r=>r.json());
+    if(!config.domain){
+      console.warn('Auth0 not configured — running without auth');
+      showLoginRequired();return;
+    }
+    auth0Client=await createAuth0Client({
+      domain:config.domain,
+      clientId:config.clientId,
+      authorizationParams:{
+        redirect_uri:window.location.origin+window.location.pathname,
+        audience:config.audience,
+        scope:'openid profile email',
+      },
+      cacheLocation:'localstorage',
+    });
+    // Handle redirect callback
+    const query=window.location.search;
+    if(query.includes('code=')&&query.includes('state=')){
+      await auth0Client.handleRedirectCallback();
+      window.history.replaceState({},document.title,window.location.pathname);
+    }
+    const isAuth=await auth0Client.isAuthenticated();
+    if(isAuth){currentUser=await auth0Client.getUser();await onLoginSuccess();}
+    else{showLoginRequired();}
+  }catch(e){console.error('Auth0 init failed:',e);showLoginRequired();}
+}
+
+async function doLogin(){
+  if(!auth0Client)return;
+  await auth0Client.loginWithRedirect();
+}
+async function doLogout(){
+  if(!auth0Client)return;
+  auth0Client.logout({logoutParams:{returnTo:window.location.origin+window.location.pathname}});
+}
+
+async function onLoginSuccess(){
+  const overlay=$('authOverlay');if(overlay)overlay.classList.add('hidden');
+  $('loginBtn').style.display='none';
+  $('userMenu').style.display='flex';
+  $('userName').textContent=currentUser.email||currentUser.name||'User';
+  // Log login event to backend
+  try{
+    const token=await auth0Client.getTokenSilently();
+    await fetch(API+'/auth/login-event',{method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'}});
+  }catch(e){console.warn('Failed to log login event:',e);}
+  // Now load tickers
+  loadTickers();
+}
+
+function showLoginRequired(){
+  const overlay=$('authOverlay');if(overlay)overlay.classList.remove('hidden');
+  $('loginBtn').style.display='inline-block';
+  $('userMenu').style.display='none';
+}
+
+async function authFetch(url,options={}){
+  if(!auth0Client)throw new Error('Not authenticated');
+  const token=await auth0Client.getTokenSilently();
+  const headers={...options.headers,'Authorization':'Bearer '+token};
+  return fetch(url,{...options,headers});
+}
+
+async function loadTickers(){
+  try{
+    const d=await authFetch(API+'/tickers/active').then(r=>r.json());
+    allTickers=d;
+  }catch(e){$('err').textContent='Cannot reach API. Make sure uvicorn is running and you are logged in.';}
+}
 
 /* Column info tooltips — shown on hover of the * icon in table headers */
 const COL_INFO={
@@ -272,8 +347,8 @@ async function simulate(){
 
     /* Fetch ticker data AND money market rates in parallel */
     const [mmData, ...data] = await Promise.all([
-      fetch(API+'/mm-rates/monthly?start_year='+sy+'&end_year='+ey).then(r=>r.json()),
-      ...active.map(([s])=>fetch(API+'/simulation-data/'+s+'?start_year='+sy+'&start_month='+sm+'&end_year='+ey+'&end_month='+em).then(r=>r.json()))
+      authFetch(API+'/mm-rates/monthly?start_year='+sy+'&end_year='+ey).then(r=>r.json()),
+      ...active.map(([s])=>authFetch(API+'/simulation-data/'+s+'?start_year='+sy+'&start_month='+sm+'&end_year='+ey+'&end_month='+em).then(r=>r.json()))
     ]);
 
     /* Build MM rate lookup: key "YYYY-MM" → annual rate as decimal (e.g. 5.33 → 0.0533) */
@@ -652,6 +727,5 @@ function showReturnCalc(year,field){
 }
 
 renderAmts();renderYrs();updBudget();renderAlloc();
-fetch(API+'/tickers/active').then(r=>r.json()).then(d=>{
-  allTickers=d;
-}).catch(()=>{$('err').textContent='Cannot reach API at localhost:8000. Make sure uvicorn is running.'});
+// Auth0 initializes and calls loadTickers() after successful login
+initAuth();

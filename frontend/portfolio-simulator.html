@@ -6,11 +6,27 @@
 <title>Asset Allocation Simulator</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="portfolio-simulator.css">
+<script src="https://cdn.auth0.com/js/auth0-spa-js/2.1/auth0-spa-js.production.js"></script>
 </head>
 <body>
+<div id="authOverlay" class="auth-overlay">
+  <div class="auth-card">
+    <div style="font-size:48px;margin-bottom:16px">🔒</div>
+    <h2 class="space" style="margin-bottom:8px">Authentication Required</h2>
+    <p style="color:var(--text3);margin-bottom:24px;font-size:14px">Please log in to use the Asset Allocation Simulator</p>
+    <button class="run" style="padding:12px 32px;font-size:15px;width:auto" onclick="doLogin()">Log In with Auth0</button>
+  </div>
+</div>
 <div class="header">
   <div>
     <h1 class="space"><span style="color:var(--accent)">◆</span> Asset Allocation Simulator</h1>
+  </div>
+  <div id="authSection" class="auth-section">
+    <button id="loginBtn" class="btn-sm" style="background:var(--accent);color:#fff;padding:8px 20px;border-radius:8px;font-size:13px;cursor:pointer;display:none" onclick="doLogin()">Log In</button>
+    <div id="userMenu" style="display:none;align-items:center;gap:10px">
+      <span id="userName" style="font-size:13px;color:var(--text2);font-family:'JetBrains Mono',monospace"></span>
+      <button class="btn-sm" style="background:var(--border);color:var(--text2);padding:6px 14px;border-radius:8px;font-size:12px;cursor:pointer" onclick="doLogout()">Log Out</button>
+    </div>
   </div>
 </div>
 <div class="container">
