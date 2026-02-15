@@ -37,6 +37,11 @@ C:\Raj\python\portfolio-simulator\
 │   ├── portfolio-simulator.css     ← Styles
 │   └── portfolio-simulator.js      ← Application logic & simulation engine
 │
+├── tools\                          ← Utilities & verification
+│   ├── generate_test_spreadsheet.py ← Generates Excel workbook from DB data
+│   ├── spreadsheet_config.txt      ← Config file (tickers, amount, years, tax)
+│   └── Spreadsheet_Guide.md        ← One-page user guide for the Excel file
+│
 └── venv\                           ← Python virtual environment
 ```
 
@@ -48,7 +53,7 @@ C:\Raj\python\portfolio-simulator\
 cd C:\Raj\python\portfolio-simulator
 python -m venv venv
 venv\Scripts\activate
-pip install fastapi uvicorn sqlalchemy pyodbc pandas requests pytest
+pip install fastapi uvicorn sqlalchemy pyodbc pandas requests pytest openpyxl grip
 ```
 
 Create tables and load historical data (one-time):
@@ -108,6 +113,44 @@ git commit -m "Your commit message"
 
 ---
 
+## Test Spreadsheet (Verify Calculations)
+
+Generate an Excel workbook that mirrors the website's simulation logic with real DB data and Excel formulas.
+
+**Setup:** Edit `tools/spreadsheet_config.txt`:
+```
+tickers = XLK:60, XLV:40
+monthly_amount = 1000
+years = 3
+tax_rate = 30
+```
+
+**Generate:**
+```bash
+cd C:\Raj\python\portfolio-simulator
+venv\Scripts\python tools\generate_test_spreadsheet.py
+```
+
+Opens as `tools/Portfolio_Simulator_Test.xlsx` with 5 sheets: Setup, Monthly Simulation, Year Summary, Tax Impact, Annual Returns. All cells are Excel formulas — change any input on Setup and everything recalculates. See `tools/Spreadsheet_Guide.md` for a walkthrough.
+
+---
+
+## Viewing Markdown Files Locally
+
+Use [Grip](https://github.com/joeyespo/grip) to render `.md` files in your browser (GitHub-style):
+
+```bash
+venv\Scripts\pip install grip
+venv\Scripts\grip README.md
+```
+Opens at `http://localhost:6419`. Press Ctrl+C to stop. Works for any `.md` file:
+```bash
+venv\Scripts\grip Architecture.md
+venv\Scripts\grip tools\Spreadsheet_Guide.md
+```
+
+---
+
 ## Features
 
 - **Dollar-cost averaging simulation** — invest a fixed monthly amount across multiple securities with custom allocation percentages
@@ -120,8 +163,10 @@ git commit -m "Your commit message"
 - **Monthly breakdown table** — clickable cells for per-ticker detail modals, sortable by date, with Total Invested running total
 - **Tax impact analysis** — adjustable tax rate (0–60%) with yearly breakdown of taxes on dividends and MM interest
 - **Annual return table** — pre-tax and after-tax returns per calendar year using DCA mid-year approximation
+- **Clickable calculation modals** — click any highlighted cell in monthly or annual tables to see full calculation breakdown
 - **Multi-select ticker dropdown** — checkbox-based selection with search filtering
 - **Proportional redistribution** — when a ticker has no data for a month, its allocation flows to available tickers
+- **Excel test spreadsheet** — generate a multi-sheet workbook with real data and Excel formulas to verify every calculation
 
 ---
 

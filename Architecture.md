@@ -57,6 +57,10 @@ Each ticker has: symbol, name, active flag, created/updated timestamps.
 | `run_batch.py` | CLI entry point: `python run_batch.py full` or `incremental` — orchestrates fetcher → loader for Yahoo data |
 | `run_fred_batch.py` | CLI entry point: same pattern for FRED data |
 | `test_connection.py` | Quick script to verify DB connectivity and create tables |
+| **tools/** | |
+| `generate_test_spreadsheet.py` | Reads `spreadsheet_config.txt` (or interactive prompts), queries DB for prices/dividends/MM rates, generates 5-sheet Excel workbook with formulas mirroring the JS simulation logic |
+| `spreadsheet_config.txt` | User-editable config: tickers + allocations, monthly amount, years, tax rate |
+| `Spreadsheet_Guide.md` | One-page walkthrough for users navigating the Excel workbook |
 
 ---
 
@@ -77,6 +81,16 @@ run_fred_batch.py full
 ```
 
 Incremental mode is identical but fetches only the last 3 months and upserts (update existing, insert new).
+
+**Spreadsheet generation** (tools/generate_test_spreadsheet.py):
+```
+Read spreadsheet_config.txt (tickers, amount, years, tax rate)
+  → Query DB: Ticker, MonthlyPrice, Dividend, MonthlyMoneyMarketRate
+  → Build 5 Excel sheets with cross-sheet formula references:
+      Setup (raw data) → Monthly Sim (formulas) → Year Summary (SUMIFS)
+      → Tax Impact (rates from Setup) → Annual Returns (detail blocks)
+  → Save Portfolio_Simulator_Test.xlsx
+```
 
 ---
 
@@ -148,3 +162,5 @@ When user clicks "Run Simulation", the browser executes this flow:
 - **Security-agnostic labeling**: UI avoids ETF-specific language — supports ETFs, mutual funds, individual stocks, or any ticker in the database.
 - **Read-only API**: Write endpoints disabled by default. Data loads only through CLI batch scripts.
 - **Split frontend**: HTML, CSS, and JS in separate files — no build tools, no Node.js — just open the HTML file in a browser.
+- **Excel verification tool**: A Python script generates a multi-sheet workbook that mirrors the JS simulation using Excel formulas. Users edit a plain-text config file, re-run the script, and open the spreadsheet to trace every calculation step. The spreadsheet reads real data from the same SQL Server DB used by the API.
+- **Clickable calculation modals**: Both the monthly breakdown table and annual return table have clickable cells that show full calculation breakdowns (numerator/denominator for returns, per-ticker share purchases, dividend sources, etc.).
