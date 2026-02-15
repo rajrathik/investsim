@@ -634,13 +634,13 @@ def build_annual_returns(wb, refs, yr_refs, tax_refs):
         detail_start = r
         details = [
             ("Beginning Stock Value", None),
-            ("Stock Gain", "= End Stock Value - Beginning - Invested"),
-            ("Avg Invested Capital", "= Invested x 0.542 (DCA mid-year)"),
-            ("Base Capital (Denominator)", "= Beginning Stock Value + Avg Invested"),
-            ("Total Gain (Numerator)", "= Stock Gain + Dividends + MM Interest"),
-            ("After-Tax Gain", "= Stock Gain + (Divs-Tax) + (MMInt-Tax)"),
-            ("Pre-Tax Return", "= Total Gain / Base Capital"),
-            ("After-Tax Return", "= After-Tax Gain / Base Capital"),
+            ("Stock Gain", "End Stock Value - Beginning - Invested"),
+            ("Avg Invested Capital", "Invested x 0.542 (DCA mid-year)"),
+            ("Base Capital (Denominator)", "Beginning Stock Value + Avg Invested"),
+            ("Total Gain (Numerator)", "Stock Gain + Dividends + MM Interest"),
+            ("After-Tax Gain", "Stock Gain + (Divs-Tax) + (MMInt-Tax)"),
+            ("Pre-Tax Return", "Total Gain / Base Capital"),
+            ("After-Tax Return", "After-Tax Gain / Base Capital"),
         ]
 
         for di, (label, note) in enumerate(details):
@@ -791,7 +791,15 @@ def main():
     build_annual_returns(wb, refs, yr_refs, tax_refs)
 
     # --- Save ---
+    # If the default file is locked (open in Excel), add a suffix
     out_path = os.path.join(SCRIPT_DIR, "Portfolio_Simulator_Test.xlsx")
+    if os.path.exists(out_path):
+        try:
+            with open(out_path, "a"):
+                pass
+        except PermissionError:
+            out_path = os.path.join(SCRIPT_DIR, "Portfolio_Simulator_Test_new.xlsx")
+            print(f"  (Previous file is open in Excel, saving as new file)")
     wb.save(out_path)
     print(f"  Saved to: {out_path}")
     print()
