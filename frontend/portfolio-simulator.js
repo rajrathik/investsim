@@ -10,21 +10,18 @@ let auth0Client=null,currentUser=null;
 async function initAuth(){
   try{
     const config=await fetch(API+'/auth/config').then(r=>r.json());
-    if(!config.domain){
-      console.warn('Auth0 not configured — running without auth');
-      showLoginRequired();return;
-    }
-    auth0Client=await createAuth0Client({
+    if(!config.domain){showLoginRequired();return;}
+    const authParams={
+      redirect_uri:window.location.origin+window.location.pathname,
+      scope:'openid profile email',
+    };
+    if(config.audience)authParams.audience=config.audience;
+    auth0Client=await auth0.createAuth0Client({
       domain:config.domain,
       clientId:config.clientId,
-      authorizationParams:{
-        redirect_uri:window.location.origin+window.location.pathname,
-        audience:config.audience,
-        scope:'openid profile email',
-      },
+      authorizationParams:authParams,
       cacheLocation:'localstorage',
     });
-    // Handle redirect callback
     const query=window.location.search;
     if(query.includes('code=')&&query.includes('state=')){
       await auth0Client.handleRedirectCallback();
@@ -38,8 +35,11 @@ async function initAuth(){
 
 async function doLogin(){
   if(!auth0Client)return;
-  await auth0Client.loginWithRedirect();
+  await auth0Client.loginWithRedirect({
+    authorizationParams:{redirect_uri:window.location.origin+window.location.pathname}
+  });
 }
+
 async function doLogout(){
   if(!auth0Client)return;
   auth0Client.logout({logoutParams:{returnTo:window.location.origin+window.location.pathname}});
@@ -55,7 +55,12 @@ async function onLoginSuccess(){
     const token=await auth0Client.getTokenSilently();
     await fetch(API+'/auth/login-event',{method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'}});
   }catch(e){console.warn('Failed to log login event:',e);}
-  // Now load tickers
+  // Show welcome guide before loading simulator
+  const w=$('welcomeOverlay');if(w)w.classList.remove('hidden');
+}
+
+function dismissWelcomeGuide(){
+  const w=$('welcomeOverlay');if(w)w.classList.add('hidden');
   loadTickers();
 }
 
@@ -727,5 +732,6 @@ function showReturnCalc(year,field){
 }
 
 renderAmts();renderYrs();updBudget();renderAlloc();
+
 // Auth0 initializes and calls loadTickers() after successful login
 initAuth();

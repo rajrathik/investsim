@@ -7,6 +7,10 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="portfolio-simulator.css">
 <script src="https://cdn.auth0.com/js/auth0-spa-js/2.1/auth0-spa-js.production.js"></script>
+<script>
+// Expose Auth0 SDK globally so our JS can use createAuth0Client directly
+window.createAuth0Client = window.auth0 ? window.auth0.createAuth0Client : null;
+</script>
 </head>
 <body>
 <div id="authOverlay" class="auth-overlay">
@@ -14,9 +18,83 @@
     <div style="font-size:48px;margin-bottom:16px">🔒</div>
     <h2 class="space" style="margin-bottom:8px">Authentication Required</h2>
     <p style="color:var(--text3);margin-bottom:24px;font-size:14px">Please log in to use the Asset Allocation Simulator</p>
-    <button class="run" style="padding:12px 32px;font-size:15px;width:auto" onclick="doLogin()">Log In with Auth0</button>
+    <a href="javascript:void(0)" id="auth0LoginBtn" class="run" style="padding:12px 32px;font-size:15px;width:auto;display:inline-block;text-decoration:none;text-align:center;color:inherit">Log In with Auth0</a>
   </div>
 </div>
+<script>
+(function(){
+  var btn=document.getElementById('auth0LoginBtn');
+  btn.onclick=function(e){
+    e.preventDefault();
+    if(typeof doLogin==='function'){doLogin();}
+    else{alert('doLogin not loaded yet');}
+    return false;
+  };
+})();
+</script>
+
+<!-- Welcome Guide — shown after login, before simulator loads -->
+<div id="welcomeOverlay" class="welcome-overlay hidden">
+  <div class="welcome-card">
+    <div class="welcome-header">
+      <div style="font-size:40px;margin-bottom:12px;color:var(--accent)">◆</div>
+      <h2 class="space" style="margin-bottom:6px;font-size:22px">Welcome to the Asset Allocation Simulator</h2>
+      <p style="color:var(--text3);font-size:13px">A quick guide before you start</p>
+    </div>
+    <div class="welcome-body">
+      <div class="welcome-section">
+        <div class="welcome-icon">📈</div>
+        <div>
+          <h3 class="space">What This Tool Does</h3>
+          <ul class="welcome-list">
+            <li>Simulates investing a <strong>fixed monthly amount</strong> across ETFs, stocks, and funds</li>
+            <li>Uses <strong>real historical prices</strong> from Yahoo Finance — not projections</li>
+            <li>Buys at the <strong>monthly high price</strong> (worst-case entry point)</li>
+            <li>Tracks dividends as <strong>cash</strong> — not reinvested into equities</li>
+          </ul>
+        </div>
+      </div>
+      <div class="welcome-section">
+        <div class="welcome-icon">🎯</div>
+        <div>
+          <h3 class="space">How to Use It</h3>
+          <ol class="welcome-list welcome-list-num">
+            <li><strong>Set your monthly amount</strong> and investment period (1–20 years)</li>
+            <li><strong>Pick tickers</strong> from the dropdown — search or browse</li>
+            <li><strong>Set allocation %</strong> using sliders — must total 100%</li>
+            <li>Click <strong>▶ Run Simulation</strong></li>
+          </ol>
+        </div>
+      </div>
+      <div class="welcome-section">
+        <div class="welcome-icon">📊</div>
+        <div>
+          <h3 class="space">What You'll See</h3>
+          <ul class="welcome-list">
+            <li><strong>6 summary tiles</strong> — Invested, Portfolio Value, Dividends, Cash Accrual, Balance, Money Market benchmark</li>
+            <li><strong>Interactive charts</strong> — hover for month-by-month growth and dividend details</li>
+            <li><strong>Monthly breakdown table</strong> — click any highlighted cell for per-ticker detail</li>
+            <li><strong>Tax impact section</strong> — adjust tax rate to see yearly liability on dividends and interest</li>
+            <li><strong>Annual returns</strong> — pre-tax and after-tax performance per calendar year</li>
+          </ul>
+        </div>
+      </div>
+      <div class="welcome-section">
+        <div class="welcome-icon">💡</div>
+        <div>
+          <h3 class="space">Key Things to Know</h3>
+          <ul class="welcome-list">
+            <li>All summary values are <strong>clickable</strong> — cards, table cells, and chart points reveal detailed breakdowns</li>
+            <li>If a ticker has no data for a month, its allocation is <strong>redistributed</strong> to available tickers</li>
+            <li>The <strong>MMF column</strong> shows what the same money would earn in a money market fund — a risk-free benchmark</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <button type="button" class="run welcome-btn" onclick="dismissWelcomeGuide()">Got It — Let's Start</button>
+  </div>
+</div>
+
 <div class="header">
   <div>
     <h1 class="space"><span style="color:var(--accent)">◆</span> Asset Allocation Simulator</h1>
@@ -54,6 +132,6 @@
 <div id="modalOverlay" class="modal-overlay" onclick="if(event.target===this)closeModal()">
   <div class="modal"><h3 class="space"><span id="modalTitle">Portfolio Breakdown</span><button class="close-btn" onclick="closeModal()">✕</button></h3><div id="modalSub" class="modal-sub"></div><div id="modalBody"></div></div>
 </div>
-<script src="portfolio-simulator.js"></script>
+<script src="portfolio-simulator.js?v=7"></script>
 </body>
 </html>

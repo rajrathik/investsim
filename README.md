@@ -11,10 +11,11 @@ C:\Raj\python\portfolio-simulator\
 │
 ├── backend\                        ← Python FastAPI backend
 │   ├── app\                        ← Core application code
-│   │   ├── api.py                  ← REST API endpoints (FastAPI)
-│   │   ├── config.py               ← Settings (DB connection, constants)
+│   │   ├── api.py                  ← REST API endpoints (FastAPI) + static file serving
+│   │   ├── auth.py                 ← Auth0 JWT/token verification
+│   │   ├── config.py               ← Settings (DB connection, Auth0, constants)
 │   │   ├── database.py             ← SQLAlchemy engine & session
-│   │   ├── models.py               ← DB models (Ticker, MonthlyPrice, Dividend)
+│   │   ├── models.py               ← DB models (Ticker, MonthlyPrice, Dividend, UserLogin)
 │   │   ├── mm_rates.py             ← Money market rate models & loaders
 │   │   ├── fetcher.py              ← Yahoo Finance data fetcher
 │   │   ├── fred_fetcher.py         ← FRED federal funds rate fetcher
@@ -40,7 +41,12 @@ C:\Raj\python\portfolio-simulator\
 ├── tools\                          ← Utilities & verification
 │   ├── generate_test_spreadsheet.py ← Generates Excel workbook from DB data
 │   ├── spreadsheet_config.txt      ← Config file (tickers, amount, years, tax)
+│   ├── create_user_logins.sql      ← SQL script for manual user_logins table creation
 │   └── Spreadsheet_Guide.md        ← One-page user guide for the Excel file
+│
+├── docs\                           ← Design & planning documents
+│   ├── Auth0_Integration_Plan.md   ← Auth0 implementation requirements
+│   └── Welcome_Guide_Plan.md       ← Welcome guide implementation requirements
 │
 └── venv\                           ← Python virtual environment
 ```
@@ -78,7 +84,25 @@ uvicorn app.api:app --reload
 API runs at `http://localhost:8000` (Swagger docs at `/docs`).
 
 **Step 2 — Open the frontend:**
-Double-click `frontend\portfolio-simulator.html` in your browser. It connects to the API on localhost:8000.
+Navigate to `http://localhost:8000/portfolio-simulator.html` (served by the API).
+
+---
+
+## Authentication & Welcome Guide
+
+The simulator requires Auth0 authentication. On first visit:
+
+1. A **lock screen** overlay blocks the simulator
+2. Click **"Log In with Auth0"** to authenticate (email/password or social login)
+3. After login, a **Welcome Guide** overlay appears with a quick-start summary:
+   - What the simulator does
+   - How to use it (4 steps)
+   - What results you'll see
+   - Key things to know
+4. Click **"Got It — Let's Start"** to proceed to the simulator
+5. Header shows your email and a **"Log Out"** button
+
+Auth0 configuration is stored in `backend/.env` (AUTH0_DOMAIN, AUTH0_CLIENT_ID). Auth0 Dashboard must have `http://localhost:8000/portfolio-simulator.html` in Allowed Callback URLs, Allowed Logout URLs, and `http://localhost:8000` in Allowed Web Origins.
 
 ---
 
@@ -167,6 +191,8 @@ venv\Scripts\grip tools\Spreadsheet_Guide.md
 - **Multi-select ticker dropdown** — checkbox-based selection with search filtering
 - **Proportional redistribution** — when a ticker has no data for a month, its allocation flows to available tickers
 - **Excel test spreadsheet** — generate a multi-sheet workbook with real data and Excel formulas to verify every calculation
+- **Auth0 authentication** — login required before accessing the simulator; supports email/password and social login providers
+- **Welcome guide** — after login, a concise training overlay explains the simulator's purpose, how to use it, and what results mean
 
 ---
 

@@ -1,7 +1,12 @@
 """Auth0 JWT verification for FastAPI.
 
 Provides a `get_current_user` dependency that extracts and verifies
-the Bearer token from the Authorization header against Auth0's JWKS.
+the Bearer token from the Authorization header.
+
+Two modes:
+  - If AUTH0_AUDIENCE is set: verifies JWT locally via JWKS (fast)
+  - If AUTH0_AUDIENCE is empty: validates via Auth0 /userinfo endpoint
+    (Auth0 returns opaque tokens when no audience is specified)
 """
 
 import json
@@ -26,11 +31,7 @@ class AuthError(Exception):
 
 @lru_cache(maxsize=1)
 def get_jwks() -> dict:
-    """Fetch and cache Auth0's JWKS (JSON Web Key Set).
-
-    Cached for the lifetime of the process. If Auth0 rotates keys,
-    restart the server or call get_jwks.cache_clear().
-    """
+    """Fetch and cache Auth0's JWKS (JSON Web Key Set)."""
     jwks_url = f"https://{AUTH0_DOMAIN}/.well-known/jwks.json"
     logger.info("Fetching JWKS from %s", jwks_url)
     with urllib.request.urlopen(jwks_url, timeout=10) as response:
@@ -45,11 +46,8 @@ def get_token_from_header(request: Request) -> str:
     return auth[7:]
 
 
-def verify_token(token: str) -> dict:
-    """Verify a JWT token against Auth0's JWKS.
-
-    Returns the decoded token payload containing 'sub', 'email', etc.
-    """
+def verify_token_jwt(token: str) -> dict:
+    """Verify a JWT token against Auth0's JWKS (when audience is set)."""
     try:
         jwks = get_jwks()
         unverified_header = jwt.get_unverified_header(token)
@@ -58,7 +56,6 @@ def verify_token(token: str) -> dict:
     except Exception as e:
         raise AuthError(f"Token header error: {e}")
 
-    # Find the matching RSA key
     rsa_key = {}
     for key in jwks.get("keys", []):
         if key["kid"] == unverified_header.get("kid"):
@@ -66,7 +63,6 @@ def verify_token(token: str) -> dict:
             break
 
     if not rsa_key:
-        # Key not found — might be rotated. Clear cache and retry once.
         get_jwks.cache_clear()
         try:
             jwks = get_jwks()
@@ -96,13 +92,43 @@ def verify_token(token: str) -> dict:
         raise AuthError(f"Token validation failed: {e}")
 
 
+def verify_token_userinfo(token: str) -> dict:
+    """Verify an opaque token by calling Auth0's /userinfo endpoint.
+
+    Used when no audience is configured (Auth0 issues opaque tokens).
+    """
+    userinfo_url = f"https://{AUTH0_DOMAIN}/userinfo"
+    req = urllib.request.Request(
+        userinfo_url,
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=10) as response:
+            data = json.loads(response.read())
+            return data  # contains 'sub', 'email', 'name', etc.
+    except urllib.error.HTTPError as e:
+        if e.code == 401:
+            raise AuthError("Token is invalid or expired")
+        raise AuthError(f"Auth0 userinfo error: {e.code}")
+    except Exception as e:
+        raise AuthError(f"Failed to verify token: {e}")
+
+
+def verify_token(token: str) -> dict:
+    """Verify token using the appropriate method."""
+    if AUTH0_AUDIENCE:
+        return verify_token_jwt(token)
+    else:
+        return verify_token_userinfo(token)
+
+
 def get_current_user(request: Request) -> dict:
-    """FastAPI dependency: extract and verify JWT, return user payload.
+    """FastAPI dependency: extract and verify token, return user payload.
 
     Usage in route handlers:
         user: dict = Depends(get_current_user)
 
-    The returned dict contains Auth0 token claims:
+    The returned dict contains Auth0 claims:
         - 'sub': stable user ID (e.g. 'auth0|abc123')
         - 'email': user's email (if scope includes 'email')
         - 'name': display name (if scope includes 'profile')

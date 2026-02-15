@@ -27,7 +27,33 @@
 
 ---
 
-## Database Schema (5 Tables)
+## Frontend User Flow
+
+```
+User opens http://localhost:8000/portfolio-simulator.html
+  → Auth overlay shown (z-index: 1000, blocks simulator)
+  → User clicks "Log In with Auth0"
+  → Redirected to Auth0 hosted login page (email/password or Google)
+  → Auth0 redirects back with authorization code
+  → initAuth() handles callback, gets user profile
+  → onLoginSuccess():
+      - Hide auth overlay
+      - Show user email + Log Out button in header
+      - Log login event to user_logins table via POST /api/auth/login-event
+      - Show Welcome Guide overlay (z-index: 500)
+  → User reads 4-section guide (what it does, how to use, what you'll see, tips)
+  → Clicks "Got It — Let's Start"
+  → dismissWelcomeGuide():
+      - Hide welcome overlay
+      - loadTickers() → populate dropdown → simulator ready
+  → User configures simulation and clicks "Run Simulation"
+```
+
+**Overlay z-index layering:** Auth (1000) > Welcome Guide (500) > Result Modals (200)
+
+---
+
+## Database Schema (6 Tables)
 
 **tickers** — Master list of ETF symbols (XLK, XLV, XLE, etc.)
 Each ticker has: symbol, name, active flag, created/updated timestamps.
@@ -39,6 +65,8 @@ Each ticker has: symbol, name, active flag, created/updated timestamps.
 **monthly_mm_rates** — Federal funds rate per month from FRED. Standalone table, no FK.
 
 **annual_mm_rates** — Yearly average of monthly rates. Computed from monthly_mm_rates during load.
+
+**user_logins** — One row per login event. Stores auth0_user_id, email, name, login_time, ip_address, user_agent. Used for audit trail and future per-user simulation storage.
 
 ---
 
@@ -53,7 +81,8 @@ Each ticker has: symbol, name, active flag, created/updated timestamps.
 | `fetcher.py` | Pulls monthly OHLCV prices and dividend history from Yahoo Finance. Handles full (20 yr) and incremental (3 month) modes |
 | `fred_fetcher.py` | Pulls federal funds rate from FRED public CSV endpoint. No API key needed. Computes annual averages |
 | `loader.py` | Takes fetcher output DataFrames and upserts into SQL Server. Handles skip-if-exists (full) and update-if-exists (incremental) |
-| `api.py` | FastAPI app with all REST endpoints, CORS, error handling, request IDs, input validation |
+| `auth.py` | Auth0 token verification (opaque tokens via /userinfo endpoint), `get_current_user` FastAPI dependency |
+| `api.py` | FastAPI app with all REST endpoints, auth protection, static file serving, CORS, error handling, request IDs |
 | `run_batch.py` | CLI entry point: `python run_batch.py full` or `incremental` — orchestrates fetcher → loader for Yahoo data |
 | `run_fred_batch.py` | CLI entry point: same pattern for FRED data |
 | `test_connection.py` | Quick script to verify DB connectivity and create tables |
@@ -100,8 +129,9 @@ All endpoints live in `api.py`. Request flow:
 
 ```
 HTTP Request
-  → CORS middleware (allows all origins for dev)
+  → CORS middleware (localhost:8000)
   → Request ID middleware (generates UUID, adds X-Request-ID header)
+  → Auth0 token verification (Bearer token → get_current_user dependency)
   → Pydantic validation (symbol format, year/month ranges)
   → Route handler → SQLAlchemy query → JSON response
   → Global error handler catches exceptions → structured error JSON
@@ -109,11 +139,15 @@ HTTP Request
 
 Key endpoints the frontend uses:
 
-| Endpoint | Frontend Usage |
-|----------|---------------|
-| `GET /api/tickers/active` | Populates ticker dropdown on page load |
-| `GET /api/simulation-data/{symbol}?start_year&start_month&end_year&end_month` | Returns monthly prices + dividends merged for a ticker. Called once per allocated ticker when simulation runs |
-| `GET /api/mm-rates/monthly?start_year&end_year` | Returns monthly federal funds rates. Used to compute money market interest on accumulated dividends |
+| Endpoint | Auth | Frontend Usage |
+|----------|------|---------------|
+| `GET /api/auth/config` | No | Returns Auth0 domain + clientId for SPA SDK initialization |
+| `POST /api/auth/login-event` | Yes | Logs login to user_logins table (auth0_user_id, email, IP, user agent) |
+| `GET /api/tickers/active` | Yes | Populates ticker dropdown on page load |
+| `GET /api/simulation-data/{symbol}?start_year&start_month&end_year&end_month` | Yes | Returns monthly prices + dividends merged for a ticker |
+| `GET /api/mm-rates/monthly?start_year&end_year` | Yes | Returns monthly federal funds rates for MM interest calculation |
+
+All data endpoints require a valid Auth0 Bearer token. The frontend's `authFetch()` wrapper injects the token automatically. Static files (HTML, CSS, JS) are served via FastAPI's `StaticFiles` mount at `/`.
 
 Write endpoints (POST/PUT/DELETE) are disabled via `ENABLE_WRITE_API = False` in config.
 
@@ -164,3 +198,7 @@ When user clicks "Run Simulation", the browser executes this flow:
 - **Split frontend**: HTML, CSS, and JS in separate files — no build tools, no Node.js — just open the HTML file in a browser.
 - **Excel verification tool**: A Python script generates a multi-sheet workbook that mirrors the JS simulation using Excel formulas. Users edit a plain-text config file, re-run the script, and open the spreadsheet to trace every calculation step. The spreadsheet reads real data from the same SQL Server DB used by the API.
 - **Clickable calculation modals**: Both the monthly breakdown table and annual return table have clickable cells that show full calculation breakdowns (numerator/denominator for returns, per-ticker share purchases, dividend sources, etc.).
+- **Auth0 authentication**: All API endpoints (except `/api/health` and `/api/auth/config`) require a valid Bearer token. Frontend injects the token via `authFetch()` wrapper. Auth0 SPA SDK handles login/logout with PKCE flow (no client secret in browser). Login events logged to `user_logins` table for audit and future per-user features.
+- **Opaque token verification**: With no Auth0 audience configured, Auth0 issues opaque tokens instead of JWTs. Backend validates these by calling Auth0's `/userinfo` endpoint. Simpler setup — no Custom API registration needed in Auth0 Dashboard.
+- **Welcome guide overlay**: Shown after login and before simulator loads. Uses the same overlay pattern as the auth screen (fixed position, backdrop blur, hidden via CSS class toggle). Content is concise — four sections with icons covering what the tool does, how to use it, what results show, and key tips. Single button dismisses the guide and triggers ticker loading.
+- **Frontend served by FastAPI**: HTML, CSS, and JS are served via FastAPI's `StaticFiles` mount. Required because Auth0 SPA SDK needs HTTP origin (not `file://`) for PKCE redirects. Access via `http://localhost:8000/portfolio-simulator.html`.
