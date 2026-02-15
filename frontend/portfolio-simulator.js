@@ -516,54 +516,139 @@ function renderTaxImpact(){
   h+='<div style="margin-top:8px;font-size:12px;color:var(--text3)">Tax rate: '+rate+'% applied to dividends in the year received and MM interest in the year earned.</div>';
 
   /* === Annual Return Table === */
-  h+='<h4 style="font-size:14px;font-weight:600;color:var(--text1);margin:24px 0 10px">Annual Portfolio Return</h4>';
-  h+='<div style="overflow-x:auto"><table><thead><tr><th style="text-align:left">Year</th><th>Invested</th><th>Dividends</th><th>MM Interest</th><th>Stock Value</th><th>Portfolio Value</th><th>After-Tax Value</th><th>Pre-Tax Return</th><th>After-Tax Return</th></tr></thead><tbody>';
-
+  /* Build row data first so we can sort */
   let prevEndPv=0;
+  const returnRows=[];
   yrs.forEach(y=>{
     const d=years[y];
     const divTax=d.divs*rate/100;
     const intTax=d.mmInt*rate/100;
-    /* End-of-year values */
     const stockVal=d.endPv;
     const portfolioVal=stockVal+d.endDivBal;
-    const afterTaxDivBal=d.endDivBal-(totalDivTax+totalIntTax); /* simplified: use cumulative tax effect */
-    /* After-tax value: stock value + divBal - taxes paid this year only */
     const yearTax=divTax+intTax;
-    const afterTaxVal=portfolioVal-yearTax;
-
-    /* Avg invested capital for this year's new contributions: monthly DCA average ~0.542 of year */
     const avgNewCapital=d.invested*0.542;
-    /* Base = beginning stock value + avg new capital this year */
     const baseCapital=prevEndPv+avgNewCapital;
-
-    /* One-year gain */
-    const stockGain=stockVal-prevEndPv-d.invested; /* price appreciation only */
+    const stockGain=stockVal-prevEndPv-d.invested;
     const totalGain=stockGain+d.divs+d.mmInt;
     const afterTaxGain=stockGain+(d.divs-divTax)+(d.mmInt-intTax);
-
     const preTaxRet=baseCapital>0?(totalGain/baseCapital*100):0;
     const afterTaxRet=baseCapital>0?(afterTaxGain/baseCapital*100):0;
-
-    const retColor=preTaxRet>=0?'var(--accent)':'var(--red)';
-    const atRetColor=afterTaxRet>=0?'var(--accent)':'var(--red)';
-
-    h+='<tr><td style="color:var(--text2)">'+y+'</td>';
-    h+='<td>$'+fmt(d.invested)+'</td>';
-    h+='<td style="color:var(--gold)">$'+fmt(d.divs)+'</td>';
-    h+='<td style="color:var(--accent)">$'+fmt(d.mmInt)+'</td>';
-    h+='<td>$'+fmt(stockVal)+'</td>';
-    h+='<td style="font-weight:600">$'+fmt(portfolioVal)+'</td>';
-    h+='<td style="color:var(--accent)">$'+fmt(portfolioVal-yearTax)+'</td>';
-    h+='<td style="color:'+retColor+';font-weight:600">'+(preTaxRet>=0?'+':'')+preTaxRet.toFixed(1)+'%</td>';
-    h+='<td style="color:'+atRetColor+';font-weight:600">'+(afterTaxRet>=0?'+':'')+afterTaxRet.toFixed(1)+'%</td>';
-    h+='</tr>';
-
+    returnRows.push({year:y,invested:d.invested,divs:d.divs,mmInt:d.mmInt,stockVal,portfolioVal,yearTax,avgNewCapital,baseCapital,stockGain,totalGain,afterTaxGain,preTaxRet,afterTaxRet,prevEndPv,divTax,intTax});
     prevEndPv=stockVal;
   });
-  h+='</tbody></table></div>';
-  h+='<div style="margin-top:8px;font-size:12px;color:var(--text3)">Return = (stock gain + dividends + MM interest) ÷ (beginning stock value + avg invested capital). Avg invested capital ≈ year\'s contributions × 0.542 (DCA mid-year approximation).</div>';
+  /* Store for sort toggling */
+  window._returnRows=returnRows;
+  window._returnSortAsc=false; /* newest first by default */
+
+  h+=buildReturnTable(returnRows,false);
   el.innerHTML=h;
+}
+
+/* Build Annual Return table HTML from row data */
+function buildReturnTable(rows,sortAsc){
+  const display=sortAsc?[...rows]:[...rows].reverse();
+  const arrow=sortAsc?'▲':'▼';
+  let h='<h4 style="font-size:14px;font-weight:600;color:var(--text1);margin:24px 0 10px">Annual Portfolio Return</h4>';
+  h+='<div style="overflow-x:auto"><table><thead><tr><th style="text-align:left;cursor:pointer" onclick="toggleReturnSort()" id="thRetYear">Year '+arrow+'</th><th>Invested</th><th>Dividends</th><th>MM Interest</th><th>Stock Value<span class="col-info">*<span class="col-tooltip">Shares held × December closing price</span></span></th><th>Portfolio Value<span class="col-info">*<span class="col-tooltip">Stock Value + accumulated dividend balance (dividends + MM interest)</span></span></th><th>After-Tax Value<span class="col-info">*<span class="col-tooltip">Portfolio Value − taxes on this year\'s dividends and MM interest</span></span></th><th>Pre-Tax Return<span class="col-info">*<span class="col-tooltip">Return = (stock gain + dividends + MM interest) ÷ (beginning stock value + avg invested capital)</span></span></th><th>After-Tax Return<span class="col-info">*<span class="col-tooltip">Return = (stock gain + after-tax dividends + after-tax MM interest) ÷ (beginning stock value + avg invested capital)</span></span></th></tr></thead><tbody>';
+
+  display.forEach(r=>{
+    const retColor=r.preTaxRet>=0?'var(--accent)':'var(--red)';
+    const atRetColor=r.afterTaxRet>=0?'var(--accent)':'var(--red)';
+    h+='<tr><td style="color:var(--text2)">'+r.year+'</td>';
+    h+='<td>$'+fmt(r.invested)+'</td>';
+    h+='<td style="color:var(--gold)">$'+fmt(r.divs)+'</td>';
+    h+='<td style="color:var(--accent)">$'+fmt(r.mmInt)+'</td>';
+    h+='<td class="clickable-cell" onclick="showReturnCalc(\''+r.year+'\',\'stockVal\')" title="Click to see calculation">$'+fmt(r.stockVal)+'</td>';
+    h+='<td class="clickable-cell" onclick="showReturnCalc(\''+r.year+'\',\'portfolioVal\')" style="font-weight:600" title="Click to see calculation">$'+fmt(r.portfolioVal)+'</td>';
+    h+='<td class="clickable-cell" onclick="showReturnCalc(\''+r.year+'\',\'afterTax\')" style="color:var(--accent)" title="Click to see calculation">$'+fmt(r.portfolioVal-r.yearTax)+'</td>';
+    h+='<td class="clickable-cell" onclick="showReturnCalc(\''+r.year+'\',\'preTaxRet\')" style="color:'+retColor+';font-weight:600" title="Click to see calculation">'+(r.preTaxRet>=0?'+':'')+r.preTaxRet.toFixed(1)+'%</td>';
+    h+='<td class="clickable-cell" onclick="showReturnCalc(\''+r.year+'\',\'afterTaxRet\')" style="color:'+atRetColor+';font-weight:600" title="Click to see calculation">'+(r.afterTaxRet>=0?'+':'')+r.afterTaxRet.toFixed(1)+'%</td>';
+    h+='</tr>';
+  });
+  h+='</tbody></table></div>';
+  h+='<div style="margin-top:8px;font-size:12px;color:var(--text3)">Click any highlighted cell for calculation details. Avg invested capital ≈ year\'s contributions × 0.542 (DCA mid-year approximation).</div>';
+  return h;
+}
+
+/* Toggle annual return table sort order */
+function toggleReturnSort(){
+  window._returnSortAsc=!window._returnSortAsc;
+  const container=$('taxBody');if(!container||!window._returnRows)return;
+  /* Find and replace just the annual return section */
+  const newHtml=buildReturnTable(window._returnRows,window._returnSortAsc);
+  /* The annual return section starts after the tax footnote div */
+  const parts=container.innerHTML.split('<h4 style="font-size:14px;font-weight:600;color:var(--text1);margin:24px 0 10px">Annual Portfolio Return</h4>');
+  if(parts.length===2){
+    container.innerHTML=parts[0]+newHtml;
+  }
+}
+
+/* Show calculation detail modal for annual return table cells */
+function showReturnCalc(year,field){
+  if(!window._returnRows)return;
+  const r=window._returnRows.find(x=>x.year===year);
+  if(!r)return;
+  let h='';
+  const fmtV=n=>'$'+fmt(n);
+  const pctV=n=>(n>=0?'+':'')+n.toFixed(2)+'%';
+
+  if(field==='stockVal'){
+    $('modalTitle').textContent=year+' — Stock Value';
+    $('modalSub').textContent='End-of-year holdings value';
+    h+='<div class="detail-row"><div><div class="d-sym">Formula</div><div class="d-name">Total shares held × December closing price</div></div></div>';
+    h+='<div class="detail-total"><div class="dt-label">Stock Value</div><div class="dt-val" style="color:var(--accent)">'+fmtV(r.stockVal)+'</div></div>';
+  }
+
+  else if(field==='portfolioVal'){
+    $('modalTitle').textContent=year+' — Portfolio Value';
+    $('modalSub').textContent='Stock value + accumulated dividend balance';
+    h+='<div class="detail-row"><div><div class="d-sym" style="color:var(--accent)">Stock Value</div><div class="d-name">Shares held × December close price</div></div><div class="d-nums"><div class="d-val">'+fmtV(r.stockVal)+'</div></div></div>';
+    h+='<div class="detail-row"><div><div class="d-sym" style="color:var(--gold)">Dividend Balance</div><div class="d-name">Accumulated dividends + MM interest earned on cash</div></div><div class="d-nums"><div class="d-val" style="color:var(--gold)">'+fmtV(r.portfolioVal-r.stockVal)+'</div></div></div>';
+    h+='<div class="detail-total" style="background:var(--accent-dim);border-color:rgba(16,185,129,.25)"><div><div class="dt-label" style="color:var(--accent)">Portfolio Value</div><div style="font-size:11px;color:var(--text2);margin-top:1px">'+fmtV(r.stockVal)+' + '+fmtV(r.portfolioVal-r.stockVal)+'</div></div><div class="dt-val" style="color:var(--accent)">'+fmtV(r.portfolioVal)+'</div></div>';
+  }
+
+  else if(field==='afterTax'){
+    const afterTaxVal=r.portfolioVal-r.yearTax;
+    $('modalTitle').textContent=year+' — After-Tax Value';
+    $('modalSub').textContent='Portfolio value minus taxes on this year\'s income';
+    h+='<div class="detail-row"><div><div class="d-sym" style="color:var(--accent)">Portfolio Value</div><div class="d-name">Stock value + dividend balance</div></div><div class="d-nums"><div class="d-val">'+fmtV(r.portfolioVal)+'</div></div></div>';
+    h+='<div class="detail-row"><div><div class="d-sym" style="color:var(--red)">Tax on Dividends</div><div class="d-name">'+fmtV(r.divs)+' × '+((r.divTax/Math.max(r.divs,0.01))*100).toFixed(0)+'%</div></div><div class="d-nums"><div class="d-val" style="color:var(--red)">−'+fmtV(r.divTax)+'</div></div></div>';
+    h+='<div class="detail-row"><div><div class="d-sym" style="color:var(--red)">Tax on MM Interest</div><div class="d-name">'+fmtV(r.mmInt)+' × '+((r.intTax/Math.max(r.mmInt,0.01))*100).toFixed(0)+'%</div></div><div class="d-nums"><div class="d-val" style="color:var(--red)">−'+fmtV(r.intTax)+'</div></div></div>';
+    h+='<div class="detail-total"><div><div class="dt-label">After-Tax Value</div><div style="font-size:11px;color:var(--text2);margin-top:1px">'+fmtV(r.portfolioVal)+' − '+fmtV(r.yearTax)+' taxes</div></div><div class="dt-val" style="color:var(--accent)">'+fmtV(afterTaxVal)+'</div></div>';
+  }
+
+  else if(field==='preTaxRet'){
+    $('modalTitle').textContent=year+' — Pre-Tax Return';
+    $('modalSub').textContent='Total gain ÷ capital base';
+    h+='<div class="section-label">Numerator (Total Gain)</div>';
+    h+='<div class="detail-row"><div><div class="d-sym">Stock Gain</div><div class="d-name">End stock value − beginning stock value − new investment</div></div><div class="d-nums"><div class="d-val" style="color:'+(r.stockGain>=0?'var(--accent)':'var(--red)')+'">'+fmtV(r.stockGain)+'</div><div class="d-sub">'+fmtV(r.stockVal)+' − '+fmtV(r.prevEndPv)+' − '+fmtV(r.invested)+'</div></div></div>';
+    h+='<div class="detail-row"><div><div class="d-sym" style="color:var(--gold)">Dividends</div><div class="d-name">Cash dividends received this year</div></div><div class="d-nums"><div class="d-val" style="color:var(--gold)">'+fmtV(r.divs)+'</div></div></div>';
+    h+='<div class="detail-row"><div><div class="d-sym" style="color:var(--accent)">MM Interest</div><div class="d-name">Money market interest earned this year</div></div><div class="d-nums"><div class="d-val" style="color:var(--accent)">'+fmtV(r.mmInt)+'</div></div></div>';
+    h+='<div class="detail-total" style="background:var(--accent-dim);border-color:rgba(16,185,129,.25)"><div class="dt-label" style="color:var(--accent)">Total Gain</div><div class="dt-val" style="color:var(--accent)">'+fmtV(r.totalGain)+'</div></div>';
+    h+='<div class="section-label" style="margin-top:16px">Denominator (Capital Base)</div>';
+    h+='<div class="detail-row"><div><div class="d-sym">Beginning Stock Value</div><div class="d-name">Prior year\'s ending stock value</div></div><div class="d-nums"><div class="d-val">'+fmtV(r.prevEndPv)+'</div></div></div>';
+    h+='<div class="detail-row"><div><div class="d-sym">Avg Invested Capital</div><div class="d-name">'+fmtV(r.invested)+' × 0.542 (DCA mid-year approx)</div></div><div class="d-nums"><div class="d-val">'+fmtV(r.avgNewCapital)+'</div></div></div>';
+    h+='<div class="detail-total"><div class="dt-label">Capital Base</div><div class="dt-val">'+fmtV(r.baseCapital)+'</div></div>';
+    h+='<div style="margin-top:14px;padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:JetBrains Mono,monospace;color:var(--text2)">Pre-Tax Return = '+fmtV(r.totalGain)+' ÷ '+fmtV(r.baseCapital)+' = <span style="color:'+(r.preTaxRet>=0?'var(--accent)':'var(--red)')+';font-weight:700">'+pctV(r.preTaxRet)+'</span></div>';
+  }
+
+  else if(field==='afterTaxRet'){
+    $('modalTitle').textContent=year+' — After-Tax Return';
+    $('modalSub').textContent='After-tax gain ÷ capital base';
+    h+='<div class="section-label">Numerator (After-Tax Gain)</div>';
+    h+='<div class="detail-row"><div><div class="d-sym">Stock Gain</div><div class="d-name">Price appreciation (not taxed until sold)</div></div><div class="d-nums"><div class="d-val" style="color:'+(r.stockGain>=0?'var(--accent)':'var(--red)')+'">'+fmtV(r.stockGain)+'</div><div class="d-sub">'+fmtV(r.stockVal)+' − '+fmtV(r.prevEndPv)+' − '+fmtV(r.invested)+'</div></div></div>';
+    h+='<div class="detail-row"><div><div class="d-sym" style="color:var(--gold)">After-Tax Dividends</div><div class="d-name">'+fmtV(r.divs)+' − '+fmtV(r.divTax)+' tax</div></div><div class="d-nums"><div class="d-val" style="color:var(--gold)">'+fmtV(r.divs-r.divTax)+'</div></div></div>';
+    h+='<div class="detail-row"><div><div class="d-sym" style="color:var(--accent)">After-Tax MM Interest</div><div class="d-name">'+fmtV(r.mmInt)+' − '+fmtV(r.intTax)+' tax</div></div><div class="d-nums"><div class="d-val" style="color:var(--accent)">'+fmtV(r.mmInt-r.intTax)+'</div></div></div>';
+    h+='<div class="detail-total" style="background:var(--accent-dim);border-color:rgba(16,185,129,.25)"><div class="dt-label" style="color:var(--accent)">After-Tax Gain</div><div class="dt-val" style="color:var(--accent)">'+fmtV(r.afterTaxGain)+'</div></div>';
+    h+='<div class="section-label" style="margin-top:16px">Denominator (Capital Base)</div>';
+    h+='<div class="detail-row"><div><div class="d-sym">Beginning Stock Value</div><div class="d-name">Prior year\'s ending stock value</div></div><div class="d-nums"><div class="d-val">'+fmtV(r.prevEndPv)+'</div></div></div>';
+    h+='<div class="detail-row"><div><div class="d-sym">Avg Invested Capital</div><div class="d-name">'+fmtV(r.invested)+' × 0.542 (DCA mid-year approx)</div></div><div class="d-nums"><div class="d-val">'+fmtV(r.avgNewCapital)+'</div></div></div>';
+    h+='<div class="detail-total"><div class="dt-label">Capital Base</div><div class="dt-val">'+fmtV(r.baseCapital)+'</div></div>';
+    h+='<div style="margin-top:14px;padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:JetBrains Mono,monospace;color:var(--text2)">After-Tax Return = '+fmtV(r.afterTaxGain)+' ÷ '+fmtV(r.baseCapital)+' = <span style="color:'+(r.afterTaxRet>=0?'var(--accent)':'var(--red)')+';font-weight:700">'+pctV(r.afterTaxRet)+'</span></div>';
+  }
+
+  $('modalBody').innerHTML=h;
+  $('modalOverlay').classList.add('show');
 }
 
 renderAmts();renderYrs();updBudget();renderAlloc();
