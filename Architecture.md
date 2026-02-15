@@ -163,9 +163,9 @@ When user clicks "Run Simulation", the browser executes this flow:
 
 **3. Redistribute allocation** — For each month, checks which tickers have valid price data. If a ticker has no data (e.g., ETF didn't exist yet), its allocation percentage is redistributed proportionally among available tickers. This ensures the full monthly amount is always invested.
 
-**4. Compute month budget** — The investable amount each month is the base monthly investment plus any carryover (unspent dollars) from the prior month. On the first month, carryover is zero.
+**4. Compute month budget** — The investable amount each month is the base monthly investment (flat — no aggregate carryover).
 
-**5. Buy shares (round lot)** — For each ticker with data, calculates: `allocated = month_budget × effective_%`, then `shares = floor(allocated / high_price)` (integer shares only). Actual cost = shares × high price. The leftover (allocated − spent) from each ticker is summed. After all tickers are processed, the total leftover becomes next month's carryover at the aggregate level (not per-ticker).
+**5. Accumulate-then-buy (round lot)** — Each ticker maintains its own accumulation bucket. For each ticker with data: `allocated = month_budget × effective_%`, then the allocated amount is added to that ticker's bucket. `shares = floor(bucket / high_price)` (integer shares only). Actual cost = shares × high price. The remainder stays in that ticker's bucket for next month. No money crosses between tickers — each ticker's unspent dollars are earmarked for that ticker only.
 
 **6. Calculate dividends** — For each dividend payment in the month, calculates: `dividend_cash = dividend_per_share × total_shares_held`. Accumulated as cash (not reinvested into equities).
 
@@ -175,7 +175,7 @@ When user clicks "Run Simulation", the browser executes this flow:
 
 **9. Value portfolio** — At month end: `portfolio_value = Σ (shares_held × close_price)` across all tickers.
 
-**10. Store snapshots** — Each month's per-ticker detail (integer shares bought, actual $ spent, running totals, dividends, effective allocation, dividend balance with MM interest, MM-only balance) is stored for the drill-down modals.
+**10. Store snapshots** — Each month's per-ticker detail (integer shares bought, actual $ spent, accumulation bucket balance, running totals, dividends, effective allocation, dividend balance with MM interest, MM-only balance) is stored for the drill-down modals.
 
 **11. Render results** — Summary cards (6 tiles: Total Invested, Equity Value, Dividends Earned, Cash Accrual, Portfolio Balance, MMF Value), two interactive charts (Growth Over Time with portfolio/invested/money market lines, and Dividend Earned), clickable monthly breakdown table (with Total Invested running total, Total Shares, Cash Accrual, Equity Value, and MMF Value columns), tax impact section, and annual return table. Charts show tooltips on hover with crosshair tracking.
 
@@ -188,7 +188,7 @@ When user clicks "Run Simulation", the browser executes this flow:
 ## Key Design Decisions
 
 - **Buy at monthly high**: Conservative — simulates worst-case dollar-cost averaging entry each month.
-- **Round-lot (integer) share buying**: Only whole shares are purchased: `floor(allocated / high_price)`. No fractional shares. Unspent dollars from all tickers pool together and carry to the next month's budget at the aggregate level (not per-ticker). Example: $100 budget, $33/share → buy 3 shares ($99 spent), $1 leftover → next month gets $101.
+- **Round-lot (integer) share buying with per-ticker accumulation**: Only whole shares are purchased: `floor(bucket / high_price)`. No fractional shares. Each ticker keeps its own accumulation bucket — unspent dollars stay earmarked for that ticker until enough accumulates to buy a whole share. Example: $100/month budget, XLRE at 10% = $10/month, share price $40 → accumulates $10, $20, $30, $40 → buys 1 share in month 4. This preserves the user's allocation intent even at low dollar amounts.
 - **Prior year-end cutoff**: Simulation runs from January of (current year − N) through December of the prior complete calendar year. This avoids partial-year data for the current year.
 - **Dividends as cash**: Not reinvested into equities — tracked separately so user sees true cash generation.
 - **Dividends earn money market interest**: Accumulated dividends are modeled as invested in a money market fund at the federal funds rate (monthly compounding). The "Cash Accrual" column and summary tile show the impact.

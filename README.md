@@ -179,7 +179,7 @@ venv\Scripts\grip tools\Spreadsheet_Guide.md
 
 - **Dollar-cost averaging simulation** — invest a fixed monthly amount across multiple securities with custom allocation percentages
 - **Worst-case entry pricing** — buys at the monthly high price each month (conservative backtesting)
-- **Round-lot (integer) share buying** — buys whole shares only: floor(budget ÷ price). Unspent cents carry to next month at aggregate level
+- **Round-lot (integer) share buying** — buys whole shares only: floor(bucket ÷ price). Each ticker accumulates unspent dollars in its own bucket until enough to buy a share
 - **Prior year-end cutoff** — simulation runs through December of the last complete calendar year (never into the current partial year)
 - **Dividend tracking** — cash dividends accumulated separately (not reinvested into equities)
 - **Money market interest** — accumulated dividends earn interest at the federal funds rate (monthly compounding)

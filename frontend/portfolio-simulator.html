@@ -49,7 +49,8 @@ window.createAuth0Client = window.auth0 ? window.auth0.createAuth0Client : null;
           <ul class="welcome-list">
             <li>Simulates investing a <strong>fixed monthly amount</strong> across ETFs, stocks, and funds</li>
             <li>Uses <strong>historical prices</strong> from Yahoo Finance — not projections</li>
-            <li>Buys at the <strong>monthly high price</strong> (worst-case entry point)</li>
+            <li>Buys <strong>whole shares</strong> at the monthly high price (worst-case entry)</li>
+            <li>If allocation can't buy a share, it <strong>accumulates</strong> in that ticker's bucket until it can</li>
             <li>Tracks dividends as <strong>cash</strong> — not reinvested into equities</li>
           </ul>
         </div>
@@ -132,6 +133,6 @@ window.createAuth0Client = window.auth0 ? window.auth0.createAuth0Client : null;
 <div id="modalOverlay" class="modal-overlay" onclick="if(event.target===this)closeModal()">
   <div class="modal"><h3 class="space"><span id="modalTitle">Portfolio Breakdown</span><button class="close-btn" onclick="closeModal()">✕</button></h3><div id="modalSub" class="modal-sub"></div><div id="modalBody"></div></div>
 </div>
-<script src="portfolio-simulator.js?v=9"></script>
+<script src="portfolio-simulator.js?v=10"></script>
 </body>
 </html>

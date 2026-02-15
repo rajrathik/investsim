@@ -86,9 +86,9 @@ async function loadTickers(){
 
 /* Column info tooltips — shown on hover of the * icon in table headers */
 const COL_INFO={
-  invested:'Actual $ spent this month (integer shares × high price). Unspent remainder carries to next month.',
+  invested:'Actual $ spent this month (integer shares × high price). Unspent remainder stays in each ticker\'s bucket until enough to buy a share.',
   totalinvested:'Running total of all monthly investments to date.',
-  shares:'Whole shares purchased this month = floor($ allocated ÷ monthly high price). Remainder carries forward.',
+  shares:'Whole shares purchased this month = floor(accumulated $ ÷ monthly high price). Each ticker accumulates until it can afford a share.',
   totalshares:'Running total of all shares held across all tickers.',
   dividends:'Cash dividends received based on shares held × dividend per share. Not reinvested.',
   divvalue:'Accumulated dividends and money market interest on accrued cash.',
@@ -190,7 +190,10 @@ function renderMonthModal(idx){
     if(d.boughtThisMonth>0){
       let note='';
       if(d.effectivePct!==d.origPct)note='<div class="redist-note">Redistributed: '+d.origPct+'% → '+d.effectivePct.toFixed(1)+'% effective</div>';
-      h+='<div class="detail-row"><div><div class="d-sym">'+s+'</div><div class="d-name">'+(t?.name||'')+'</div></div><div class="d-nums"><div class="d-val">+'+d.boughtThisMonth.toLocaleString()+' shares</div><div class="d-sub">$'+fmt(d.investedThisMonth)+' invested at $'+fmt(d.buyPrice)+' high</div>'+note+'</div></div>'
+      const accumNote=d.accumBal>0?'<div class="d-sub2" style="color:var(--text3)">$'+fmt(d.accumBal)+' remaining in bucket</div>':'';
+      h+='<div class="detail-row"><div><div class="d-sym">'+s+'</div><div class="d-name">'+(t?.name||'')+'</div></div><div class="d-nums"><div class="d-val">+'+d.boughtThisMonth.toLocaleString()+' shares</div><div class="d-sub">$'+fmt(d.investedThisMonth)+' invested at $'+fmt(d.buyPrice)+' high</div>'+note+accumNote+'</div></div>'
+    } else if(d.origPct>0&&d.effectivePct>0){
+      h+='<div class="detail-row" style="opacity:.7"><div><div class="d-sym">'+s+'</div><div class="d-name">'+(t?.name||'')+'</div></div><div class="d-nums"><div class="d-val" style="color:var(--text3)">Accumulating</div><div class="d-sub">$'+fmt(d.accumBal)+' saved — waiting for enough to buy a share</div></div></div>'
     } else if(d.origPct>0){
       h+='<div class="detail-row" style="opacity:.5"><div><div class="d-sym">'+s+'</div><div class="d-name">'+(t?.name||'')+'</div></div><div class="d-nums"><div class="d-val" style="color:var(--text3)">No data</div><div class="d-sub">Allocation redistributed to other tickers</div></div></div>'
     }
@@ -217,12 +220,15 @@ function renderContextModal(idx,context){
 
   if(context==='invested'){
     $('modalTitle').textContent=monthLabel+' — Investment Split';
-    $('modalSub').textContent='How $'+fmt(bk.invested)+' was allocated across tickers';
+    $('modalSub').textContent='How $'+fmt(bk.invested)+' was spent across tickers';
     let totalInv=0;
     syms.forEach(s=>{const d=snap.tickers[s],t=getTk(s);
       if(d.investedThisMonth>0){totalInv+=d.investedThisMonth;
         let note='';if(d.effectivePct!==d.origPct)note='<div class="redist-note" style="font-size:10px;padding:3px 8px;margin-top:1px">'+d.origPct+'% → '+d.effectivePct.toFixed(1)+'%</div>';
-        h+='<div class="detail-row"><div><div class="d-sym">'+s+'</div><div class="d-name">'+(t?.name||'')+'</div></div><div class="d-nums"><div class="d-val">$'+fmt(d.investedThisMonth)+'</div><div class="d-sub">at $'+fmt(d.buyPrice)+' high</div>'+note+'</div></div>'}
+        const accumNote=d.accumBal>0?'<div class="d-sub2" style="color:var(--text3)">$'+fmt(d.accumBal)+' remaining in bucket</div>':'';
+        h+='<div class="detail-row"><div><div class="d-sym">'+s+'</div><div class="d-name">'+(t?.name||'')+'</div></div><div class="d-nums"><div class="d-val">$'+fmt(d.investedThisMonth)+'</div><div class="d-sub">at $'+fmt(d.buyPrice)+' high</div>'+note+accumNote+'</div></div>'}
+      else if(d.origPct>0&&d.effectivePct>0){
+        h+='<div class="detail-row" style="opacity:.7"><div><div class="d-sym">'+s+'</div><div class="d-name">'+(t?.name||'')+'</div></div><div class="d-nums"><div class="d-val" style="color:var(--text3);font-size:13px">Accumulating</div><div class="d-sub">$'+fmt(d.accumBal)+' in bucket</div></div></div>'}
       else if(d.origPct>0){h+='<div class="detail-row" style="opacity:.4"><div><div class="d-sym">'+s+'</div><div class="d-name">'+(t?.name||'')+'</div></div><div class="d-nums"><div class="d-val" style="color:var(--text3);font-size:13px">No data</div></div></div>'}
     });
     h+='<div class="detail-total"><div class="dt-label">Total Invested</div><div class="dt-val">$'+fmt(totalInv)+'</div></div>';
@@ -230,11 +236,14 @@ function renderContextModal(idx,context){
 
   else if(context==='shares'){
     $('modalTitle').textContent=monthLabel+' — Shares Purchased';
-    $('modalSub').textContent='New shares acquired this month';
+    $('modalSub').textContent='New shares acquired this month (per-ticker accumulation)';
     let totalShares=0;
     syms.forEach(s=>{const d=snap.tickers[s],t=getTk(s);
       if(d.boughtThisMonth>0){totalShares+=d.boughtThisMonth;
-        h+='<div class="detail-row"><div><div class="d-sym">'+s+'</div><div class="d-name">'+(t?.name||'')+'</div></div><div class="d-nums"><div class="d-val">+'+d.boughtThisMonth.toLocaleString()+'</div><div class="d-sub">$'+fmt(d.investedThisMonth)+' ÷ $'+fmt(d.buyPrice)+'</div></div></div>'}
+        const accumNote=d.accumBal>0?'<div class="d-sub2" style="color:var(--text3)">$'+fmt(d.accumBal)+' remaining in bucket</div>':'';
+        h+='<div class="detail-row"><div><div class="d-sym">'+s+'</div><div class="d-name">'+(t?.name||'')+'</div></div><div class="d-nums"><div class="d-val">+'+d.boughtThisMonth.toLocaleString()+'</div><div class="d-sub">$'+fmt(d.investedThisMonth)+' ÷ $'+fmt(d.buyPrice)+'</div>'+accumNote+'</div></div>'}
+      else if(d.origPct>0&&d.effectivePct>0){
+        h+='<div class="detail-row" style="opacity:.7"><div><div class="d-sym">'+s+'</div><div class="d-name">'+(t?.name||'')+'</div></div><div class="d-nums"><div class="d-val" style="color:var(--text3);font-size:13px">Accumulating</div><div class="d-sub">$'+fmt(d.accumBal)+' in bucket</div></div></div>'}
       else if(d.origPct>0){h+='<div class="detail-row" style="opacity:.4"><div><div class="d-sym">'+s+'</div><div class="d-name">'+(t?.name||'')+'</div></div><div class="d-nums"><div class="d-val" style="color:var(--text3);font-size:13px">No data</div></div></div>'}
     });
     h+='<div class="detail-total"><div class="dt-label">Total Shares Bought</div><div class="dt-val">'+totalShares.toLocaleString()+'</div></div>';
@@ -376,9 +385,11 @@ async function simulate(){
     const sorted=[...months].sort();
     const st={};active.forEach(([s,p],i)=>{st[s]={p,sh:0,d:{},totalDivs:0};data[i].monthly_data?.forEach(m=>st[s].d[m.year+'-'+String(m.month).padStart(2,'0')]=m)});
 
-    let tInv=0,tDiv=0,divBal=0,mmOnlyBal=0,carryover=0;const bk=[];snapshots=[];
+    /* Per-ticker accumulation buckets: each ticker keeps its own unspent $ */
+    const accum={};active.forEach(([s])=>accum[s]=0);
+    let tInv=0,tDiv=0,divBal=0,mmOnlyBal=0;const bk=[];snapshots=[];
     for(const k of sorted){
-      const[y,m]=k.split('-').map(Number);let mI=0,mD=0,mS=0,mLeftover=0;
+      const[y,m]=k.split('-').map(Number);let mI=0,mD=0,mS=0;
       const monthSnap={tickers:{},redistributed:false};
 
       /* Step 0: Apply MM interest on prior dividend balance BEFORE adding new dividends */
@@ -391,9 +402,8 @@ async function simulate(){
       mmOnlyBal=Math.round((mmOnlyBal*(1+monthRate/12))*100)/100;
       mmOnlyBal=Math.round((mmOnlyBal+selAmt)*100)/100;
 
-      /* This month's investable amount = base + carryover from prior months */
-      const monthBudget=selAmt+carryover;
-      carryover=0; /* reset — any unused will be re-added below */
+      /* This month's investable amount = flat base (no aggregate carryover) */
+      const monthBudget=selAmt;
 
       // Step 1: Find which tickers have valid data this month
       const available=[],unavailable=[];
@@ -413,22 +423,22 @@ async function simulate(){
         effectiveAlloc[s]=totalAvailPct>0?(st[s].p/totalAvailPct)*100:0;
       }
 
-      // Step 3: Invest using effective allocation — round lot (integer shares only)
+      // Step 3: Invest using per-ticker accumulate-then-buy
       for(const s of available){
         const x=st[s],d=x.d[k];
         const effPct=effectiveAlloc[s];
         const allocAmt=(monthBudget*effPct)/100;
-        const bought=Math.floor(allocAmt/d.high);   /* integer shares only */
-        const spent=bought*d.high;                    /* actual $ spent */
-        const leftover=Math.round((allocAmt-spent)*100)/100; /* unspent remainder */
-        mLeftover+=leftover;
+        accum[s]=Math.round((accum[s]+allocAmt)*100)/100; /* add this month's allocation to bucket */
+        const bought=Math.floor(accum[s]/d.high);          /* integer shares from accumulated $ */
+        const spent=bought*d.high;                          /* actual $ spent */
+        accum[s]=Math.round((accum[s]-spent)*100)/100;      /* remainder stays in this ticker's bucket */
         x.sh+=bought;mI+=spent;mS+=bought;
 
         let divsThis=0;
         if(d.dividends){for(const dv of d.dividends){const da=dv.amount*x.sh;tDiv+=da;mD+=da;x.totalDivs+=da;divsThis+=da}}
 
         const closeP=d.close||0;
-        monthSnap.tickers[s]={boughtThisMonth:bought,investedThisMonth:spent,buyPrice:d.high,totalShares:x.sh,closePrice:closeP,value:x.sh*closeP,divsThisMonth:divsThis,totalDivs:x.totalDivs,origPct:x.p,effectivePct:effPct};
+        monthSnap.tickers[s]={boughtThisMonth:bought,investedThisMonth:spent,buyPrice:d.high,totalShares:x.sh,closePrice:closeP,value:x.sh*closeP,divsThisMonth:divsThis,totalDivs:x.totalDivs,origPct:x.p,effectivePct:effPct,accumBal:accum[s]};
       }
 
       // Step 4: Record unavailable tickers
@@ -437,11 +447,8 @@ async function simulate(){
         let divsThis=0;
         if(d&&d.dividends){for(const dv of d.dividends){const da=dv.amount*x.sh;tDiv+=da;mD+=da;x.totalDivs+=da;divsThis+=da}}
         const closeP=(d&&d.close)?d.close:0;
-        monthSnap.tickers[s]={boughtThisMonth:0,investedThisMonth:0,buyPrice:0,totalShares:x.sh,closePrice:closeP,value:x.sh*closeP,divsThisMonth:divsThis,totalDivs:x.totalDivs,origPct:x.p,effectivePct:0};
+        monthSnap.tickers[s]={boughtThisMonth:0,investedThisMonth:0,buyPrice:0,totalShares:x.sh,closePrice:closeP,value:x.sh*closeP,divsThisMonth:divsThis,totalDivs:x.totalDivs,origPct:x.p,effectivePct:0,accumBal:accum[s]||0};
       }
-
-      /* Carry leftover to next month (aggregate level, not per-ticker) */
-      carryover=mLeftover;
 
       /* Add this month's new dividends to the balance (after interest was applied) */
       divBal=Math.round((divBal+mD)*100)/100;

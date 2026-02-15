@@ -36,18 +36,18 @@ One row per month. This is where the math happens.
 | Prior Div Bal | Dividend cash balance carried from last month | Previous row's "Div Bal End" |
 | MM Interest | Interest earned on cash | Prior Div Bal x MM Rate / 12 |
 | Div Bal After Interest | Cash after interest | Prior Div Bal + MM Interest |
-| Month Budget | Investable amount this month | Monthly Amount + Carryover from prior month |
-| Carryover In | Leftover $ from prior month | Previous row's "Total Leftover" |
+| Month Budget | Investable amount this month | Monthly Amount (flat — no aggregate carryover) |
 | **Per ticker:** | | |
-| Allocated | Dollars earmarked for this ticker | Month Budget x Allocation % |
-| Shares | Whole shares bought (round lot) | INT(Allocated / High Price) |
+| Accum In | Unspent $ carried from last month for this ticker | Previous row's "Accum Out" |
+| Allocated | Dollars earmarked for this ticker this month | Month Budget x Allocation % |
+| Accum Bal | Total available to buy shares | Accum In + Allocated |
+| Shares | Whole shares bought (round lot) | INT(Accum Bal / High Price) |
 | Spent | Actual dollars used | Shares x High Price |
-| Leftover | Unspent from this ticker | Allocated - Spent |
+| Accum Out | Remainder stays in this ticker's bucket | Accum Bal - Spent |
 | Cum Shares | Total shares you own | Last month's Cum Shares + Shares |
 | Dividends | Cash dividend received | Cum Shares x Dividend per Share |
 | Value | What your shares are worth | Cum Shares x Close Price |
 | **Totals:** | | |
-| Total Leftover | All tickers' leftover combined | Carries to next month as Carryover In |
 | Total Shares | Running total of all shares held | Sum of all ticker Cum Shares |
 | Monthly Divs | All dividends this month | Sum of all ticker dividends |
 | Div Bal End | Cash balance end of month | Div Bal After Interest + Monthly Divs |
@@ -137,8 +137,8 @@ Pre-Tax Return     = (Stock Gain + Dividends + MM Interest) / Base Capital
 ## Key Concepts
 
 - **Buys at monthly high price** — worst case scenario (conservative)
-- **Integer shares only (round lots)** — you buy whole shares: INT(budget / price). No fractional shares.
-- **Leftover carries forward** — unspent cents from all tickers pool together and add to next month's budget
+- **Integer shares only (round lots)** — you buy whole shares: INT(accumulated / price). No fractional shares.
+- **Per-ticker accumulation** — each ticker keeps its own bucket of unspent dollars. When allocation can't buy a share, the money stays in that ticker's bucket until it accumulates enough. No money crosses between tickers.
 - **Simulation stops at prior year-end** — runs through December of last complete calendar year, never into the current partial year
 - **Dividends are NOT reinvested** — they sit in a cash account earning money market interest
 - **0.542 multiplier** — since you invest monthly, on average your money was invested for about half the year (DCA mid-year approximation)
