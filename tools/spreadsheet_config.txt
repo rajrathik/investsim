@@ -1,0 +1,18 @@
+# Portfolio Simulator — Spreadsheet Generator Config
+# Edit these values and run: python tools/generate_test_spreadsheet.py
+#
+# Lines starting with # are comments.
+# All fields are required.
+
+# Tickers and allocation percentages (must sum to 100)
+# Format: TICKER:PERCENT  separated by commas
+tickers = XLK:60, XLV:40
+
+# Monthly investment amount in dollars
+monthly_amount = 1000
+
+# Investment period in years (1-20)
+years = 3
+
+# Tax rate percentage (0-60)
+tax_rate = 30

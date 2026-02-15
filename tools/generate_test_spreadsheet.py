@@ -58,6 +58,7 @@ FMT_SHARES = '#,##0.0000'
 FMT_INT    = '#,##0'
 
 MO_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+CONFIG_FILE = os.path.join(SCRIPT_DIR, "spreadsheet_config.txt")
 
 
 def style_header_row(ws, row, max_col, fill=DARK_BG):
@@ -727,38 +728,88 @@ def build_annual_returns(wb, refs, yr_refs, tax_refs):
 # ============================================================
 # MAIN
 # ============================================================
+def read_config():
+    """Read parameters from spreadsheet_config.txt if it exists.
+
+    Returns (tickers_alloc, monthly_amt, years, tax_rate) or None if
+    the config file is missing or has errors.
+    """
+    if not os.path.exists(CONFIG_FILE):
+        return None
+
+    config = {}
+    with open(CONFIG_FILE) as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            if "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            config[key.strip().lower()] = value.strip()
+
+    required = ["tickers", "monthly_amount", "years", "tax_rate"]
+    missing = [k for k in required if k not in config]
+    if missing:
+        print(f"  Config file missing fields: {', '.join(missing)}")
+        print(f"  Falling back to interactive prompts...")
+        return None
+
+    # Parse tickers
+    tickers_alloc = []
+    for part in config["tickers"].split(","):
+        part = part.strip()
+        if ":" not in part:
+            print(f"  Invalid ticker format '{part}' in config — use TICKER:PCT")
+            return None
+        sym, pct = part.split(":", 1)
+        tickers_alloc.append((sym.strip().upper(), float(pct.strip())))
+
+    monthly_amt = float(config["monthly_amount"])
+    years = int(config["years"])
+    tax_rate = float(config["tax_rate"])
+
+    return tickers_alloc, monthly_amt, years, tax_rate
+
+
 def main():
     print("=" * 60)
     print("  Portfolio Simulator — Test Spreadsheet Generator")
     print("=" * 60)
     print()
 
-    # --- Collect inputs ---
-    raw = input("Enter tickers and allocation % (e.g. XLK:60,XLV:40): ").strip()
-    if not raw:
-        print("No input. Exiting.")
-        return
-    tickers_alloc = []
-    for part in raw.split(","):
-        part = part.strip()
-        if ":" not in part:
-            print(f"  Invalid format '{part}' — use TICKER:PCT")
+    # --- Try config file first, then interactive prompts ---
+    cfg = read_config()
+    if cfg:
+        tickers_alloc, monthly_amt, years, tax_rate = cfg
+        print(f"  Read from: {CONFIG_FILE}")
+    else:
+        # Interactive prompts (fallback)
+        raw = input("Enter tickers and allocation % (e.g. XLK:60,XLV:40): ").strip()
+        if not raw:
+            print("No input. Exiting.")
             return
-        sym, pct = part.split(":", 1)
-        tickers_alloc.append((sym.strip().upper(), float(pct.strip())))
+        tickers_alloc = []
+        for part in raw.split(","):
+            part = part.strip()
+            if ":" not in part:
+                print(f"  Invalid format '{part}' — use TICKER:PCT")
+                return
+            sym, pct = part.split(":", 1)
+            tickers_alloc.append((sym.strip().upper(), float(pct.strip())))
+
+        amt_str = input("Monthly investment amount [$1000]: ").strip()
+        monthly_amt = float(amt_str) if amt_str else 1000.0
+
+        yr_str = input("Investment period in years [10]: ").strip()
+        years = int(yr_str) if yr_str else 10
+
+        tax_str = input("Tax rate % [30]: ").strip()
+        tax_rate = float(tax_str) if tax_str else 30.0
 
     total_pct = sum(p for _, p in tickers_alloc)
     if abs(total_pct - 100) > 0.01:
         print(f"  WARNING: allocations sum to {total_pct}%, not 100%")
-
-    amt_str = input("Monthly investment amount [$1000]: ").strip()
-    monthly_amt = float(amt_str) if amt_str else 1000.0
-
-    yr_str = input("Investment period in years [10]: ").strip()
-    years = int(yr_str) if yr_str else 10
-
-    tax_str = input("Tax rate % [30]: ").strip()
-    tax_rate = float(tax_str) if tax_str else 30.0
 
     print()
     print(f"  Tickers: {', '.join(f'{s} {p}%' for s,p in tickers_alloc)}")
