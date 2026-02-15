@@ -1,5 +1,5 @@
 const API="http://localhost:8000/api";
-const AMTS=[500,1000,2000,5000],YRS=[3,5,7,10,15,20];
+const AMTS=[500,1000,2000,5000];
 const MO=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 let allTickers=[],selected=[],alloc={},selAmt=1000,selYr=10;
 let snapshots=null,breakdownData=null;
@@ -9,7 +9,7 @@ const COL_INFO={
   invested:'Monthly amount allocated per your % split. Bought at the monthly high price (worst-case entry).',
   shares:'Shares purchased = $ invested ÷ monthly high price. Click to see per-ticker breakdown.',
   dividends:'Cash dividends received based on shares held × dividend per share. Not reinvested.',
-  divvalue:'Accumulated dividends invested in money market. Each month\'s balance grows at the federal funds rate ÷ 12.',
+  divvalue:'Accumulated dividends and money market interest on accrued cash.',
   portfolio:'Total shares held × monthly close price for each ticker, summed across all holdings.',
   mmonly:'What if you invested the same monthly amount entirely in money market at the federal funds rate instead of ETFs.'
 };
@@ -17,6 +17,7 @@ let mmRates={}; /* key: "YYYY-MM" → annual rate as decimal e.g. 0.05 */
 
 function $(id){return document.getElementById(id)}
 function fmt(n){return(n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}
+function fmtW(n){return(n||0).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0})}
 function fmtS(n){if(n>=1e6)return'$'+(n/1e6).toFixed(2)+'M';if(n>=1e3)return'$'+(n/1e3).toFixed(1)+'K';return'$'+fmt(n)}
 function tot(){return selected.reduce((a,s)=>a+(alloc[s]||0),0)}
 function getTk(s){return allTickers.find(t=>t.symbol===s)}
@@ -29,8 +30,11 @@ function thWithInfo(label,key){
 function renderAmts(){$('amtBtns').innerHTML=AMTS.map(v=>'<button class="btn f1 '+(selAmt===v?'on':'')+'" onclick="setAmt('+v+')">$'+v.toLocaleString()+'</button>').join('')}
 function setAmt(v){selAmt=v;$('amt').value=v;renderAmts()}
 $('amt').addEventListener('input',function(){selAmt=Math.max(0,parseInt(this.value)||0);renderAmts()});
-function renderYrs(){$('yrBtns').innerHTML=YRS.map(y=>'<button class="btn '+(selYr===y?'on':'')+'" onclick="setYr('+y+')">'+y+'Y</button>').join('')}
-function setYr(y){selYr=y;$('yrInp').value=y;renderYrs()}
+function renderYrs(){
+  let h='';for(let y=1;y<=20;y++)h+='<button class="btn yr-btn '+(selYr===y?'on':'')+'" onclick="setYr('+y+')">'+y+'Y</button>';
+  $('yrBtns').innerHTML=h;
+}
+function setYr(y){selYr=Math.max(1,Math.min(20,y));$('yrInp').value=selYr;renderYrs()}
 $('yrInp').addEventListener('input',function(){selYr=Math.max(1,Math.min(20,parseInt(this.value)||1));renderYrs()});
 
 const si=$('searchInp'),dd=$('dropdown');
@@ -38,7 +42,7 @@ function showDD(q){
   q=(q||'').toLowerCase().trim();
   let list=q?allTickers.filter(t=>t.symbol.toLowerCase().includes(q)||(t.name||'').toLowerCase().includes(q)):allTickers;
   if(!list.length){dd.innerHTML='<div style="padding:14px;color:var(--text3);text-align:center">No matches</div>';dd.classList.add('show');return}
-  dd.innerHTML=list.map(t=>{const sel=selected.includes(t.symbol);return'<div class="dd-item" onclick="togTk(\''+t.symbol+'\')"><div><span class="dd-sym">'+t.symbol+'</span><span class="dd-name">'+(t.name||'')+'</span></div>'+(sel?'<span class="dd-check">✓</span>':'')+'</div>'}).join('');
+  dd.innerHTML=list.map(t=>{const sel=selected.includes(t.symbol);return'<div class="dd-item" onclick="togTk(\''+t.symbol+'\')"><span class="dd-cb-wrap"><input type="checkbox" class="dd-cb" '+(sel?'checked':'')+' tabindex="-1"><span class="dd-sym">'+t.symbol+'</span><span class="dd-name">'+(t.name||'')+'</span></span></div>'}).join('');
   dd.classList.add('show');
 }
 si.addEventListener('input',function(){showDD(this.value)});
@@ -346,21 +350,21 @@ function showResults(r){
   const divGain=r.divBal-r.tDiv;
   const mmOnlyRetP=((r.mmOnlyBal-r.tInv)/r.tInv*100).toFixed(1);
   const cards=[
-    {l:'Total Invested',v:'$'+fmt(r.tInv),s:r.n+' months × $'+fmt(selAmt),c:'var(--text1)',i:'$',ck:''},
-    {l:'Portfolio Value',v:'$'+fmt(r.pv),s:(r.retP>=0?'+':'')+r.retP.toFixed(1)+'% return',c:r.pv>=r.tInv?'var(--accent)':'var(--red)',i:'◆',ck:' clickable-val" onclick="openModal()" title="Click for per-ticker breakdown'},
-    {l:'Dividends Earned',v:'$'+fmt(r.tDiv),s:'Cash accumulated',c:'var(--gold)',i:'★',ck:' clickable-val" onclick="showDivSummary()" title="Click for per-ticker dividends'},
-    {l:'Div + MM Interest',v:'$'+fmt(r.divBal),s:'MM earned: $'+fmt(divGain),c:'var(--gold)',i:'%',ck:' clickable-val" onclick="showDivValueSummary()" title="Click for details'},
-    {l:'Total Value + Dividends',v:'$'+fmt(r.pv+r.divBal),s:((((r.pv+r.divBal)-r.tInv)/r.tInv)*100).toFixed(1)+'% total return',c:'var(--blue)',i:'∑',ck:' clickable-val" onclick="showTotalSummary()" title="Click for breakdown'},
-    {l:'MM Only Benchmark',v:'$'+fmt(r.mmOnlyBal),s:'+'+mmOnlyRetP+'% return',c:'var(--text2)',i:'⊞',ck:' clickable-val" onclick="showMMOnlySummary()" title="Click for details'},
+    {l:'Total Invested',v:'$'+fmtW(r.tInv),s:r.n+' months × $'+fmtW(selAmt),c:'var(--text1)',i:'$',ck:''},
+    {l:'Portfolio Value',v:'$'+fmtW(r.pv),s:(r.retP>=0?'+':'')+r.retP.toFixed(1)+'% return',c:r.pv>=r.tInv?'var(--accent)':'var(--red)',i:'◆',ck:' clickable-val" onclick="openModal()" title="Click for per-ticker breakdown'},
+    {l:'Dividends Earned',v:'$'+fmtW(r.tDiv),s:'Cash accumulated',c:'var(--gold)',i:'★',ck:' clickable-val" onclick="showDivSummary()" title="Click for per-ticker dividends'},
+    {l:'Cash Accrual',v:'$'+fmtW(r.divBal),s:'MM earned: $'+fmtW(divGain),c:'var(--gold)',i:'%',ck:' clickable-val" onclick="showDivValueSummary()" title="Click for details'},
+    {l:'Total Value + Dividends',v:'$'+fmtW(r.pv+r.divBal),s:((((r.pv+r.divBal)-r.tInv)/r.tInv)*100).toFixed(1)+'% total return',c:'var(--blue)',i:'∑',ck:' clickable-val" onclick="showTotalSummary()" title="Click for breakdown'},
+    {l:'MMF Value',v:'$'+fmtW(r.mmOnlyBal),s:'+'+mmOnlyRetP+'% return',c:'var(--text2)',i:'⊞',ck:' clickable-val" onclick="showMMOnlySummary()" title="Click for details'},
   ];
   let h='<div class="grid-6">';cards.forEach((c,i)=>h+='<div class="card sc fade-up" style="animation-delay:'+i*.1+'s"><div class="icon">'+c.i+'</div><div class="sl">'+c.l+'</div><div class="sv'+c.ck+'" style="color:'+c.c+'">'+c.v+'</div><div class="ss">'+c.s+'</div></div>');h+='</div>';
   h+='<div class="card fade-up" style="animation-delay:.2s;padding:24px;margin-bottom:24px"><h3 class="space" style="font-size:16px;font-weight:600;margin-bottom:16px">Your Allocation</h3><div class="tags">';r.active.forEach(([s,p])=>h+='<div class="tag">'+s+' '+p+'%</div>');h+='</div></div>';
   /* Chart 1: Growth Over Time — interactive with click tooltip */
   h+='<div class="card fade-up" style="animation-delay:.3s;padding:24px;margin-bottom:24px"><h3 class="space" style="font-size:18px;font-weight:600;margin-bottom:16px">Growth Over Time</h3><div class="chart-wrap" id="chartWrap1"><canvas id="chart" style="width:100%;height:300px;cursor:crosshair"></canvas><div class="chart-crosshair" id="chartCross1"></div><div class="chart-tooltip" id="chartTip1"></div></div></div>';
   /* Chart 2: Dividend Balance + MM Interest growth */
-  h+='<div class="card fade-up" style="animation-delay:.35s;padding:24px;margin-bottom:24px"><h3 class="space" style="font-size:18px;font-weight:600;margin-bottom:16px">Dividend Balance Growth (MM Interest)</h3><div class="chart-wrap" id="chartWrap2"><canvas id="chart2" style="width:100%;height:250px;cursor:crosshair"></canvas><div class="chart-crosshair" id="chartCross2"></div><div class="chart-tooltip" id="chartTip2"></div></div></div>';
+  h+='<div class="card fade-up" style="animation-delay:.35s;padding:24px;margin-bottom:24px"><h3 class="space" style="font-size:18px;font-weight:600;margin-bottom:16px">Dividend Accumulated and Dividend Invested in Money Market</h3><div class="chart-wrap" id="chartWrap2"><canvas id="chart2" style="width:100%;height:250px;cursor:crosshair"></canvas><div class="chart-crosshair" id="chartCross2"></div><div class="chart-tooltip" id="chartTip2"></div></div></div>';
   h+='<div class="card fade-up" style="animation-delay:.4s;padding:24px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><h3 class="space" style="font-size:18px;font-weight:600">Monthly Breakdown</h3><button class="btn-sm mono" style="background:var(--accent-dim);color:var(--accent)" onclick="togTbl()">Show All ('+r.bk.length+')</button></div>';
-  h+='<div style="overflow-x:auto"><table><thead><tr><th style="text-align:left;cursor:pointer" onclick="toggleSortOrder()" id="thMonth">Month ▼</th>'+thWithInfo('Invested','invested')+thWithInfo('Shares','shares')+thWithInfo('Dividends','dividends')+thWithInfo('Div Value','divvalue')+thWithInfo('Portfolio Value','portfolio')+thWithInfo('MM Only','mmonly')+'</tr></thead><tbody id="tblBody"></tbody></table></div></div>';
+  h+='<div style="overflow-x:auto"><table><thead><tr><th style="text-align:left;cursor:pointer" onclick="toggleSortOrder()" id="thMonth">Month ▼</th>'+thWithInfo('Invested','invested')+thWithInfo('Shares','shares')+thWithInfo('Dividends','dividends')+thWithInfo('Cash Accrual','divvalue')+thWithInfo('Portfolio Value','portfolio')+thWithInfo('MMF Value','mmonly')+'</tr></thead><tbody id="tblBody"></tbody></table></div></div>';
   el.innerHTML=h;window._bk=r.bk;window._exp=false;window._sortAsc=false;fillTbl(r.bk.slice(-24),r.bk.length-24);
   setTimeout(()=>{drawChart(r.bk);drawDivChart(r.bk);setupChartInteraction(r.bk)},100);
   el.scrollIntoView({behavior:'smooth',block:'start'});
@@ -396,7 +400,7 @@ function drawChart(bk){
   ctx.font='bold 11px JetBrains Mono,monospace';ctx.textAlign='left';
   ctx.fillStyle='#10b981';ctx.fillRect(p.l,14,12,3);ctx.fillText('Portfolio Value',p.l+18,18);
   ctx.fillStyle='#64748b';ctx.fillRect(p.l+150,14,12,3);ctx.fillText('Total Invested',p.l+168,18);
-  ctx.fillStyle='#94a3b8';ctx.setLineDash([4,3]);ctx.beginPath();ctx.moveTo(p.l+300,15.5);ctx.lineTo(p.l+312,15.5);ctx.stroke();ctx.setLineDash([]);ctx.fillText('MM Only',p.l+318,18);
+  ctx.fillStyle='#94a3b8';ctx.setLineDash([4,3]);ctx.beginPath();ctx.moveTo(p.l+300,15.5);ctx.lineTo(p.l+312,15.5);ctx.stroke();ctx.setLineDash([]);ctx.fillText('Money Market Return',p.l+318,18);
 }
 
 function drawDivChart(bk){
@@ -413,8 +417,8 @@ function drawDivChart(bk){
   function line(data,color,fill){ctx.beginPath();data.forEach((v,i)=>{const x=p.l+(cw*i)/(data.length-1),y=p.t+ch-(ch*v)/mx;i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.strokeStyle=color;ctx.lineWidth=2.5;ctx.stroke();if(fill){ctx.lineTo(p.l+cw,p.t+ch);ctx.lineTo(p.l,p.t+ch);ctx.closePath();const g=ctx.createLinearGradient(0,p.t,0,p.t+ch);g.addColorStop(0,fill);g.addColorStop(1,'transparent');ctx.fillStyle=g;ctx.fill()}}
   line(rawDivs,'#64748b88',false);line(divBals,'#f59e0b','rgba(245,158,11,.12)');
   ctx.font='bold 11px JetBrains Mono,monospace';ctx.textAlign='left';
-  ctx.fillStyle='#f59e0b';ctx.fillRect(p.l,14,12,3);ctx.fillText('Div Value (with MM Interest)',p.l+18,18);
-  ctx.fillStyle='#64748b';ctx.fillRect(p.l+260,14,12,3);ctx.fillText('Raw Dividends',p.l+278,18);
+  ctx.fillStyle='#f59e0b';ctx.fillRect(p.l,14,12,3);ctx.fillText('Dividend Invested in Money Market',p.l+18,18);
+  ctx.fillStyle='#64748b';ctx.fillRect(p.l+300,14,12,3);ctx.fillText('Dividend Accumulated',p.l+318,18);
 }
 
 function setupChartInteraction(bk){
@@ -448,15 +452,15 @@ function setupChartInteraction(bk){
     return '<div class="ct-label">'+MO[r.month-1]+' '+r.year+'</div>'+
       '<div class="ct-row"><span><span class="ct-dot" style="background:#10b981"></span>Portfolio</span><span style="color:#10b981;font-weight:700;font-family:JetBrains Mono,monospace">$'+fmt(r.pv)+'</span></div>'+
       '<div class="ct-row"><span><span class="ct-dot" style="background:#64748b"></span>Invested</span><span style="color:var(--text2);font-family:JetBrains Mono,monospace">$'+fmt(r.tInv)+'</span></div>'+
-      '<div class="ct-row"><span><span class="ct-dot" style="background:#94a3b8"></span>MM Only</span><span style="color:var(--text2);font-family:JetBrains Mono,monospace">$'+fmt(r.mmOnlyBal)+'</span></div>'+
+      '<div class="ct-row"><span><span class="ct-dot" style="background:#94a3b8"></span>MM Return</span><span style="color:var(--text2);font-family:JetBrains Mono,monospace">$'+fmt(r.mmOnlyBal)+'</span></div>'+
       '<div class="ct-row" style="margin-top:4px;padding-top:4px;border-top:1px solid var(--border)"><span style="color:var(--text3)">Return</span><span style="color:'+(r.pv>=r.tInv?'#10b981':'#ef4444')+';font-weight:600;font-family:JetBrains Mono,monospace">'+((r.pv-r.tInv)/r.tInv*100).toFixed(1)+'%</span></div>';
   });
   /* Chart 2: Dividend Balance */
   attachChart('chart2','chartCross2','chartTip2','_chart2',function(r){
     const mmInt=r.divBal-r.tDiv;
     return '<div class="ct-label">'+MO[r.month-1]+' '+r.year+'</div>'+
-      '<div class="ct-row"><span><span class="ct-dot" style="background:#f59e0b"></span>Div Value</span><span style="color:#f59e0b;font-weight:700;font-family:JetBrains Mono,monospace">$'+fmt(r.divBal)+'</span></div>'+
-      '<div class="ct-row"><span><span class="ct-dot" style="background:#64748b"></span>Raw Divs</span><span style="color:var(--text2);font-family:JetBrains Mono,monospace">$'+fmt(r.tDiv)+'</span></div>'+
+      '<div class="ct-row"><span><span class="ct-dot" style="background:#f59e0b"></span>Div + MM</span><span style="color:#f59e0b;font-weight:700;font-family:JetBrains Mono,monospace">$'+fmt(r.divBal)+'</span></div>'+
+      '<div class="ct-row"><span><span class="ct-dot" style="background:#64748b"></span>Div Accumulated</span><span style="color:var(--text2);font-family:JetBrains Mono,monospace">$'+fmt(r.tDiv)+'</span></div>'+
       '<div class="ct-row" style="margin-top:4px;padding-top:4px;border-top:1px solid var(--border)"><span style="color:var(--text3)">MM Interest</span><span style="color:#10b981;font-weight:600;font-family:JetBrains Mono,monospace">$'+fmt(mmInt)+'</span></div>'+
       '<div class="ct-row"><span style="color:var(--text3)">Rate</span><span style="color:var(--text2);font-family:JetBrains Mono,monospace">'+(r.mmRate*100).toFixed(2)+'% APR</span></div>';
   });
@@ -464,6 +468,5 @@ function setupChartInteraction(bk){
 
 renderAmts();renderYrs();updBudget();renderAlloc();
 fetch(API+'/tickers/active').then(r=>r.json()).then(d=>{
-  allTickers=d;const s=$('status');s.style.background='var(--accent-dim)';s.style.color='var(--accent)';
-  s.innerHTML='<span style="width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse 2s infinite"></span> API Connected &middot; '+d.length+' tickers';
-}).catch(()=>{const s=$('status');s.style.background='var(--red-dim)';s.style.color='var(--red)';s.innerHTML='<span style="width:6px;height:6px;border-radius:50%;background:var(--red)"></span> API Offline';$('err').textContent='Cannot reach API at localhost:8000. Make sure uvicorn is running.'});
+  allTickers=d;
+}).catch(()=>{$('err').textContent='Cannot reach API at localhost:8000. Make sure uvicorn is running.'});
