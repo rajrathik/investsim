@@ -11,7 +11,7 @@ const COL_INFO={
   dividends:'Cash dividends received based on shares held × dividend per share. Not reinvested.',
   divvalue:'Accumulated dividends and money market interest on accrued cash.',
   portfolio:'Total shares held × monthly close price for each ticker, summed across all holdings.',
-  mmonly:'What if you invested the same monthly amount entirely in money market at the federal funds rate instead of ETFs.'
+  mmonly:'What if you invested the same monthly amount entirely in money market at the federal funds rate instead of securities.'
 };
 let mmRates={}; /* key: "YYYY-MM" → annual rate as decimal e.g. 0.05 */
 
@@ -31,7 +31,9 @@ function renderAmts(){$('amtBtns').innerHTML=AMTS.map(v=>'<button class="btn f1 
 function setAmt(v){selAmt=v;$('amt').value=v;renderAmts()}
 $('amt').addEventListener('input',function(){selAmt=Math.max(0,parseInt(this.value)||0);renderAmts()});
 function renderYrs(){
-  let h='';for(let y=1;y<=20;y++)h+='<button class="btn yr-btn '+(selYr===y?'on':'')+'" onclick="setYr('+y+')">'+y+'Y</button>';
+  let h='<select id="yrSel" class="yr-select" onchange="setYr(+this.value)">';
+  for(let y=1;y<=20;y++)h+='<option value="'+y+'"'+(selYr===y?' selected':'')+'>'+y+' Year'+(y>1?'s':'')+'</option>';
+  h+='</select>';
   $('yrBtns').innerHTML=h;
 }
 function setYr(y){selYr=Math.max(1,Math.min(20,y));$('yrInp').value=selYr;renderYrs()}
@@ -42,14 +44,22 @@ function showDD(q){
   q=(q||'').toLowerCase().trim();
   let list=q?allTickers.filter(t=>t.symbol.toLowerCase().includes(q)||(t.name||'').toLowerCase().includes(q)):allTickers;
   if(!list.length){dd.innerHTML='<div style="padding:14px;color:var(--text3);text-align:center">No matches</div>';dd.classList.add('show');return}
-  dd.innerHTML=list.map(t=>{const sel=selected.includes(t.symbol);return'<div class="dd-item" onclick="togTk(\''+t.symbol+'\')"><span class="dd-cb-wrap"><input type="checkbox" class="dd-cb" '+(sel?'checked':'')+' tabindex="-1"><span class="dd-sym">'+t.symbol+'</span><span class="dd-name">'+(t.name||'')+'</span></span></div>'}).join('');
+  dd.innerHTML=list.map(t=>{const sel=selected.includes(t.symbol);return'<div class="dd-item" onclick="event.stopPropagation();togTk(\''+t.symbol+'\')"><span class="dd-cb-wrap"><input type="checkbox" class="dd-cb" '+(sel?'checked':'')+' tabindex="-1"><span class="dd-sym">'+t.symbol+'</span><span class="dd-name">'+(t.name||'')+'</span></span></div>'}).join('');
   dd.classList.add('show');
 }
 si.addEventListener('input',function(){showDD(this.value)});
 si.addEventListener('focus',function(){showDD(this.value)});
 si.addEventListener('click',function(){showDD(this.value)});
 document.addEventListener('click',function(e){if(!e.target.closest('.search-wrap'))dd.classList.remove('show')});
-function togTk(s){if(selected.includes(s)){selected=selected.filter(x=>x!==s);delete alloc[s]}else{selected.push(s);alloc[s]=0}renderChips();renderAlloc();updBudget();showDD(si.value);si.focus()}
+function togTk(s){
+  if(selected.includes(s)){selected=selected.filter(x=>x!==s);delete alloc[s]}
+  else{selected.push(s);alloc[s]=0}
+  renderChips();renderAlloc();updBudget();
+  /* Re-render dropdown in place so it stays open for multi-select */
+  showDD(si.value);
+  /* Keep focus on search so user can continue typing/browsing */
+  setTimeout(function(){si.focus()},10);
+}
 function remTk(s){selected=selected.filter(x=>x!==s);delete alloc[s];renderChips();renderAlloc();updBudget()}
 function renderChips(){$('chips').innerHTML=selected.map(s=>{const t=getTk(s);return'<div class="chip">'+s+' <span style="opacity:.6;font-weight:400">'+(t?.name||'')+'</span> <span class="x" onclick="remTk(\''+s+'\')">✕</span></div>'}).join('')}
 
@@ -241,11 +251,11 @@ function showMMOnlySummary(){
   h+='<div class="detail-row"><div><div class="d-sym" style="color:var(--text2)">Total Invested</div><div class="d-name">'+r.n+' months × $'+fmt(selAmt)+'</div></div><div class="d-nums"><div class="d-val">$'+fmt(r.tInv)+'</div></div></div>';
   h+='<div class="detail-row"><div><div class="d-sym" style="color:var(--accent)">Interest Earned</div><div class="d-name">At federal funds rate (monthly compounding)</div></div><div class="d-nums"><div class="d-val" style="color:var(--accent)">$'+fmt(mmGain)+'</div></div></div>';
   h+='<div class="detail-total" style="background:var(--border);border-color:var(--text3)"><div><div class="dt-label" style="color:var(--text2)">MM Only Value</div><div style="font-size:11px;color:var(--text3);margin-top:1px">+'+(mmGain/r.tInv*100).toFixed(1)+'% return</div></div><div class="dt-val" style="color:var(--text2)">$'+fmt(r.mmOnlyBal)+'</div></div>';
-  h+='<div class="section-label" style="margin-top:16px">Your ETF Portfolio (for comparison)</div>';
+  h+='<div class="section-label" style="margin-top:16px">Your Portfolio (for comparison)</div>';
   h+='<div class="detail-row"><div><div class="d-sym" style="color:var(--accent)">Portfolio + Dividends</div><div class="d-name">Holdings value + dividend balance with MM interest</div></div><div class="d-nums"><div class="d-val" style="color:var(--accent)">$'+fmt(etfTotal)+'</div></div></div>';
   const diff=etfTotal-r.mmOnlyBal;
   const diffColor=diff>=0?'var(--accent)':'var(--red)';
-  h+='<div class="detail-total" style="margin-top:8px;background:'+(diff>=0?'var(--accent-dim)':'var(--red-dim)')+';border-color:'+(diff>=0?'rgba(16,185,129,.25)':'rgba(239,68,68,.25)')+'"><div><div class="dt-label" style="color:'+diffColor+'">ETF vs MM Only</div><div style="font-size:11px;color:var(--text2);margin-top:1px">Your ETF strategy '+(diff>=0?'outperformed':'underperformed')+' by</div></div><div class="dt-val" style="color:'+diffColor+'">'+(diff>=0?'+':'')+' $'+fmt(diff)+'</div></div>';
+  h+='<div class="detail-total" style="margin-top:8px;background:'+(diff>=0?'var(--accent-dim)':'var(--red-dim)')+';border-color:'+(diff>=0?'rgba(16,185,129,.25)':'rgba(239,68,68,.25)')+'"><div><div class="dt-label" style="color:'+diffColor+'">Portfolio vs MM Only</div><div style="font-size:11px;color:var(--text2);margin-top:1px">Your investment strategy '+(diff>=0?'outperformed':'underperformed')+' by</div></div><div class="dt-val" style="color:'+diffColor+'">'+(diff>=0?'+':'')+' $'+fmt(diff)+'</div></div>';
   $('modalBody').innerHTML=h;
   $('modalOverlay').classList.add('show');
 }
@@ -354,7 +364,7 @@ function showResults(r){
     {l:'Portfolio Value',v:'$'+fmtW(r.pv),s:(r.retP>=0?'+':'')+r.retP.toFixed(1)+'% return',c:r.pv>=r.tInv?'var(--accent)':'var(--red)',i:'◆',ck:' clickable-val" onclick="openModal()" title="Click for per-ticker breakdown'},
     {l:'Dividends Earned',v:'$'+fmtW(r.tDiv),s:'Cash accumulated',c:'var(--gold)',i:'★',ck:' clickable-val" onclick="showDivSummary()" title="Click for per-ticker dividends'},
     {l:'Cash Accrual',v:'$'+fmtW(r.divBal),s:'MM earned: $'+fmtW(divGain),c:'var(--gold)',i:'%',ck:' clickable-val" onclick="showDivValueSummary()" title="Click for details'},
-    {l:'Total Value + Dividends',v:'$'+fmtW(r.pv+r.divBal),s:((((r.pv+r.divBal)-r.tInv)/r.tInv)*100).toFixed(1)+'% total return',c:'var(--blue)',i:'∑',ck:' clickable-val" onclick="showTotalSummary()" title="Click for breakdown'},
+    {l:'Portfolio Balance',v:'$'+fmtW(r.pv+r.divBal),s:((((r.pv+r.divBal)-r.tInv)/r.tInv)*100).toFixed(1)+'% total return',c:'var(--blue)',i:'∑',ck:' clickable-val" onclick="showTotalSummary()" title="Click for breakdown'},
     {l:'MMF Value',v:'$'+fmtW(r.mmOnlyBal),s:'+'+mmOnlyRetP+'% return',c:'var(--text2)',i:'⊞',ck:' clickable-val" onclick="showMMOnlySummary()" title="Click for details'},
   ];
   let h='<div class="grid-6">';cards.forEach((c,i)=>h+='<div class="card sc fade-up" style="animation-delay:'+i*.1+'s"><div class="icon">'+c.i+'</div><div class="sl">'+c.l+'</div><div class="sv'+c.ck+'" style="color:'+c.c+'">'+c.v+'</div><div class="ss">'+c.s+'</div></div>');h+='</div>';
@@ -362,7 +372,7 @@ function showResults(r){
   /* Chart 1: Growth Over Time — interactive with click tooltip */
   h+='<div class="card fade-up" style="animation-delay:.3s;padding:24px;margin-bottom:24px"><h3 class="space" style="font-size:18px;font-weight:600;margin-bottom:16px">Growth Over Time</h3><div class="chart-wrap" id="chartWrap1"><canvas id="chart" style="width:100%;height:300px;cursor:crosshair"></canvas><div class="chart-crosshair" id="chartCross1"></div><div class="chart-tooltip" id="chartTip1"></div></div></div>';
   /* Chart 2: Dividend Balance + MM Interest growth */
-  h+='<div class="card fade-up" style="animation-delay:.35s;padding:24px;margin-bottom:24px"><h3 class="space" style="font-size:18px;font-weight:600;margin-bottom:16px">Dividend Accumulated and Dividend Invested in Money Market</h3><div class="chart-wrap" id="chartWrap2"><canvas id="chart2" style="width:100%;height:250px;cursor:crosshair"></canvas><div class="chart-crosshair" id="chartCross2"></div><div class="chart-tooltip" id="chartTip2"></div></div></div>';
+  h+='<div class="card fade-up" style="animation-delay:.35s;padding:24px;margin-bottom:24px"><h3 class="space" style="font-size:18px;font-weight:600;margin-bottom:16px">Dividend Earned</h3><div class="chart-wrap" id="chartWrap2"><canvas id="chart2" style="width:100%;height:250px;cursor:crosshair"></canvas><div class="chart-crosshair" id="chartCross2"></div><div class="chart-tooltip" id="chartTip2"></div></div></div>';
   h+='<div class="card fade-up" style="animation-delay:.4s;padding:24px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><h3 class="space" style="font-size:18px;font-weight:600">Monthly Breakdown</h3><button class="btn-sm mono" style="background:var(--accent-dim);color:var(--accent)" onclick="togTbl()">Show All ('+r.bk.length+')</button></div>';
   h+='<div style="overflow-x:auto"><table><thead><tr><th style="text-align:left;cursor:pointer" onclick="toggleSortOrder()" id="thMonth">Month ▼</th>'+thWithInfo('Invested','invested')+thWithInfo('Shares','shares')+thWithInfo('Dividends','dividends')+thWithInfo('Cash Accrual','divvalue')+thWithInfo('Portfolio Value','portfolio')+thWithInfo('MMF Value','mmonly')+'</tr></thead><tbody id="tblBody"></tbody></table></div></div>';
   el.innerHTML=h;window._bk=r.bk;window._exp=false;window._sortAsc=false;fillTbl(r.bk.slice(-24),r.bk.length-24);
