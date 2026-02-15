@@ -127,7 +127,11 @@ When user clicks "Run Simulation", the browser executes this flow:
 
 **9. Store snapshots** — Each month's per-ticker detail (shares bought, running totals, dividends, effective allocation, dividend balance with MM interest, MM-only balance) is stored for the drill-down modals.
 
-**10. Render results** — Summary cards (6 tiles including Div + MM Interest and MM Only Benchmark), two interactive charts (Growth Over Time with portfolio/invested/MM-only lines, and Dividend Balance Growth), and clickable monthly breakdown table with Div Value and MM Only columns. Charts show tooltips on hover with values at that point in time.
+**10. Render results** — Summary cards (6 tiles: Total Invested, Portfolio Value, Dividends Earned, Cash Accrual, Portfolio Balance, MMF Value), two interactive charts (Growth Over Time with portfolio/invested/money market lines, and Dividend Earned), clickable monthly breakdown table (with Total Invested running total, Cash Accrual, and MMF Value columns), tax impact section, and annual return table. Charts show tooltips on hover with crosshair tracking.
+
+**11. Compute tax impact** — User-adjustable tax rate (0–60%) applied per year to dividends and MM interest separately. Renders a Tax Liability by Year table showing dividends, tax on dividends, MM interest, tax on interest, and total taxes per year.
+
+**12. Compute annual returns** — For each calendar year, calculates pre-tax and after-tax returns using a DCA mid-year approximation. Stock value = shares × December close price. Portfolio value = stock value + accumulated dividend balance. Average invested capital ≈ year's new contributions × 0.542 (reflects that monthly DCA dollars are invested ~6.5 months on average). Pre-tax return = (stock gain + dividends + MM interest) ÷ (beginning stock value + avg invested capital). After-tax return = (stock gain + after-tax dividends + after-tax MM interest) ÷ (beginning stock value + avg invested capital). Beginning stock value is the prior year's ending stock value (0 for the first year).
 
 ---
 
@@ -135,9 +139,12 @@ When user clicks "Run Simulation", the browser executes this flow:
 
 - **Buy at monthly high**: Conservative — simulates worst-case dollar-cost averaging entry each month.
 - **Dividends as cash**: Not reinvested into equities — tracked separately so user sees true cash generation.
-- **Dividends earn money market interest**: Accumulated dividends are modeled as invested in a money market fund at the federal funds rate (monthly compounding). The "Div Value" column and summary tile show the impact.
-- **MM-only benchmark**: A separate calculation shows what the same monthly investment would grow to if invested entirely in money market (no ETFs). Helps answer "was the ETF strategy worth the risk?"
+- **Dividends earn money market interest**: Accumulated dividends are modeled as invested in a money market fund at the federal funds rate (monthly compounding). The "Cash Accrual" column and summary tile show the impact.
+- **MM-only benchmark**: A separate calculation shows what the same monthly investment would grow to if invested entirely in money market (no securities). Helps answer "was the investment strategy worth the risk?"
 - **Interactive charts**: Charts respond to mouse hover — a crosshair tracks position and a tooltip shows values at that point. No click needed, just hover.
 - **Proportional redistribution**: When a ticker has no data for a month, its allocation flows to available tickers proportionally, ensuring 100% of monthly investment is always deployed.
+- **Tax impact analysis**: User-adjustable tax rate (0–60%) applied to dividends and MM interest per year. Shows yearly tax liability breakdown and after-tax portfolio values.
+- **Annual return calculation**: Pre-tax and after-tax returns per calendar year using DCA mid-year approximation (contributions × 0.542). Returns computed against beginning stock value + average invested capital.
+- **Security-agnostic labeling**: UI avoids ETF-specific language — supports ETFs, mutual funds, individual stocks, or any ticker in the database.
 - **Read-only API**: Write endpoints disabled by default. Data loads only through CLI batch scripts.
 - **Split frontend**: HTML, CSS, and JS in separate files — no build tools, no Node.js — just open the HTML file in a browser.

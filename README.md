@@ -1,6 +1,6 @@
 # Portfolio Simulator
 
-**What it does:** A historical backtesting tool that lets you simulate investing a fixed monthly amount across sector ETFs over 1–20 years. It buys at the worst-case price each month (monthly high), tracks share accumulation, dividends earned, and shows your portfolio's current value — all powered by real Yahoo Finance and FRED data stored in SQL Server.
+**What it does:** A historical backtesting tool that lets you simulate investing a fixed monthly amount across securities (ETFs, mutual funds, stocks) over 1–20 years. It buys at the worst-case price each month (monthly high), tracks share accumulation, dividends earned, money market interest on accumulated cash, tax impact, and annual returns — all powered by real Yahoo Finance and FRED data stored in SQL Server.
 
 ---
 
@@ -105,6 +105,23 @@ cd C:\Raj\python\portfolio-simulator
 git add .
 git commit -m "Your commit message"
 ```
+
+---
+
+## Features
+
+- **Dollar-cost averaging simulation** — invest a fixed monthly amount across multiple securities with custom allocation percentages
+- **Worst-case entry pricing** — buys at the monthly high price each month (conservative backtesting)
+- **Dividend tracking** — cash dividends accumulated separately (not reinvested into equities)
+- **Money market interest** — accumulated dividends earn interest at the federal funds rate (monthly compounding)
+- **MMF benchmark** — side-by-side comparison: what if the same investment went entirely into money market?
+- **6 summary tiles** — Total Invested, Portfolio Value, Dividends Earned, Cash Accrual, Portfolio Balance, MMF Value (all clickable for drill-down)
+- **Interactive charts** — Growth Over Time and Dividend Earned charts with hover tooltips and crosshair tracking
+- **Monthly breakdown table** — clickable cells for per-ticker detail modals, sortable by date, with Total Invested running total
+- **Tax impact analysis** — adjustable tax rate (0–60%) with yearly breakdown of taxes on dividends and MM interest
+- **Annual return table** — pre-tax and after-tax returns per calendar year using DCA mid-year approximation
+- **Multi-select ticker dropdown** — checkbox-based selection with search filtering
+- **Proportional redistribution** — when a ticker has no data for a month, its allocation flows to available tickers
 
 ---
 

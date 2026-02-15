@@ -485,17 +485,26 @@ function renderTaxImpact(){
   const bk=window._bk;
   let rate=parseFloat(($('taxRate')||{}).value)||30;
   rate=Math.max(0,Math.min(60,rate));
-  /* Aggregate by year: dividends, MM interest */
+
+  /* Aggregate by year: dividends, MM interest, invested, end-of-year snapshots */
   const years={};
   bk.forEach(r=>{
     const y=r.year;
-    if(!years[y])years[y]={divs:0,mmInt:0};
+    if(!years[y])years[y]={divs:0,mmInt:0,invested:0,endPv:0,endDivBal:0,endTInv:0,months:0};
     years[y].divs+=r.divs;
     years[y].mmInt+=r.mmInt;
+    years[y].invested+=r.invested;
+    years[y].endPv=r.pv;
+    years[y].endDivBal=r.divBal;
+    years[y].endTInv=r.tInv;
+    years[y].months++;
   });
   const yrs=Object.keys(years).sort();
+
+  /* === Tax Detail Table === */
   let totalDivs=0,totalDivTax=0,totalInt=0,totalIntTax=0;
-  let h='<div style="overflow-x:auto"><table><thead><tr><th style="text-align:left">Year</th><th>Dividends</th><th>Tax on Dividends</th><th>MM Interest Earned</th><th>Tax on Interest</th><th>Total Taxes</th></tr></thead><tbody>';
+  let h='<h4 style="font-size:14px;font-weight:600;color:var(--text1);margin-bottom:10px">Tax Liability by Year</h4>';
+  h+='<div style="overflow-x:auto"><table><thead><tr><th style="text-align:left">Year</th><th>Dividends</th><th>Tax on Dividends</th><th>MM Interest Earned</th><th>Tax on Interest</th><th>Total Taxes</th></tr></thead><tbody>';
   yrs.forEach(y=>{
     const d=years[y];
     const divTax=d.divs*rate/100;
@@ -504,7 +513,56 @@ function renderTaxImpact(){
     h+='<tr><td style="color:var(--text2)">'+y+'</td><td style="color:var(--gold)">$'+fmt(d.divs)+'</td><td style="color:var(--red)">$'+fmt(divTax)+'</td><td style="color:var(--accent)">$'+fmt(d.mmInt)+'</td><td style="color:var(--red)">$'+fmt(intTax)+'</td><td style="color:var(--red);font-weight:600">$'+fmt(divTax+intTax)+'</td></tr>';
   });
   h+='</tbody><tfoot><tr style="border-top:2px solid var(--border);font-weight:700"><td style="color:var(--text1)">Total</td><td style="color:var(--gold)">$'+fmt(totalDivs)+'</td><td style="color:var(--red)">$'+fmt(totalDivTax)+'</td><td style="color:var(--accent)">$'+fmt(totalInt)+'</td><td style="color:var(--red)">$'+fmt(totalIntTax)+'</td><td style="color:var(--red)">$'+fmt(totalDivTax+totalIntTax)+'</td></tr></tfoot></table></div>';
-  h+='<div style="margin-top:12px;font-size:12px;color:var(--text3)">Tax rate: '+rate+'% applied to dividends in the year received and MM interest in the year earned.</div>';
+  h+='<div style="margin-top:8px;font-size:12px;color:var(--text3)">Tax rate: '+rate+'% applied to dividends in the year received and MM interest in the year earned.</div>';
+
+  /* === Annual Return Table === */
+  h+='<h4 style="font-size:14px;font-weight:600;color:var(--text1);margin:24px 0 10px">Annual Portfolio Return</h4>';
+  h+='<div style="overflow-x:auto"><table><thead><tr><th style="text-align:left">Year</th><th>Invested</th><th>Dividends</th><th>MM Interest</th><th>Stock Value</th><th>Portfolio Value</th><th>After-Tax Value</th><th>Pre-Tax Return</th><th>After-Tax Return</th></tr></thead><tbody>';
+
+  let prevEndPv=0;
+  yrs.forEach(y=>{
+    const d=years[y];
+    const divTax=d.divs*rate/100;
+    const intTax=d.mmInt*rate/100;
+    /* End-of-year values */
+    const stockVal=d.endPv;
+    const portfolioVal=stockVal+d.endDivBal;
+    const afterTaxDivBal=d.endDivBal-(totalDivTax+totalIntTax); /* simplified: use cumulative tax effect */
+    /* After-tax value: stock value + divBal - taxes paid this year only */
+    const yearTax=divTax+intTax;
+    const afterTaxVal=portfolioVal-yearTax;
+
+    /* Avg invested capital for this year's new contributions: monthly DCA average ~0.542 of year */
+    const avgNewCapital=d.invested*0.542;
+    /* Base = beginning stock value + avg new capital this year */
+    const baseCapital=prevEndPv+avgNewCapital;
+
+    /* One-year gain */
+    const stockGain=stockVal-prevEndPv-d.invested; /* price appreciation only */
+    const totalGain=stockGain+d.divs+d.mmInt;
+    const afterTaxGain=stockGain+(d.divs-divTax)+(d.mmInt-intTax);
+
+    const preTaxRet=baseCapital>0?(totalGain/baseCapital*100):0;
+    const afterTaxRet=baseCapital>0?(afterTaxGain/baseCapital*100):0;
+
+    const retColor=preTaxRet>=0?'var(--accent)':'var(--red)';
+    const atRetColor=afterTaxRet>=0?'var(--accent)':'var(--red)';
+
+    h+='<tr><td style="color:var(--text2)">'+y+'</td>';
+    h+='<td>$'+fmt(d.invested)+'</td>';
+    h+='<td style="color:var(--gold)">$'+fmt(d.divs)+'</td>';
+    h+='<td style="color:var(--accent)">$'+fmt(d.mmInt)+'</td>';
+    h+='<td>$'+fmt(stockVal)+'</td>';
+    h+='<td style="font-weight:600">$'+fmt(portfolioVal)+'</td>';
+    h+='<td style="color:var(--accent)">$'+fmt(portfolioVal-yearTax)+'</td>';
+    h+='<td style="color:'+retColor+';font-weight:600">'+(preTaxRet>=0?'+':'')+preTaxRet.toFixed(1)+'%</td>';
+    h+='<td style="color:'+atRetColor+';font-weight:600">'+(afterTaxRet>=0?'+':'')+afterTaxRet.toFixed(1)+'%</td>';
+    h+='</tr>';
+
+    prevEndPv=stockVal;
+  });
+  h+='</tbody></table></div>';
+  h+='<div style="margin-top:8px;font-size:12px;color:var(--text3)">Return = (stock gain + dividends + MM interest) ÷ (beginning stock value + avg invested capital). Avg invested capital ≈ year\'s contributions × 0.542 (DCA mid-year approximation).</div>';
   el.innerHTML=h;
 }
 
