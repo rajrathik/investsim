@@ -9,6 +9,12 @@ pulls real historical data from the SQL Server DB and builds five sheets:
   4. Tax Impact   - yearly tax on dividends and MM interest
   5. Annual Return- pre-tax & after-tax return with DCA mid-year approx
 
+Key behaviors:
+  - Round-lot (integer) share buying: INT(allocated / high_price)
+  - Leftover $ carries to next month at aggregate level (not per-ticker)
+  - Simulation period: January of (current_year - N) through December of
+    prior complete year (never includes the current partial year)
+
 Run:
     cd C:\\Raj\\python\\portfolio-simulator
     venv\\Scripts\\python tools\\generate_test_spreadsheet.py
@@ -92,9 +98,10 @@ def load_data(db, tickers_alloc, years):
         mm_rates    : dict  {(y,m): rate}   (rate as percentage, e.g. 5.33)
     """
     now = date.today()
-    end_year, end_month = now.year, now.month
-    start = date(now.year - years, now.month, 1)
-    start_year, start_month = start.year, start.month
+    # Stop at prior year-end (December of last complete year)
+    end_year, end_month = now.year - 1, 12
+    start_year = end_year - years + 1
+    start_month = 1
 
     ticker_info = {}
     for sym, pct in tickers_alloc:
@@ -258,30 +265,38 @@ def build_monthly_sim(wb, refs):
 
     # Build header
     hdr_row = 1
-    headers = ["Month", "MM Rate", "Prior Div Bal", "MM Interest", "Div Bal After Int"]
+    headers = ["Month", "MM Rate", "Prior Div Bal", "MM Interest", "Div Bal After Int",
+               "Carryover In", "Month Budget"]
     for sym in syms:
-        headers += [f"{sym} Invested", f"{sym} Shares", f"{sym} Cum Shares",
+        headers += [f"{sym} Allocated", f"{sym} Shares", f"{sym} Spent",
+                    f"{sym} Leftover", f"{sym} Cum Shares",
                     f"{sym} Divs", f"{sym} Value"]
-    headers += ["Monthly Divs", "Div Bal End", "Cum Invested", "Portfolio Value", "MM-Only Bal"]
+    headers += ["Total Leftover", "Total Shares", "Monthly Divs", "Div Bal End",
+                "Cum Invested", "Equity Value", "MM-Only Bal"]
 
     for ci, h in enumerate(headers, 1):
         ws.cell(hdr_row, ci, h)
     style_header_row(ws, hdr_row, len(headers))
 
     # Column indices (1-based)
-    C_MONTH = 1
-    C_RATE  = 2
-    C_PRIOR = 3
-    C_MMINT = 4
-    C_DVAFT = 5
-    # Per-ticker block starts at col 6, each ticker takes 5 cols
+    C_MONTH  = 1
+    C_RATE   = 2
+    C_PRIOR  = 3
+    C_MMINT  = 4
+    C_DVAFT  = 5
+    C_CARRY  = 6   # Carryover In (from prior month's total leftover)
+    C_BUDGET = 7   # Month Budget = base amt + carryover
+    # Per-ticker block starts at col 8, each ticker takes 7 cols
     def tk_col(ti, offset):
-        return 6 + ti * 5 + offset
-    C_MDIVS  = 6 + len(syms) * 5       # Monthly Divs total
-    C_DVEND  = C_MDIVS + 1
-    C_CINV   = C_MDIVS + 2
-    C_PV     = C_MDIVS + 3
-    C_MMONLY = C_MDIVS + 4
+        return 8 + ti * 7 + offset
+    # offset: 0=Allocated, 1=Shares, 2=Spent, 3=Leftover, 4=Cum Shares, 5=Divs, 6=Value
+    C_TLEFT  = 8 + len(syms) * 7       # Total Leftover (becomes next month's carryover)
+    C_TSHRS  = C_TLEFT + 1             # Total Shares (sum of all ticker Cum Shares)
+    C_MDIVS  = C_TLEFT + 2
+    C_DVEND  = C_TLEFT + 3
+    C_CINV   = C_TLEFT + 4
+    C_PV     = C_TLEFT + 5
+    C_MMONLY = C_TLEFT + 6
 
     # Reference helpers — Setup sheet data columns
     # Setup col 1=Month, 2=MM Rate, then per ticker 3 cols each starting at 3
@@ -322,13 +337,31 @@ def build_monthly_sim(wb, refs):
                  f"={pc}{r}+{mc}{r}").font = FORMULA_FONT
         ws.cell(r, C_DVAFT).number_format = FMT_USD
 
+        # F: Carryover In = prior month's Total Leftover (0 for first month)
+        carry_c = get_column_letter(C_CARRY)
+        tleft_c = get_column_letter(C_TLEFT)
+        if mi == 0:
+            ws.cell(r, C_CARRY, 0).font = DATA_FONT
+        else:
+            ws.cell(r, C_CARRY,
+                     f"={tleft_c}{r-1}").font = FORMULA_FONT
+        ws.cell(r, C_CARRY).number_format = FMT_USD
+
+        # G: Month Budget = base monthly amt + carryover
+        budget_c = get_column_letter(C_BUDGET)
+        ws.cell(r, C_BUDGET,
+                 f"={refs['amt_cell']}+{carry_c}{r}").font = FORMULA_FONT
+        ws.cell(r, C_BUDGET).number_format = FMT_USD
+
         # Per-ticker columns
         for ti, sym in enumerate(syms):
-            c_inv   = tk_col(ti, 0)  # Invested
-            c_sh    = tk_col(ti, 1)  # Shares bought
-            c_cum   = tk_col(ti, 2)  # Cum shares
-            c_div   = tk_col(ti, 3)  # Dividends
-            c_val   = tk_col(ti, 4)  # Value
+            c_alloc = tk_col(ti, 0)  # Allocated $
+            c_sh    = tk_col(ti, 1)  # Shares bought (integer)
+            c_spent = tk_col(ti, 2)  # Spent = shares × high
+            c_left  = tk_col(ti, 3)  # Leftover = allocated - spent
+            c_cum   = tk_col(ti, 4)  # Cum shares
+            c_div   = tk_col(ti, 5)  # Dividends
+            c_val   = tk_col(ti, 6)  # Value
 
             # Alloc cell in Setup (row tk_row+1+ti, col 3)
             alloc_ref = f"Setup!$C${refs['alloc_start_row'] + ti}"
@@ -337,27 +370,39 @@ def build_monthly_sim(wb, refs):
             close_col = get_column_letter(setup_col(ti, 1))
             div_col = get_column_letter(setup_col(ti, 2))
 
-            # Invested = monthly_amt * alloc%
-            ws.cell(r, c_inv,
-                     f"={refs['amt_cell']}*{alloc_ref}").font = FORMULA_FONT
-            ws.cell(r, c_inv).number_format = FMT_USD
+            # Allocated = monthBudget * alloc%
+            alloc_c = get_column_letter(c_alloc)
+            ws.cell(r, c_alloc,
+                     f"={budget_c}{r}*{alloc_ref}").font = FORMULA_FONT
+            ws.cell(r, c_alloc).number_format = FMT_USD
 
-            # Shares = IF(high>0, invested/high, 0)
-            inv_c = get_column_letter(c_inv)
+            # Shares = IF(high>0, INT(allocated/high), 0) — integer shares only
+            sh_c = get_column_letter(c_sh)
             ws.cell(r, c_sh,
-                     f"=IF(Setup!{high_col}{sr}>0,{inv_c}{r}/Setup!{high_col}{sr},0)"
+                     f"=IF(Setup!{high_col}{sr}>0,INT({alloc_c}{r}/Setup!{high_col}{sr}),0)"
                      ).font = FORMULA_FONT
-            ws.cell(r, c_sh).number_format = FMT_SHARES
+            ws.cell(r, c_sh).number_format = FMT_INT
+
+            # Spent = Shares * High price
+            spent_c = get_column_letter(c_spent)
+            ws.cell(r, c_spent,
+                     f"={sh_c}{r}*Setup!{high_col}{sr}").font = FORMULA_FONT
+            ws.cell(r, c_spent).number_format = FMT_USD
+
+            # Leftover = ROUND(Allocated - Spent, 2)
+            left_c = get_column_letter(c_left)
+            ws.cell(r, c_left,
+                     f"=ROUND({alloc_c}{r}-{spent_c}{r},2)").font = FORMULA_FONT
+            ws.cell(r, c_left).number_format = FMT_USD
 
             # Cum Shares
-            sh_c = get_column_letter(c_sh)
             cum_c = get_column_letter(c_cum)
             if mi == 0:
                 ws.cell(r, c_cum, f"={sh_c}{r}").font = FORMULA_FONT
             else:
                 ws.cell(r, c_cum,
                          f"={cum_c}{r-1}+{sh_c}{r}").font = FORMULA_FONT
-            ws.cell(r, c_cum).number_format = FMT_SHARES
+            ws.cell(r, c_cum).number_format = FMT_INT
 
             # Dividends = Cum Shares * Div/Share (from Setup)
             ws.cell(r, c_div,
@@ -369,9 +414,21 @@ def build_monthly_sim(wb, refs):
                      f"={cum_c}{r}*Setup!{close_col}{sr}").font = FORMULA_FONT
             ws.cell(r, c_val).number_format = FMT_USD
 
+        # Total Leftover = SUM of all per-ticker leftover columns
+        left_refs = "+".join(
+            f"{get_column_letter(tk_col(ti,3))}{r}" for ti in range(len(syms)))
+        ws.cell(r, C_TLEFT, f"={left_refs}").font = FORMULA_FONT
+        ws.cell(r, C_TLEFT).number_format = FMT_USD
+
+        # Total Shares = SUM of all per-ticker Cum Shares columns
+        cum_refs = "+".join(
+            f"{get_column_letter(tk_col(ti,4))}{r}" for ti in range(len(syms)))
+        ws.cell(r, C_TSHRS, f"={cum_refs}").font = FORMULA_FONT
+        ws.cell(r, C_TSHRS).number_format = FMT_INT
+
         # Monthly Divs = SUM of all ticker div columns
         div_refs = "+".join(
-            f"{get_column_letter(tk_col(ti,3))}{r}" for ti in range(len(syms)))
+            f"{get_column_letter(tk_col(ti,5))}{r}" for ti in range(len(syms)))
         ws.cell(r, C_MDIVS, f"={div_refs}").font = FORMULA_FONT
         ws.cell(r, C_MDIVS).number_format = FMT_USD
 
@@ -382,24 +439,25 @@ def build_monthly_sim(wb, refs):
                  f"={dvc}{r}+{mdc}{r}").font = FORMULA_FONT
         ws.cell(r, C_DVEND).number_format = FMT_USD
 
-        # Cum Invested
-        inv_refs = "+".join(
-            f"{get_column_letter(tk_col(ti,0))}{r}" for ti in range(len(syms)))
+        # Cum Invested = running total of actual $ spent (not allocated)
+        spent_refs = "+".join(
+            f"{get_column_letter(tk_col(ti,2))}{r}" for ti in range(len(syms)))
         civc = get_column_letter(C_CINV)
         if mi == 0:
-            ws.cell(r, C_CINV, f"={inv_refs}").font = FORMULA_FONT
+            ws.cell(r, C_CINV, f"={spent_refs}").font = FORMULA_FONT
         else:
             ws.cell(r, C_CINV,
-                     f"={civc}{r-1}+{inv_refs}").font = FORMULA_FONT
+                     f"={civc}{r-1}+{spent_refs}").font = FORMULA_FONT
         ws.cell(r, C_CINV).number_format = FMT_USD
 
         # Portfolio Value = SUM of all ticker value columns
         val_refs = "+".join(
-            f"{get_column_letter(tk_col(ti,4))}{r}" for ti in range(len(syms)))
+            f"{get_column_letter(tk_col(ti,6))}{r}" for ti in range(len(syms)))
         ws.cell(r, C_PV, f"={val_refs}").font = FORMULA_FONT
         ws.cell(r, C_PV).number_format = FMT_USD
 
         # MM-Only Bal = ROUND(prior*(1+rate/12),2) + monthly_amt
+        # Note: MM benchmark uses flat selAmt (no carryover)
         mmc = get_column_letter(C_MMONLY)
         if mi == 0:
             ws.cell(r, C_MMONLY,
@@ -425,6 +483,7 @@ def build_monthly_sim(wb, refs):
         "data_start_row": hdr_row + 1,
         "C_RATE": C_RATE, "C_MMINT": C_MMINT, "C_MDIVS": C_MDIVS,
         "C_DVEND": C_DVEND, "C_CINV": C_CINV, "C_PV": C_PV, "C_MMONLY": C_MMONLY,
+        "C_TLEFT": C_TLEFT, "C_TSHRS": C_TSHRS, "C_BUDGET": C_BUDGET, "C_CARRY": C_CARRY,
         "tk_col": tk_col,
     }
 
@@ -463,10 +522,11 @@ def build_year_summary(wb, refs, sim_refs, months):
         ws.cell(r, 1, year).font = DATA_FONT
         ws.cell(r, 1).number_format = FMT_INT
 
-        # Invested = SUM of all per-ticker invested columns for this year's rows
+        # Invested = SUM of all per-ticker Spent columns for this year's rows
+        # (Spent = shares × high, offset 2 in per-ticker block)
         inv_parts = []
         for ti in range(len(refs["syms"])):
-            col_letter = get_column_letter(sim_refs["tk_col"](ti, 0))
+            col_letter = get_column_letter(sim_refs["tk_col"](ti, 2))
             inv_parts.append(f"SUM({sim_sheet}!{col_letter}{fr}:{col_letter}{lr})")
         ws.cell(r, 2, "=" + "+".join(inv_parts)).font = FORMULA_FONT
         ws.cell(r, 2).number_format = FMT_USD
@@ -577,22 +637,19 @@ def build_tax_impact(wb, refs, yr_refs):
 # ============================================================
 # SHEET 5: ANNUAL RETURNS
 # ============================================================
-def build_annual_returns(wb, refs, yr_refs, tax_refs):
+def build_annual_returns(wb, refs, yr_refs):
     ws = wb.create_sheet("Annual Returns")
     ws.sheet_properties.tabColor = "F59E0B"
 
-    tax_ref = refs["tax_cell"]
     ys_sheet = "'Year Summary'"
-    ti_sheet = "'Tax Impact'"
     yr_start = yr_refs["data_start_row"]
-    tx_start = tax_refs["data_start_row"]
 
     # For each year we write a summary row + a calculation breakdown block
     r = 1
 
-    # Main header
+    # Main header (After-Tax Value and After-Tax Return removed)
     main_headers = ["Year", "Invested", "Dividends", "MM Interest", "Stock Value",
-                    "Portfolio Value", "After-Tax Value", "Pre-Tax Return", "After-Tax Return"]
+                    "Portfolio Value", "Pre-Tax Return"]
     for ci, h in enumerate(main_headers, 1):
         ws.cell(r, ci, h)
     style_header_row(ws, r, len(main_headers))
@@ -600,7 +657,6 @@ def build_annual_returns(wb, refs, yr_refs, tax_refs):
 
     for yi in range(yr_refs["n_years"]):
         yr_r = yr_start + yi    # row in Year Summary
-        tx_r = tx_start + yi    # row in Tax Impact
 
         # --- Summary row ---
         sr = r  # remember this row for the detail formulas
@@ -623,12 +679,8 @@ def build_annual_returns(wb, refs, yr_refs, tax_refs):
         # Portfolio Value = Stock Value + Div Bal
         ws.cell(r, 6, f"={ys_sheet}!F{yr_r}+{ys_sheet}!G{yr_r}").font = FORMULA_FONT
         ws.cell(r, 6).number_format = FMT_USD
-        # After-Tax Value = Portfolio Value - Year Taxes
-        ws.cell(r, 7, f"=F{r}-{ti_sheet}!F{tx_r}").font = FORMULA_FONT
-        ws.cell(r, 7).number_format = FMT_USD
 
-        # Pre-Tax Return and After-Tax Return — will reference detail rows below
-        # We'll fill these after writing the detail block
+        # Pre-Tax Return — will reference detail rows below
         r += 1
 
         # --- Calculation detail block ---
@@ -639,9 +691,7 @@ def build_annual_returns(wb, refs, yr_refs, tax_refs):
             ("Avg Invested Capital", "Invested x 0.542 (DCA mid-year)"),
             ("Base Capital (Denominator)", "Beginning Stock Value + Avg Invested"),
             ("Total Gain (Numerator)", "Stock Gain + Dividends + MM Interest"),
-            ("After-Tax Gain", "Stock Gain + (Divs-Tax) + (MMInt-Tax)"),
             ("Pre-Tax Return", "Total Gain / Base Capital"),
-            ("After-Tax Return", "After-Tax Gain / Base Capital"),
         ]
 
         for di, (label, note) in enumerate(details):
@@ -661,9 +711,7 @@ def build_annual_returns(wb, refs, yr_refs, tax_refs):
         r_avg    = detail_start + 2
         r_base   = detail_start + 3
         r_tgain  = detail_start + 4
-        r_atgain = detail_start + 5
-        r_ptret  = detail_start + 6
-        r_atret  = detail_start + 7
+        r_ptret  = detail_start + 5
 
         # Beginning Stock Value = prior year's End Stock Value (or 0 for first year)
         if yi == 0:
@@ -691,27 +739,14 @@ def build_annual_returns(wb, refs, yr_refs, tax_refs):
                  f"=C{r_sg}+C{sr}+D{sr}").font = FORMULA_FONT
         ws.cell(r_tgain, 3).number_format = FMT_USD
 
-        # After-Tax Gain = Stock Gain + (Divs - DivTax) + (MMInt - IntTax)
-        ws.cell(r_atgain, 3,
-                 f"=C{r_sg}+(C{sr}-{ti_sheet}!C{tx_r})+(D{sr}-{ti_sheet}!E{tx_r})"
-                 ).font = FORMULA_FONT
-        ws.cell(r_atgain, 3).number_format = FMT_USD
-
         # Pre-Tax Return = Total Gain / Base Capital
         ws.cell(r_ptret, 3,
                  f"=IF(C{r_base}>0,C{r_tgain}/C{r_base},0)").font = FORMULA_FONT
         ws.cell(r_ptret, 3).number_format = FMT_PCT
 
-        # After-Tax Return = After-Tax Gain / Base Capital
-        ws.cell(r_atret, 3,
-                 f"=IF(C{r_base}>0,C{r_atgain}/C{r_base},0)").font = FORMULA_FONT
-        ws.cell(r_atret, 3).number_format = FMT_PCT
-
-        # Now fill in the summary row's return columns (H and I)
-        ws.cell(sr, 8, f"=C{r_ptret}").font = Font(bold=True, color="10B981", size=11)
-        ws.cell(sr, 8).number_format = FMT_PCT
-        ws.cell(sr, 9, f"=C{r_atret}").font = Font(bold=True, color="10B981", size=11)
-        ws.cell(sr, 9).number_format = FMT_PCT
+        # Fill in the summary row's Pre-Tax Return column (G)
+        ws.cell(sr, 7, f"=C{r_ptret}").font = Font(bold=True, color="10B981", size=11)
+        ws.cell(sr, 7).number_format = FMT_PCT
 
         # Highlight the summary row
         for c in range(1, len(main_headers) + 1):
@@ -839,7 +874,7 @@ def main():
     sim_refs = build_monthly_sim(wb, refs)
     yr_refs = build_year_summary(wb, refs, sim_refs, months)
     tax_refs = build_tax_impact(wb, refs, yr_refs)
-    build_annual_returns(wb, refs, yr_refs, tax_refs)
+    build_annual_returns(wb, refs, yr_refs)
 
     # --- Save ---
     # If the default file is locked (open in Excel), add a suffix

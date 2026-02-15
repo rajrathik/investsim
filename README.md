@@ -1,6 +1,6 @@
 # Portfolio Simulator
 
-**What it does:** A historical backtesting tool that lets you simulate investing a fixed monthly amount across securities (ETFs, mutual funds, stocks) over 1–20 years. It buys at the worst-case price each month (monthly high), tracks share accumulation, dividends earned, money market interest on accumulated cash, tax impact, and annual returns — all powered by real Yahoo Finance and FRED data stored in SQL Server.
+**What it does:** A historical backtesting tool that lets you simulate investing a fixed monthly amount across securities (ETFs, mutual funds, stocks) over 1–20 years. It buys whole shares at the worst-case price each month (monthly high), carries unspent dollars to the next month, tracks share accumulation, dividends earned, money market interest on accumulated cash, tax impact, and annual returns — all powered by real Yahoo Finance and FRED data stored in SQL Server. Simulation period ends at the prior year's December (no partial-year data).
 
 ---
 
@@ -179,14 +179,16 @@ venv\Scripts\grip tools\Spreadsheet_Guide.md
 
 - **Dollar-cost averaging simulation** — invest a fixed monthly amount across multiple securities with custom allocation percentages
 - **Worst-case entry pricing** — buys at the monthly high price each month (conservative backtesting)
+- **Round-lot (integer) share buying** — buys whole shares only: floor(budget ÷ price). Unspent cents carry to next month at aggregate level
+- **Prior year-end cutoff** — simulation runs through December of the last complete calendar year (never into the current partial year)
 - **Dividend tracking** — cash dividends accumulated separately (not reinvested into equities)
 - **Money market interest** — accumulated dividends earn interest at the federal funds rate (monthly compounding)
 - **MMF benchmark** — side-by-side comparison: what if the same investment went entirely into money market?
-- **6 summary tiles** — Total Invested, Portfolio Value, Dividends Earned, Cash Accrual, Portfolio Balance, MMF Value (all clickable for drill-down)
+- **6 summary tiles** — Total Invested, Equity Value, Dividends Earned, Cash Accrual, Portfolio Balance, MMF Value (all clickable for drill-down)
 - **Interactive charts** — Growth Over Time and Dividend Earned charts with hover tooltips and crosshair tracking
-- **Monthly breakdown table** — clickable cells for per-ticker detail modals, sortable by date, with Total Invested running total
+- **Monthly breakdown table** — clickable cells for per-ticker detail modals, sortable by date, with Total Invested running total and Total Shares column
 - **Tax impact analysis** — adjustable tax rate (0–60%) with yearly breakdown of taxes on dividends and MM interest
-- **Annual return table** — pre-tax and after-tax returns per calendar year using DCA mid-year approximation
+- **Annual return table** — pre-tax returns per calendar year using DCA mid-year approximation
 - **Clickable calculation modals** — click any highlighted cell in monthly or annual tables to see full calculation breakdown
 - **Multi-select ticker dropdown** — checkbox-based selection with search filtering
 - **Proportional redistribution** — when a ticker has no data for a month, its allocation flows to available tickers

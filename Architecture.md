@@ -163,36 +163,40 @@ When user clicks "Run Simulation", the browser executes this flow:
 
 **3. Redistribute allocation** — For each month, checks which tickers have valid price data. If a ticker has no data (e.g., ETF didn't exist yet), its allocation percentage is redistributed proportionally among available tickers. This ensures the full monthly amount is always invested.
 
-**4. Buy shares** — For each ticker with data, calculates: `shares = (monthly_amount × effective_%) / high_price`. Uses the monthly high price (worst-case entry point). Accumulates shares in running total.
+**4. Compute month budget** — The investable amount each month is the base monthly investment plus any carryover (unspent dollars) from the prior month. On the first month, carryover is zero.
 
-**5. Calculate dividends** — For each dividend payment in the month, calculates: `dividend_cash = dividend_per_share × total_shares_held`. Accumulated as cash (not reinvested into equities).
+**5. Buy shares (round lot)** — For each ticker with data, calculates: `allocated = month_budget × effective_%`, then `shares = floor(allocated / high_price)` (integer shares only). Actual cost = shares × high price. The leftover (allocated − spent) from each ticker is summed. After all tickers are processed, the total leftover becomes next month's carryover at the aggregate level (not per-ticker).
 
-**6. Apply money market interest** — Prior month's accumulated dividend balance grows at that month's federal funds rate ÷ 12 (monthly compounding). New dividends are then added. This models parking dividends in a money market fund.
+**6. Calculate dividends** — For each dividend payment in the month, calculates: `dividend_cash = dividend_per_share × total_shares_held`. Accumulated as cash (not reinvested into equities).
 
-**7. Compute MM-only benchmark** — A separate running balance tracks what would happen if the entire monthly investment went into money market instead of ETFs. Each month: prior balance grows at MM rate ÷ 12, then the monthly investment is added. This provides a "what if you didn't invest in ETFs at all" comparison.
+**7. Apply money market interest** — Prior month's accumulated dividend balance grows at that month's federal funds rate ÷ 12 (monthly compounding). New dividends are then added. This models parking dividends in a money market fund.
 
-**8. Value portfolio** — At month end: `portfolio_value = Σ (shares_held × close_price)` across all tickers.
+**8. Compute MM-only benchmark** — A separate running balance tracks what would happen if the entire monthly investment went into money market instead of ETFs. Each month: prior balance grows at MM rate ÷ 12, then the base monthly investment is added (no carryover concept for the benchmark). This provides a "what if you didn't invest in ETFs at all" comparison.
 
-**9. Store snapshots** — Each month's per-ticker detail (shares bought, running totals, dividends, effective allocation, dividend balance with MM interest, MM-only balance) is stored for the drill-down modals.
+**9. Value portfolio** — At month end: `portfolio_value = Σ (shares_held × close_price)` across all tickers.
 
-**10. Render results** — Summary cards (6 tiles: Total Invested, Portfolio Value, Dividends Earned, Cash Accrual, Portfolio Balance, MMF Value), two interactive charts (Growth Over Time with portfolio/invested/money market lines, and Dividend Earned), clickable monthly breakdown table (with Total Invested running total, Cash Accrual, and MMF Value columns), tax impact section, and annual return table. Charts show tooltips on hover with crosshair tracking.
+**10. Store snapshots** — Each month's per-ticker detail (integer shares bought, actual $ spent, running totals, dividends, effective allocation, dividend balance with MM interest, MM-only balance) is stored for the drill-down modals.
 
-**11. Compute tax impact** — User-adjustable tax rate (0–60%) applied per year to dividends and MM interest separately. Renders a Tax Liability by Year table showing dividends, tax on dividends, MM interest, tax on interest, and total taxes per year.
+**11. Render results** — Summary cards (6 tiles: Total Invested, Equity Value, Dividends Earned, Cash Accrual, Portfolio Balance, MMF Value), two interactive charts (Growth Over Time with portfolio/invested/money market lines, and Dividend Earned), clickable monthly breakdown table (with Total Invested running total, Total Shares, Cash Accrual, Equity Value, and MMF Value columns), tax impact section, and annual return table. Charts show tooltips on hover with crosshair tracking.
 
-**12. Compute annual returns** — For each calendar year, calculates pre-tax and after-tax returns using a DCA mid-year approximation. Stock value = shares × December close price. Portfolio value = stock value + accumulated dividend balance. Average invested capital ≈ year's new contributions × 0.542 (reflects that monthly DCA dollars are invested ~6.5 months on average). Pre-tax return = (stock gain + dividends + MM interest) ÷ (beginning stock value + avg invested capital). After-tax return = (stock gain + after-tax dividends + after-tax MM interest) ÷ (beginning stock value + avg invested capital). Beginning stock value is the prior year's ending stock value (0 for the first year).
+**12. Compute tax impact** — User-adjustable tax rate (0–60%) applied per year to dividends and MM interest separately. Renders a Tax Liability by Year table showing dividends, tax on dividends, MM interest, tax on interest, and total taxes per year.
+
+**13. Compute annual returns** — For each calendar year, calculates pre-tax returns using a DCA mid-year approximation. Stock value = shares × December close price. Portfolio value = stock value + accumulated dividend balance. Average invested capital ≈ year's new contributions × 0.542 (reflects that monthly DCA dollars are invested ~6.5 months on average). Pre-tax return = (stock gain + dividends + MM interest) ÷ (beginning stock value + avg invested capital). Beginning stock value is the prior year's ending stock value (0 for the first year).
 
 ---
 
 ## Key Design Decisions
 
 - **Buy at monthly high**: Conservative — simulates worst-case dollar-cost averaging entry each month.
+- **Round-lot (integer) share buying**: Only whole shares are purchased: `floor(allocated / high_price)`. No fractional shares. Unspent dollars from all tickers pool together and carry to the next month's budget at the aggregate level (not per-ticker). Example: $100 budget, $33/share → buy 3 shares ($99 spent), $1 leftover → next month gets $101.
+- **Prior year-end cutoff**: Simulation runs from January of (current year − N) through December of the prior complete calendar year. This avoids partial-year data for the current year.
 - **Dividends as cash**: Not reinvested into equities — tracked separately so user sees true cash generation.
 - **Dividends earn money market interest**: Accumulated dividends are modeled as invested in a money market fund at the federal funds rate (monthly compounding). The "Cash Accrual" column and summary tile show the impact.
 - **MM-only benchmark**: A separate calculation shows what the same monthly investment would grow to if invested entirely in money market (no securities). Helps answer "was the investment strategy worth the risk?"
 - **Interactive charts**: Charts respond to mouse hover — a crosshair tracks position and a tooltip shows values at that point. No click needed, just hover.
 - **Proportional redistribution**: When a ticker has no data for a month, its allocation flows to available tickers proportionally, ensuring 100% of monthly investment is always deployed.
 - **Tax impact analysis**: User-adjustable tax rate (0–60%) applied to dividends and MM interest per year. Shows yearly tax liability breakdown and after-tax portfolio values.
-- **Annual return calculation**: Pre-tax and after-tax returns per calendar year using DCA mid-year approximation (contributions × 0.542). Returns computed against beginning stock value + average invested capital.
+- **Annual return calculation**: Pre-tax returns per calendar year using DCA mid-year approximation (contributions × 0.542). Returns computed against beginning stock value + average invested capital.
 - **Security-agnostic labeling**: UI avoids ETF-specific language — supports ETFs, mutual funds, individual stocks, or any ticker in the database.
 - **Read-only API**: Write endpoints disabled by default. Data loads only through CLI batch scripts.
 - **Split frontend**: HTML, CSS, and JS in separate files — no build tools, no Node.js — just open the HTML file in a browser.

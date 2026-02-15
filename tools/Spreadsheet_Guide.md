@@ -36,17 +36,23 @@ One row per month. This is where the math happens.
 | Prior Div Bal | Dividend cash balance carried from last month | Previous row's "Div Bal End" |
 | MM Interest | Interest earned on cash | Prior Div Bal x MM Rate / 12 |
 | Div Bal After Interest | Cash after interest | Prior Div Bal + MM Interest |
+| Month Budget | Investable amount this month | Monthly Amount + Carryover from prior month |
+| Carryover In | Leftover $ from prior month | Previous row's "Total Leftover" |
 | **Per ticker:** | | |
-| Invested | Your dollars into this ticker | Monthly Amount x Allocation % |
-| New Shares | Shares bought this month | Invested / High Price |
-| Cum Shares | Total shares you own | Last month's Cum Shares + New Shares |
+| Allocated | Dollars earmarked for this ticker | Month Budget x Allocation % |
+| Shares | Whole shares bought (round lot) | INT(Allocated / High Price) |
+| Spent | Actual dollars used | Shares x High Price |
+| Leftover | Unspent from this ticker | Allocated - Spent |
+| Cum Shares | Total shares you own | Last month's Cum Shares + Shares |
 | Dividends | Cash dividend received | Cum Shares x Dividend per Share |
 | Value | What your shares are worth | Cum Shares x Close Price |
 | **Totals:** | | |
+| Total Leftover | All tickers' leftover combined | Carries to next month as Carryover In |
+| Total Shares | Running total of all shares held | Sum of all ticker Cum Shares |
 | Monthly Divs | All dividends this month | Sum of all ticker dividends |
 | Div Bal End | Cash balance end of month | Div Bal After Interest + Monthly Divs |
-| Total Invested | Cumulative dollars in | Running sum |
-| Portfolio Value | Stock value + cash balance | Sum of all ticker Values + Div Bal End |
+| Total Invested | Cumulative actual $ spent | Running sum of Spent (not Allocated) |
+| Equity Value | Stock value | Sum of all ticker Values |
 | MM-Only Bal | What if you put everything in money market? | Grows with interest each month |
 
 > Try it: click any green formula cell. Excel shows you the exact calculation in the formula bar.
@@ -98,9 +104,7 @@ One summary row per year + calculation detail rows underneath.
 | MM Interest | Interest earned that year |
 | Stock Value | End-of-year shares value |
 | Portfolio Value | Stock Value + Div Balance |
-| After-Tax Value | Portfolio Value - Taxes |
 | Pre-Tax Return % | How well you did before taxes |
-| After-Tax Return % | How well you did after taxes |
 
 **Detail rows** (italicized, below each year) show exactly how return is computed:
 
@@ -110,7 +114,6 @@ Avg Invested Capital = Invested x 0.542   (assumes money goes in mid-year on ave
 Base Capital       = Beginning Stock Value + Avg Invested Capital
 
 Pre-Tax Return     = (Stock Gain + Dividends + MM Interest) / Base Capital
-After-Tax Return   = (Stock Gain + After-Tax Divs + After-Tax Interest) / Base Capital
 ```
 
 ---
@@ -134,6 +137,9 @@ After-Tax Return   = (Stock Gain + After-Tax Divs + After-Tax Interest) / Base C
 ## Key Concepts
 
 - **Buys at monthly high price** — worst case scenario (conservative)
+- **Integer shares only (round lots)** — you buy whole shares: INT(budget / price). No fractional shares.
+- **Leftover carries forward** — unspent cents from all tickers pool together and add to next month's budget
+- **Simulation stops at prior year-end** — runs through December of last complete calendar year, never into the current partial year
 - **Dividends are NOT reinvested** — they sit in a cash account earning money market interest
 - **0.542 multiplier** — since you invest monthly, on average your money was invested for about half the year (DCA mid-year approximation)
 - **All cells are formulas** — change any input on Setup, everything recalculates
