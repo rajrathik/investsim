@@ -55,7 +55,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 /* Summary cards */
 .sc{position:relative;overflow:hidden;padding:24px 28px}
 .sc .icon{position:absolute;top:-20px;right:-20px;font-size:80px;opacity:.04;font-weight:900}
-.sc .sl{font-size:13px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;font-family:'JetBrains Mono',monospace}
+.sc .sl{font-size:13px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;font-family:'JetBrains Mono',monospace;min-height:2.6em;display:flex;align-items:flex-end}
 .sc .sv{font-size:30px;font-weight:700;line-height:1.1;font-family:'Space Grotesk',sans-serif}
 .sc .ss{font-size:13px;color:var(--text2);margin-top:6px}
 .clickable-val{cursor:pointer;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:4px;text-decoration-color:rgba(16,185,129,.4)}.clickable-val:hover{text-decoration-color:var(--accent)}
