@@ -88,6 +88,7 @@ async function loadTickers(){
 
 /* Column info tooltips — shown on hover of the * icon in table headers */
 const COL_INFO={
+  deposit:'New money deposited this month (base amount + annual growth). This is the fresh deposit before any carryover from prior months.',
   invested:'Actual $ spent this month (integer shares × high price). Unspent remainder stays in each ticker\'s bucket until enough to buy a share.',
   totalinvested:'Running total of all monthly investments to date.',
   shares:'Whole shares purchased this month = floor(accumulated $ ÷ monthly high price). Each ticker accumulates until it can afford a share.',
@@ -458,7 +459,7 @@ async function simulate(){
 
       tInv+=mI;
       let pv=0,totalSh=0;for(const[s,x]of Object.entries(st)){const d=x.d[k];if(d&&d.close)pv+=x.sh*d.close;totalSh+=x.sh}
-      bk.push({year:y,month:m,invested:mI,shares:mS,totalShares:totalSh,divs:mD,tInv,tDiv,pv,divBal,mmRate:monthRate,mmOnlyBal,mmInt:mmIntThisMonth});
+      bk.push({year:y,month:m,deposit:monthBudget,invested:mI,shares:mS,totalShares:totalSh,divs:mD,tInv,tDiv,pv,divBal,mmRate:monthRate,mmOnlyBal,mmInt:mmIntThisMonth});
       snapshots.push(monthSnap);
     }
     breakdownData=bk;
@@ -489,7 +490,7 @@ function showResults(r){
   /* Chart 2: Dividend Balance + MM Interest growth */
   h+='<div class="card fade-up" style="animation-delay:.35s;padding:24px;margin-bottom:24px"><h3 class="space" style="font-size:18px;font-weight:600;margin-bottom:16px">Dividend Earned</h3><div class="chart-wrap" id="chartWrap2"><canvas id="chart2" style="width:100%;height:250px;cursor:crosshair"></canvas><div class="chart-crosshair" id="chartCross2"></div><div class="chart-tooltip" id="chartTip2"></div></div></div>';
   h+='<div class="card fade-up" style="animation-delay:.4s;padding:24px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><h3 class="space" style="font-size:18px;font-weight:600">Monthly Breakdown</h3><button class="btn-sm mono" style="background:var(--accent-dim);color:var(--accent)" onclick="togTbl()">Show All ('+r.bk.length+')</button></div>';
-  h+='<div style="overflow-x:auto"><table><thead><tr><th style="text-align:left;cursor:pointer" onclick="toggleSortOrder()" id="thMonth">Month ▼</th>'+thWithInfo('Invested','invested')+thWithInfo('Total Invested','totalinvested')+thWithInfo('Shares','shares')+thWithInfo('Total Shares','totalshares')+thWithInfo('Dividends','dividends')+thWithInfo('Cash Accrual','divvalue')+thWithInfo('Equity Value','portfolio')+thWithInfo('MMF Value','mmonly')+'</tr></thead><tbody id="tblBody"></tbody></table></div></div>';
+  h+='<div style="overflow-x:auto"><table><thead><tr><th style="text-align:left;cursor:pointer" onclick="toggleSortOrder()" id="thMonth">Month ▼</th>'+thWithInfo('Deposit','deposit')+thWithInfo('Invested','invested')+thWithInfo('Total Invested','totalinvested')+thWithInfo('Shares','shares')+thWithInfo('Total Shares','totalshares')+thWithInfo('Dividends','dividends')+thWithInfo('Cash Accrual','divvalue')+thWithInfo('Equity Value','portfolio')+thWithInfo('MMF Value','mmonly')+'</tr></thead><tbody id="tblBody"></tbody></table></div></div>';
   /* Tax Impact section */
   h+='<div class="card fade-up" style="animation-delay:.5s;padding:24px;margin-top:24px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><h3 class="space" style="font-size:18px;font-weight:600">Tax Impact</h3><div style="display:flex;align-items:center;gap:8px"><label style="font-size:12px;color:var(--text3);font-family:JetBrains Mono,monospace">Tax Rate %</label><input type="number" id="taxRate" class="inp" style="width:80px;margin:0;padding:6px 10px;font-size:14px" value="30" min="0" max="60" step="1" oninput="renderTaxImpact()"></div></div><div id="taxBody"></div></div>';
   el.innerHTML=h;window._bk=r.bk;window._exp=false;window._sortAsc=false;fillTbl(r.bk.slice(-24),r.bk.length-24);
@@ -501,7 +502,7 @@ function fillTbl(rows,startIdx){
   /* Build display list with original indices, then apply sort */
   let display=rows.map((r,i)=>({r,gi:startIdx+i}));
   if(!window._sortAsc) display=[...display].reverse();
-  $('tblBody').innerHTML=display.map(({r,gi})=>'<tr><td style="color:var(--text2)">'+MO[r.month-1]+' '+r.year+'</td><td class="clickable-cell" onclick="openModal('+gi+',\'invested\')">$'+fmt(r.invested)+'</td><td>$'+fmt(r.tInv)+'</td><td class="clickable-cell" onclick="openModal('+gi+',\'shares\')" style="color:var(--text2)">'+r.shares.toLocaleString()+'</td><td class="clickable-cell" onclick="openModal('+gi+',\'totalshares\')" style="color:var(--text2)">'+r.totalShares.toLocaleString()+'</td><td class="clickable-cell" onclick="openModal('+gi+',\'dividends\')" style="color:'+(r.divs>0?'var(--gold)':'var(--text3)')+'">$'+fmt(r.divs)+'</td><td style="color:var(--gold)">$'+fmt(r.divBal)+'</td><td class="clickable-cell" onclick="openModal('+gi+',\'portfolio\')" style="color:var(--accent);font-weight:600">$'+fmt(r.pv)+'</td><td style="color:var(--text2)">$'+fmt(r.mmOnlyBal)+'</td></tr>').join('');
+  $('tblBody').innerHTML=display.map(({r,gi})=>'<tr><td style="color:var(--text2)">'+MO[r.month-1]+' '+r.year+'</td><td style="color:var(--text2)">$'+fmt(r.deposit)+'</td><td class="clickable-cell" onclick="openModal('+gi+',\'invested\')">$'+fmt(r.invested)+'</td><td>$'+fmt(r.tInv)+'</td><td class="clickable-cell" onclick="openModal('+gi+',\'shares\')" style="color:var(--text2)">'+r.shares.toLocaleString()+'</td><td class="clickable-cell" onclick="openModal('+gi+',\'totalshares\')" style="color:var(--text2)">'+r.totalShares.toLocaleString()+'</td><td class="clickable-cell" onclick="openModal('+gi+',\'dividends\')" style="color:'+(r.divs>0?'var(--gold)':'var(--text3)')+'">$'+fmt(r.divs)+'</td><td style="color:var(--gold)">$'+fmt(r.divBal)+'</td><td class="clickable-cell" onclick="openModal('+gi+',\'portfolio\')" style="color:var(--accent);font-weight:600">$'+fmt(r.pv)+'</td><td style="color:var(--text2)">$'+fmt(r.mmOnlyBal)+'</td></tr>').join('');
 }
 function togTbl(){window._exp=!window._exp;if(window._exp)fillTbl(window._bk,0);else fillTbl(window._bk.slice(-24),window._bk.length-24)}
 function toggleSortOrder(){
