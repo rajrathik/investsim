@@ -61,6 +61,8 @@ async function onLoginSuccess(){
 
 function dismissWelcomeGuide(){
   const w=$('welcomeOverlay');if(w)w.classList.add('hidden');
+  const h=$('mainHeader');if(h)h.style.display='';
+  const c=$('mainContainer');if(c)c.style.display='';
   loadTickers();
 }
 

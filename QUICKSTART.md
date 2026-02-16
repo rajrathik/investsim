@@ -73,3 +73,25 @@ venv\Scripts\python tools\generate_test_spreadsheet.py
 ```
 
 Output: `tools/Portfolio_Simulator_Test.xlsx`
+
+## 8. Convert Markdown files to PDF
+
+When a `.md` file is new or changed, regenerate its PDF:
+
+```bash
+cd C:\Raj\python\portfolio-simulator
+venv\Scripts\activate
+venv\Scripts\mdpdf -o README.pdf README.md
+venv\Scripts\mdpdf -o Architecture.pdf Architecture.md
+venv\Scripts\mdpdf -o CHANGELOG.pdf CHANGELOG.md
+venv\Scripts\mdpdf -o QUICKSTART.pdf QUICKSTART.md
+venv\Scripts\mdpdf -o tools\Spreadsheet_Guide.pdf tools\Spreadsheet_Guide.md
+venv\Scripts\mdpdf -o docs\Auth0_Integration_Plan.pdf docs\Auth0_Integration_Plan.md
+venv\Scripts\mdpdf -o docs\Welcome_Guide_Plan.pdf docs\Welcome_Guide_Plan.md
+```
+
+Or convert any single file:
+
+```bash
+venv\Scripts\mdpdf -o <output>.pdf <input>.md
+```
