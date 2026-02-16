@@ -40,7 +40,7 @@ C:\Raj\python\portfolio-simulator\
 │
 ├── tools\                          ← Utilities & verification
 │   ├── generate_test_spreadsheet.py ← Generates Excel workbook from DB data
-│   ├── spreadsheet_config.txt      ← Config file (tickers, amount, years, tax)
+│   ├── spreadsheet_config.txt      ← Config file (tickers, amount, years, tax, growth)
 │   ├── create_user_logins.sql      ← SQL script for manual user_logins table creation
 │   └── Spreadsheet_Guide.md        ← One-page user guide for the Excel file
 │
@@ -147,6 +147,7 @@ tickers = XLK:60, XLV:40
 monthly_amount = 1000
 years = 3
 tax_rate = 30
+annual_growth = 0
 ```
 
 **Generate:**
@@ -177,7 +178,8 @@ venv\Scripts\grip tools\Spreadsheet_Guide.md
 
 ## Features
 
-- **Dollar-cost averaging simulation** — invest a fixed monthly amount across multiple securities with custom allocation percentages
+- **Dollar-cost averaging simulation** — invest a monthly amount across multiple securities with custom allocation percentages
+- **Annual deposit growth** — optionally increase your monthly investment by a fixed $ amount each year (e.g., $1000/month growing by $100/year)
 - **Worst-case entry pricing** — buys at the monthly high price each month (conservative backtesting)
 - **Round-lot (integer) share buying** — buys whole shares only: floor(bucket ÷ price). Each ticker accumulates unspent dollars in its own bucket until enough to buy a share
 - **Prior year-end cutoff** — simulation runs through December of the last complete calendar year (never into the current partial year)

@@ -92,6 +92,12 @@
 |--------|-------------|
 | `3cb8dff` | Replaced aggregate carryover with per-ticker accumulation buckets. Each ticker keeps its own unspent dollars — money never crosses between tickers. Monthly budget is flat (no carryover addition). Excel generator expanded to 9 columns per ticker (Accum In, Allocated, Accum Bal, Shares, Spent, Accum Out, Cum Shares, Divs, Value). Updated welcome guide, Architecture.md, README.md, Spreadsheet_Guide.md. Branch: `feature/accumulate-then-buy` |
 
+### Phase 10 — Annual Deposit Growth (Feb 16)
+
+| Commit | Description |
+|--------|-------------|
+| TBD | Annual deposit growth feature: optional $ increase to monthly investment each year. Year 1 uses base amount, each subsequent year adds the growth amount. New UI input field in Investment Parameters card. MM-only benchmark uses same growing schedule. Spreadsheet generator reads `annual_growth` from config file. Updated welcome guide, Architecture.md, README.md, Spreadsheet_Guide.md. Branch: `feature/annual-deposit-growth` |
+
 ---
 
 ## Branch History
@@ -100,6 +106,7 @@
 main
  └── feature/round-lot-shares  (Phase 8)
       └── feature/accumulate-then-buy  (Phase 9)
+ └── feature/annual-deposit-growth  (Phase 10)
 ```
 
 ---
@@ -129,7 +136,7 @@ main
 | `frontend/portfolio-simulator.css` | All styles |
 | `frontend/portfolio-simulator.js` | Simulation engine + UI rendering |
 | `tools/generate_test_spreadsheet.py` | Excel workbook generator |
-| `tools/spreadsheet_config.txt` | Spreadsheet config (tickers, amount, years, tax) |
+| `tools/spreadsheet_config.txt` | Spreadsheet config (tickers, amount, years, tax, annual growth) |
 | `tools/Spreadsheet_Guide.md` | Spreadsheet user guide |
 | `tools/create_user_logins.sql` | SQL script for user_logins table |
 | `docs/Auth0_Integration_Plan.md` | Auth0 implementation plan |

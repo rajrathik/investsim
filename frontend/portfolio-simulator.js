@@ -1,7 +1,7 @@
 const API="/api";
 const AMTS=[500,1000,2000,5000];
 const MO=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-let allTickers=[],selected=[],alloc={},selAmt=1000,selYr=10;
+let allTickers=[],selected=[],alloc={},selAmt=1000,selGrowth=0,selYr=10;
 let snapshots=null,breakdownData=null;
 
 /* ========== AUTH0 INTEGRATION ========== */
@@ -114,6 +114,7 @@ function thWithInfo(label,key){
 function renderAmts(){$('amtBtns').innerHTML=AMTS.map(v=>'<button class="btn f1 '+(selAmt===v?'on':'')+'" onclick="setAmt('+v+')">$'+v.toLocaleString()+'</button>').join('')}
 function setAmt(v){selAmt=v;$('amt').value=v;renderAmts()}
 $('amt').addEventListener('input',function(){selAmt=Math.max(0,parseInt(this.value)||0);renderAmts()});
+$('growthInp').addEventListener('input',function(){selGrowth=Math.max(0,parseInt(this.value)||0)});
 function renderYrs(){
   let h='<select id="yrSel" class="yr-select" onchange="setYr(+this.value)">';
   for(let y=1;y<=20;y++)h+='<option value="'+y+'"'+(selYr===y?' selected':'')+'>'+y+' Year'+(y>1?'s':'')+'</option>';
@@ -347,10 +348,10 @@ function showMMOnlySummary(){
   const etfTotal=r.pv+r.divBal;
   const etfGain=etfTotal-r.tInv;
   $('modalTitle').textContent='Money Market Only Benchmark';
-  $('modalSub').textContent='What if you invested $'+fmt(selAmt)+'/month entirely in money market?';
+  $('modalSub').textContent='What if you invested $'+fmt(selAmt)+'/month'+(selGrowth>0?' (growing $'+fmt(selGrowth)+'/yr)':'')+' entirely in money market?';
   let h='';
   h+='<div class="section-label">Money Market Only</div>';
-  h+='<div class="detail-row"><div><div class="d-sym" style="color:var(--text2)">Total Invested</div><div class="d-name">'+r.n+' months × $'+fmt(selAmt)+'</div></div><div class="d-nums"><div class="d-val">$'+fmt(r.tInv)+'</div></div></div>';
+  h+='<div class="detail-row"><div><div class="d-sym" style="color:var(--text2)">Total Invested</div><div class="d-name">'+r.n+' months'+(selGrowth>0?' (base $'+fmt(selAmt)+' + $'+fmt(selGrowth)+'/yr growth)':' × $'+fmt(selAmt))+'</div></div><div class="d-nums"><div class="d-val">$'+fmt(r.tInv)+'</div></div></div>';
   h+='<div class="detail-row"><div><div class="d-sym" style="color:var(--accent)">Interest Earned</div><div class="d-name">At federal funds rate (monthly compounding)</div></div><div class="d-nums"><div class="d-val" style="color:var(--accent)">$'+fmt(mmGain)+'</div></div></div>';
   h+='<div class="detail-total" style="background:var(--border);border-color:var(--text3)"><div><div class="dt-label" style="color:var(--text2)">MM Only Value</div><div style="font-size:11px;color:var(--text3);margin-top:1px">+'+(mmGain/r.tInv*100).toFixed(1)+'% return</div></div><div class="dt-val" style="color:var(--text2)">$'+fmt(r.mmOnlyBal)+'</div></div>';
   h+='<div class="section-label" style="margin-top:16px">Your Portfolio (for comparison)</div>';
@@ -399,13 +400,13 @@ async function simulate(){
       const mmIntThisMonth=Math.round((divBal*monthRate/12)*100)/100;
       divBal=Math.round((divBal+mmIntThisMonth)*100)/100;
 
-      /* MM-only benchmark: grow prior balance at MM rate, then add this month's investment
-         Note: MM benchmark uses exact selAmt (no carryover concept for benchmark) */
-      mmOnlyBal=Math.round((mmOnlyBal*(1+monthRate/12))*100)/100;
-      mmOnlyBal=Math.round((mmOnlyBal+selAmt)*100)/100;
+      /* This month's investable amount = base + annual growth */
+      const yearOffset=y-sy;
+      const monthBudget=selAmt+(yearOffset*selGrowth);
 
-      /* This month's investable amount = flat base (no aggregate carryover) */
-      const monthBudget=selAmt;
+      /* MM-only benchmark: grow prior balance at MM rate, then add this month's investment */
+      mmOnlyBal=Math.round((mmOnlyBal*(1+monthRate/12))*100)/100;
+      mmOnlyBal=Math.round((mmOnlyBal+monthBudget)*100)/100;
 
       // Step 1: Find which tickers have valid data this month
       const available=[],unavailable=[];
@@ -474,7 +475,7 @@ function showResults(r){
   const divGain=r.divBal-r.tDiv;
   const mmOnlyRetP=((r.mmOnlyBal-r.tInv)/r.tInv*100).toFixed(1);
   const cards=[
-    {l:'Total Invested',v:'$'+fmtW(r.tInv),s:r.n+' months × $'+fmtW(selAmt),c:'var(--text1)',i:'$',ck:''},
+    {l:'Total Invested',v:'$'+fmtW(r.tInv),s:r.n+' months'+(selGrowth>0?' (base $'+fmtW(selAmt)+' + $'+fmtW(selGrowth)+'/yr)':' × $'+fmtW(selAmt)),c:'var(--text1)',i:'$',ck:''},
     {l:'Equity Value',v:'$'+fmtW(r.pv),s:(r.retP>=0?'+':'')+r.retP.toFixed(1)+'% return',c:r.pv>=r.tInv?'var(--accent)':'var(--red)',i:'◆',ck:' clickable-val" onclick="openModal()" title="Click for per-ticker breakdown'},
     {l:'Dividends Earned',v:'$'+fmtW(r.tDiv),s:'Cash accumulated',c:'var(--gold)',i:'★',ck:' clickable-val" onclick="showDivSummary()" title="Click for per-ticker dividends'},
     {l:'Cash Accrual',v:'$'+fmtW(r.divBal),s:'MM earned: $'+fmtW(divGain),c:'var(--gold)',i:'%',ck:' clickable-val" onclick="showDivValueSummary()" title="Click for details'},

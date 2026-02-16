@@ -88,7 +88,7 @@ Each ticker has: symbol, name, active flag, created/updated timestamps.
 | `test_connection.py` | Quick script to verify DB connectivity and create tables |
 | **tools/** | |
 | `generate_test_spreadsheet.py` | Reads `spreadsheet_config.txt` (or interactive prompts), queries DB for prices/dividends/MM rates, generates 5-sheet Excel workbook with formulas mirroring the JS simulation logic |
-| `spreadsheet_config.txt` | User-editable config: tickers + allocations, monthly amount, years, tax rate |
+| `spreadsheet_config.txt` | User-editable config: tickers + allocations, monthly amount, years, tax rate, annual deposit growth |
 | `Spreadsheet_Guide.md` | One-page walkthrough for users navigating the Excel workbook |
 
 ---
@@ -113,7 +113,7 @@ Incremental mode is identical but fetches only the last 3 months and upserts (up
 
 **Spreadsheet generation** (tools/generate_test_spreadsheet.py):
 ```
-Read spreadsheet_config.txt (tickers, amount, years, tax rate)
+Read spreadsheet_config.txt (tickers, amount, years, tax rate, annual growth)
   → Query DB: Ticker, MonthlyPrice, Dividend, MonthlyMoneyMarketRate
   → Build 5 Excel sheets with cross-sheet formula references:
       Setup (raw data) → Monthly Sim (formulas) → Year Summary (SUMIFS)
@@ -163,7 +163,7 @@ When user clicks "Run Simulation", the browser executes this flow:
 
 **3. Redistribute allocation** — For each month, checks which tickers have valid price data. If a ticker has no data (e.g., ETF didn't exist yet), its allocation percentage is redistributed proportionally among available tickers. This ensures the full monthly amount is always invested.
 
-**4. Compute month budget** — The investable amount each month is the base monthly investment (flat — no aggregate carryover).
+**4. Compute month budget** — The investable amount each month is: `base_monthly_amount + (year_offset × annual_growth)`. Year 1 uses the base amount; each subsequent year adds the growth amount. Default growth is $0 (flat — existing behavior). No aggregate carryover between months.
 
 **5. Accumulate-then-buy (round lot)** — Each ticker maintains its own accumulation bucket. For each ticker with data: `allocated = month_budget × effective_%`, then the allocated amount is added to that ticker's bucket. `shares = floor(bucket / high_price)` (integer shares only). Actual cost = shares × high price. The remainder stays in that ticker's bucket for next month. No money crosses between tickers — each ticker's unspent dollars are earmarked for that ticker only.
 
@@ -171,7 +171,7 @@ When user clicks "Run Simulation", the browser executes this flow:
 
 **7. Apply money market interest** — Prior month's accumulated dividend balance grows at that month's federal funds rate ÷ 12 (monthly compounding). New dividends are then added. This models parking dividends in a money market fund.
 
-**8. Compute MM-only benchmark** — A separate running balance tracks what would happen if the entire monthly investment went into money market instead of ETFs. Each month: prior balance grows at MM rate ÷ 12, then the base monthly investment is added (no carryover concept for the benchmark). This provides a "what if you didn't invest in ETFs at all" comparison.
+**8. Compute MM-only benchmark** — A separate running balance tracks what would happen if the entire monthly investment went into money market instead of equities. Each month: prior balance grows at MM rate ÷ 12, then the same growing month budget is added (matching the equity simulation's annual growth schedule). This provides a "what if you didn't invest in equities at all" comparison.
 
 **9. Value portfolio** — At month end: `portfolio_value = Σ (shares_held × close_price)` across all tickers.
 

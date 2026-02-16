@@ -16,3 +16,7 @@ years = 3
 
 # Tax rate percentage (0-60)
 tax_rate = 30
+
+# Annual deposit growth in dollars (0 = flat monthly amount)
+# Year 1: base amount, Year 2: base + growth, Year 3: base + 2*growth...
+annual_growth = 0

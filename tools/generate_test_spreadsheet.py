@@ -161,7 +161,7 @@ def load_data(db, tickers_alloc, years):
 # SHEET 1: SETUP
 # ============================================================
 def build_setup(wb, ticker_info, months, prices, dividends, mm_rates,
-                monthly_amt, years, tax_rate):
+                monthly_amt, years, tax_rate, annual_growth=0):
     ws = wb.active
     ws.title = "Setup"
     ws.sheet_properties.tabColor = "10B981"
@@ -176,6 +176,7 @@ def build_setup(wb, ticker_info, months, prices, dividends, mm_rates,
         ("Investment Years", years, FMT_INT),
         ("Tax Rate", tax_rate / 100, FMT_PCT),
         ("Total Months", len(months), FMT_INT),
+        ("Annual Growth", annual_growth, FMT_USD),
     ]
     for i, (label, val, fmt) in enumerate(params):
         r = 3 + i
@@ -187,7 +188,7 @@ def build_setup(wb, ticker_info, months, prices, dividends, mm_rates,
 
     # --- Ticker allocation table ---
     syms = list(ticker_info.keys())
-    tk_row = 8
+    tk_row = 9
     ws.cell(tk_row, 1, "Ticker").font = LABEL_FONT
     ws.cell(tk_row, 2, "Name").font = LABEL_FONT
     ws.cell(tk_row, 3, "Allocation %").font = LABEL_FONT
@@ -243,6 +244,7 @@ def build_setup(wb, ticker_info, months, prices, dividends, mm_rates,
     # Return references for other sheets
     return {
         "amt_cell": "Setup!$B$3",
+        "growth_cell": "Setup!$B$7",
         "tax_cell": "Setup!$B$5",
         "alloc_start_row": tk_row + 1,
         "data_hdr_row": hdr,
@@ -250,6 +252,7 @@ def build_setup(wb, ticker_info, months, prices, dividends, mm_rates,
         "syms": syms,
         "n_months": len(months),
         "months": months,
+        "start_year": months[0][0],
     }
 
 
@@ -338,10 +341,11 @@ def build_monthly_sim(wb, refs):
                  f"={pc}{r}+{mc}{r}").font = FORMULA_FONT
         ws.cell(r, C_DVAFT).number_format = FMT_USD
 
-        # F: Month Budget = flat base monthly amt (no aggregate carryover)
+        # F: Month Budget = base + yearOffset * annual growth
         budget_c = get_column_letter(C_BUDGET)
+        start_year = refs["start_year"]
         ws.cell(r, C_BUDGET,
-                 f"={refs['amt_cell']}").font = FORMULA_FONT
+                 f"={refs['amt_cell']}+(VALUE(RIGHT(Setup!A{sr},4))-{start_year})*{refs['growth_cell']}").font = FORMULA_FONT
         ws.cell(r, C_BUDGET).number_format = FMT_USD
 
         # Per-ticker columns (accumulate-then-buy)
@@ -458,16 +462,16 @@ def build_monthly_sim(wb, refs):
         ws.cell(r, C_PV, f"={val_refs}").font = FORMULA_FONT
         ws.cell(r, C_PV).number_format = FMT_USD
 
-        # MM-Only Bal = ROUND(prior*(1+rate/12),2) + monthly_amt
-        # Note: MM benchmark uses flat selAmt (no carryover)
+        # MM-Only Bal = ROUND(prior*(1+rate/12),2) + monthBudget
+        # Note: MM benchmark uses same growing budget as equity simulation
         mmc = get_column_letter(C_MMONLY)
         if mi == 0:
             ws.cell(r, C_MMONLY,
-                     f"=ROUND(0*(1+{rc}{r}/12),2)+{refs['amt_cell']}"
+                     f"=ROUND(0*(1+{rc}{r}/12),2)+{budget_c}{r}"
                      ).font = FORMULA_FONT
         else:
             ws.cell(r, C_MMONLY,
-                     f"=ROUND({mmc}{r-1}*(1+{rc}{r}/12),2)+{refs['amt_cell']}"
+                     f"=ROUND({mmc}{r-1}*(1+{rc}{r}/12),2)+{budget_c}{r}"
                      ).font = FORMULA_FONT
         ws.cell(r, C_MMONLY).number_format = FMT_USD
 
@@ -805,8 +809,9 @@ def read_config():
     monthly_amt = float(config["monthly_amount"])
     years = int(config["years"])
     tax_rate = float(config["tax_rate"])
+    annual_growth = float(config.get("annual_growth", 0))
 
-    return tickers_alloc, monthly_amt, years, tax_rate
+    return tickers_alloc, monthly_amt, years, tax_rate, annual_growth
 
 
 def main():
@@ -818,7 +823,7 @@ def main():
     # --- Try config file first, then interactive prompts ---
     cfg = read_config()
     if cfg:
-        tickers_alloc, monthly_amt, years, tax_rate = cfg
+        tickers_alloc, monthly_amt, years, tax_rate, annual_growth = cfg
         print(f"  Read from: {CONFIG_FILE}")
     else:
         # Interactive prompts (fallback)
@@ -844,6 +849,9 @@ def main():
         tax_str = input("Tax rate % [30]: ").strip()
         tax_rate = float(tax_str) if tax_str else 30.0
 
+        growth_str = input("Annual deposit growth [$0]: ").strip()
+        annual_growth = float(growth_str) if growth_str else 0.0
+
     total_pct = sum(p for _, p in tickers_alloc)
     if abs(total_pct - 100) > 0.01:
         print(f"  WARNING: allocations sum to {total_pct}%, not 100%")
@@ -851,6 +859,7 @@ def main():
     print()
     print(f"  Tickers: {', '.join(f'{s} {p}%' for s,p in tickers_alloc)}")
     print(f"  Amount:  ${monthly_amt:,.0f}/month for {years} years")
+    print(f"  Growth:  +${annual_growth:,.0f}/year")
     print(f"  Tax:     {tax_rate}%")
     print()
 
@@ -872,7 +881,7 @@ def main():
     wb = Workbook()
 
     refs = build_setup(wb, ticker_info, months, prices, dividends, mm_rates,
-                       monthly_amt, years, tax_rate)
+                       monthly_amt, years, tax_rate, annual_growth)
     sim_refs = build_monthly_sim(wb, refs)
     yr_refs = build_year_summary(wb, refs, sim_refs, months)
     tax_refs = build_tax_impact(wb, refs, yr_refs)
