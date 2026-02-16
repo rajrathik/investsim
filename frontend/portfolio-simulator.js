@@ -86,12 +86,13 @@ async function loadTickers(){
 
 /* Column info tooltips — shown on hover of the * icon in table headers */
 const COL_INFO={
-  invested:'Monthly amount allocated per your % split. Bought at the monthly high price (worst-case entry).',
+  invested:'Actual $ spent this month (integer shares × high price). Unspent remainder stays in each ticker\'s bucket until enough to buy a share.',
   totalinvested:'Running total of all monthly investments to date.',
-  shares:'Shares purchased = $ invested ÷ monthly high price. Click to see per-ticker breakdown.',
+  shares:'Whole shares purchased this month = floor(accumulated $ ÷ monthly high price). Each ticker accumulates until it can afford a share.',
+  totalshares:'Running total of all shares held across all tickers.',
   dividends:'Cash dividends received based on shares held × dividend per share. Not reinvested.',
   divvalue:'Accumulated dividends and money market interest on accrued cash.',
-  portfolio:'Holdings value (shares × close price) plus accumulated dividends invested at money market rate.',
+  portfolio:'Equity value: shares held × close price for each ticker.',
   mmonly:'What if you invested the same monthly amount entirely in money market at the federal funds rate instead of securities.'
 };
 let mmRates={}; /* key: "YYYY-MM" → annual rate as decimal e.g. 0.05 */
@@ -172,7 +173,7 @@ function renderPortfolioModal(){
   $('modalSub').textContent='Final snapshot as of last available month';
   let h='',tv=0;const syms=Object.keys(snap.tickers);
   syms.forEach(s=>{const d=snap.tickers[s],t=getTk(s);tv+=d.value;
-    h+='<div class="detail-row"><div><div class="d-sym">'+s+'</div><div class="d-name">'+(t?.name||'')+'</div></div><div class="d-nums"><div class="d-val">$'+fmt(d.value)+'</div><div class="d-sub">'+d.totalShares.toFixed(4)+' shares × $'+fmt(d.closePrice)+' close</div><div class="d-sub2">'+d.origPct+'% target alloc · Divs earned: $'+fmt(d.totalDivs)+'</div></div></div>'});
+    h+='<div class="detail-row"><div><div class="d-sym">'+s+'</div><div class="d-name">'+(t?.name||'')+'</div></div><div class="d-nums"><div class="d-val">$'+fmt(d.value)+'</div><div class="d-sub">'+d.totalShares.toLocaleString()+' shares × $'+fmt(d.closePrice)+' close</div><div class="d-sub2">'+d.origPct+'% target alloc · Divs earned: $'+fmt(d.totalDivs)+'</div></div></div>'});
   h+='<div class="detail-total"><div><div class="dt-label">Total Portfolio Value</div><div style="font-size:12px;color:var(--text2);margin-top:2px">'+syms.length+' holdings</div></div><div class="dt-val">$'+fmt(tv)+'</div></div>';
   $('modalBody').innerHTML=h;
 }
@@ -189,7 +190,10 @@ function renderMonthModal(idx){
     if(d.boughtThisMonth>0){
       let note='';
       if(d.effectivePct!==d.origPct)note='<div class="redist-note">Redistributed: '+d.origPct+'% → '+d.effectivePct.toFixed(1)+'% effective</div>';
-      h+='<div class="detail-row"><div><div class="d-sym">'+s+'</div><div class="d-name">'+(t?.name||'')+'</div></div><div class="d-nums"><div class="d-val">+'+d.boughtThisMonth.toFixed(4)+' shares</div><div class="d-sub">$'+fmt(d.investedThisMonth)+' invested at $'+fmt(d.buyPrice)+' high</div>'+note+'</div></div>'
+      const accumNote=d.accumBal>0?'<div class="d-sub2" style="color:var(--text3)">$'+fmt(d.accumBal)+' remaining in bucket</div>':'';
+      h+='<div class="detail-row"><div><div class="d-sym">'+s+'</div><div class="d-name">'+(t?.name||'')+'</div></div><div class="d-nums"><div class="d-val">+'+d.boughtThisMonth.toLocaleString()+' shares</div><div class="d-sub">$'+fmt(d.investedThisMonth)+' invested at $'+fmt(d.buyPrice)+' high</div>'+note+accumNote+'</div></div>'
+    } else if(d.origPct>0&&d.effectivePct>0){
+      h+='<div class="detail-row" style="opacity:.7"><div><div class="d-sym">'+s+'</div><div class="d-name">'+(t?.name||'')+'</div></div><div class="d-nums"><div class="d-val" style="color:var(--text3)">Accumulating</div><div class="d-sub">$'+fmt(d.accumBal)+' saved — waiting for enough to buy a share</div></div></div>'
     } else if(d.origPct>0){
       h+='<div class="detail-row" style="opacity:.5"><div><div class="d-sym">'+s+'</div><div class="d-name">'+(t?.name||'')+'</div></div><div class="d-nums"><div class="d-val" style="color:var(--text3)">No data</div><div class="d-sub">Allocation redistributed to other tickers</div></div></div>'
     }
@@ -198,12 +202,12 @@ function renderMonthModal(idx){
   if(anyDiv){
     h+='<div class="section-label">Dividends This Month</div>';
     syms.forEach(s=>{const d=snap.tickers[s],t=getTk(s);
-      if(d.divsThisMonth>0)h+='<div class="detail-row"><div><div class="d-sym">'+s+'</div><div class="d-name">'+(t?.name||'')+'</div></div><div class="d-nums"><div class="d-val" style="color:var(--gold)">$'+fmt(d.divsThisMonth)+'</div><div class="d-sub">on '+d.totalShares.toFixed(4)+' shares held</div></div></div>'});
+      if(d.divsThisMonth>0)h+='<div class="detail-row"><div><div class="d-sym">'+s+'</div><div class="d-name">'+(t?.name||'')+'</div></div><div class="d-nums"><div class="d-val" style="color:var(--gold)">$'+fmt(d.divsThisMonth)+'</div><div class="d-sub">on '+d.totalShares.toLocaleString()+' shares held</div></div></div>'});
   }
   h+='<div class="section-label">Running Portfolio Totals</div>';
   let tv=0;
   syms.forEach(s=>{const d=snap.tickers[s],t=getTk(s);tv+=d.value;
-    h+='<div class="detail-row"><div><div class="d-sym">'+s+'</div><div class="d-name">'+(t?.name||'')+'</div></div><div class="d-nums"><div class="d-val">$'+fmt(d.value)+'</div><div class="d-sub">'+d.totalShares.toFixed(4)+' total shares × $'+fmt(d.closePrice)+' close</div><div class="d-sub2">Total divs to date: $'+fmt(d.totalDivs)+'</div></div></div>'});
+    h+='<div class="detail-row"><div><div class="d-sym">'+s+'</div><div class="d-name">'+(t?.name||'')+'</div></div><div class="d-nums"><div class="d-val">$'+fmt(d.value)+'</div><div class="d-sub">'+d.totalShares.toLocaleString()+' total shares × $'+fmt(d.closePrice)+' close</div><div class="d-sub2">Total divs to date: $'+fmt(d.totalDivs)+'</div></div></div>'});
   h+='<div class="detail-total"><div><div class="dt-label">Portfolio Value</div><div style="font-size:12px;color:var(--text2);margin-top:2px">Total invested: $'+fmt(bk.tInv)+' · Total divs: $'+fmt(bk.tDiv)+'</div></div><div class="dt-val">$'+fmt(bk.pv)+'</div></div>';
   $('modalBody').innerHTML=h;
 }
@@ -216,12 +220,15 @@ function renderContextModal(idx,context){
 
   if(context==='invested'){
     $('modalTitle').textContent=monthLabel+' — Investment Split';
-    $('modalSub').textContent='How $'+fmt(bk.invested)+' was allocated across tickers';
+    $('modalSub').textContent='How $'+fmt(bk.invested)+' was spent across tickers';
     let totalInv=0;
     syms.forEach(s=>{const d=snap.tickers[s],t=getTk(s);
       if(d.investedThisMonth>0){totalInv+=d.investedThisMonth;
         let note='';if(d.effectivePct!==d.origPct)note='<div class="redist-note" style="font-size:10px;padding:3px 8px;margin-top:1px">'+d.origPct+'% → '+d.effectivePct.toFixed(1)+'%</div>';
-        h+='<div class="detail-row"><div><div class="d-sym">'+s+'</div><div class="d-name">'+(t?.name||'')+'</div></div><div class="d-nums"><div class="d-val">$'+fmt(d.investedThisMonth)+'</div><div class="d-sub">at $'+fmt(d.buyPrice)+' high</div>'+note+'</div></div>'}
+        const accumNote=d.accumBal>0?'<div class="d-sub2" style="color:var(--text3)">$'+fmt(d.accumBal)+' remaining in bucket</div>':'';
+        h+='<div class="detail-row"><div><div class="d-sym">'+s+'</div><div class="d-name">'+(t?.name||'')+'</div></div><div class="d-nums"><div class="d-val">$'+fmt(d.investedThisMonth)+'</div><div class="d-sub">at $'+fmt(d.buyPrice)+' high</div>'+note+accumNote+'</div></div>'}
+      else if(d.origPct>0&&d.effectivePct>0){
+        h+='<div class="detail-row" style="opacity:.7"><div><div class="d-sym">'+s+'</div><div class="d-name">'+(t?.name||'')+'</div></div><div class="d-nums"><div class="d-val" style="color:var(--text3);font-size:13px">Accumulating</div><div class="d-sub">$'+fmt(d.accumBal)+' in bucket</div></div></div>'}
       else if(d.origPct>0){h+='<div class="detail-row" style="opacity:.4"><div><div class="d-sym">'+s+'</div><div class="d-name">'+(t?.name||'')+'</div></div><div class="d-nums"><div class="d-val" style="color:var(--text3);font-size:13px">No data</div></div></div>'}
     });
     h+='<div class="detail-total"><div class="dt-label">Total Invested</div><div class="dt-val">$'+fmt(totalInv)+'</div></div>';
@@ -229,14 +236,26 @@ function renderContextModal(idx,context){
 
   else if(context==='shares'){
     $('modalTitle').textContent=monthLabel+' — Shares Purchased';
-    $('modalSub').textContent='New shares acquired this month';
+    $('modalSub').textContent='New shares acquired this month (per-ticker accumulation)';
     let totalShares=0;
     syms.forEach(s=>{const d=snap.tickers[s],t=getTk(s);
       if(d.boughtThisMonth>0){totalShares+=d.boughtThisMonth;
-        h+='<div class="detail-row"><div><div class="d-sym">'+s+'</div><div class="d-name">'+(t?.name||'')+'</div></div><div class="d-nums"><div class="d-val">+'+d.boughtThisMonth.toFixed(4)+'</div><div class="d-sub">$'+fmt(d.investedThisMonth)+' ÷ $'+fmt(d.buyPrice)+'</div></div></div>'}
+        const accumNote=d.accumBal>0?'<div class="d-sub2" style="color:var(--text3)">$'+fmt(d.accumBal)+' remaining in bucket</div>':'';
+        h+='<div class="detail-row"><div><div class="d-sym">'+s+'</div><div class="d-name">'+(t?.name||'')+'</div></div><div class="d-nums"><div class="d-val">+'+d.boughtThisMonth.toLocaleString()+'</div><div class="d-sub">$'+fmt(d.investedThisMonth)+' ÷ $'+fmt(d.buyPrice)+'</div>'+accumNote+'</div></div>'}
+      else if(d.origPct>0&&d.effectivePct>0){
+        h+='<div class="detail-row" style="opacity:.7"><div><div class="d-sym">'+s+'</div><div class="d-name">'+(t?.name||'')+'</div></div><div class="d-nums"><div class="d-val" style="color:var(--text3);font-size:13px">Accumulating</div><div class="d-sub">$'+fmt(d.accumBal)+' in bucket</div></div></div>'}
       else if(d.origPct>0){h+='<div class="detail-row" style="opacity:.4"><div><div class="d-sym">'+s+'</div><div class="d-name">'+(t?.name||'')+'</div></div><div class="d-nums"><div class="d-val" style="color:var(--text3);font-size:13px">No data</div></div></div>'}
     });
-    h+='<div class="detail-total"><div class="dt-label">Total Shares Bought</div><div class="dt-val">'+totalShares.toFixed(4)+'</div></div>';
+    h+='<div class="detail-total"><div class="dt-label">Total Shares Bought</div><div class="dt-val">'+totalShares.toLocaleString()+'</div></div>';
+  }
+
+  else if(context==='totalshares'){
+    $('modalTitle').textContent=monthLabel+' — Total Shares Held';
+    $('modalSub').textContent='Accumulated shares across all tickers';
+    let grandTotal=0;
+    syms.forEach(s=>{const d=snap.tickers[s],t=getTk(s);grandTotal+=d.totalShares;
+      h+='<div class="detail-row"><div><div class="d-sym">'+s+'</div><div class="d-name">'+(t?.name||'')+'</div></div><div class="d-nums"><div class="d-val">'+d.totalShares.toLocaleString()+' shares</div><div class="d-sub">Value: $'+fmt(d.value)+'</div></div></div>'});
+    h+='<div class="detail-total"><div class="dt-label">Total Shares</div><div class="dt-val">'+grandTotal.toLocaleString()+'</div></div>';
   }
 
   else if(context==='dividends'){
@@ -248,18 +267,18 @@ function renderContextModal(idx,context){
       let totalDiv=0;
       syms.forEach(s=>{const d=snap.tickers[s],t=getTk(s);
         if(d.divsThisMonth>0){totalDiv+=d.divsThisMonth;
-          h+='<div class="detail-row"><div><div class="d-sym">'+s+'</div><div class="d-name">'+(t?.name||'')+'</div></div><div class="d-nums"><div class="d-val" style="color:var(--gold)">$'+fmt(d.divsThisMonth)+'</div><div class="d-sub">on '+d.totalShares.toFixed(2)+' shares</div></div></div>'}
+          h+='<div class="detail-row"><div><div class="d-sym">'+s+'</div><div class="d-name">'+(t?.name||'')+'</div></div><div class="d-nums"><div class="d-val" style="color:var(--gold)">$'+fmt(d.divsThisMonth)+'</div><div class="d-sub">on '+d.totalShares.toLocaleString()+' shares</div></div></div>'}
       });
       h+='<div class="detail-total" style="background:var(--gold-dim);border-color:rgba(245,158,11,.25)"><div class="dt-label" style="color:var(--gold)">Total Dividends</div><div class="dt-val" style="color:var(--gold)">$'+fmt(totalDiv)+'</div></div>';
     }
   }
 
   else if(context==='portfolio'){
-    $('modalTitle').textContent=monthLabel+' — Portfolio Value';
+    $('modalTitle').textContent=monthLabel+' — Equity Value';
     $('modalSub').textContent='Value split across holdings';
     let tv=0;
     syms.forEach(s=>{const d=snap.tickers[s],t=getTk(s);tv+=d.value;
-      h+='<div class="detail-row"><div><div class="d-sym">'+s+'</div><div class="d-name">'+(t?.name||'')+'</div></div><div class="d-nums"><div class="d-val" style="color:var(--accent)">$'+fmt(d.value)+'</div><div class="d-sub">'+d.totalShares.toFixed(2)+' × $'+fmt(d.closePrice)+'</div></div></div>'});
+      h+='<div class="detail-row"><div><div class="d-sym">'+s+'</div><div class="d-name">'+(t?.name||'')+'</div></div><div class="d-nums"><div class="d-val" style="color:var(--accent)">$'+fmt(d.value)+'</div><div class="d-sub">'+d.totalShares.toLocaleString()+' × $'+fmt(d.closePrice)+'</div></div></div>'});
     h+='<div class="detail-total"><div><div class="dt-label">Total Value</div><div style="font-size:11px;color:var(--text2);margin-top:1px">Invested: $'+fmt(bk.tInv)+' · Divs: $'+fmt(bk.tDiv)+'</div></div><div class="dt-val">$'+fmt(tv)+'</div></div>';
   }
 
@@ -275,7 +294,7 @@ function showDivSummary(){
   const syms=Object.keys(snap.tickers);
   let h='',totalDiv=0;
   syms.forEach(s=>{const d=snap.tickers[s],t=getTk(s);totalDiv+=d.totalDivs;
-    h+='<div class="detail-row"><div><div class="d-sym">'+s+'</div><div class="d-name">'+(t?.name||'')+'</div></div><div class="d-nums"><div class="d-val" style="color:var(--gold)">$'+fmt(d.totalDivs)+'</div><div class="d-sub">'+d.totalShares.toFixed(2)+' shares held</div></div></div>'});
+    h+='<div class="detail-row"><div><div class="d-sym">'+s+'</div><div class="d-name">'+(t?.name||'')+'</div></div><div class="d-nums"><div class="d-val" style="color:var(--gold)">$'+fmt(d.totalDivs)+'</div><div class="d-sub">'+d.totalShares.toLocaleString()+' shares held</div></div></div>'});
   h+='<div class="detail-total" style="background:var(--gold-dim);border-color:rgba(245,158,11,.25)"><div class="dt-label" style="color:var(--gold)">Total Dividends</div><div class="dt-val" style="color:var(--gold)">$'+fmt(totalDiv)+'</div></div>';
   $('modalBody').innerHTML=h;
   $('modalOverlay').classList.add('show');
@@ -305,7 +324,7 @@ function showTotalSummary(){
   let h='',tv=0,td=0;
   h+='<div class="section-label">Holdings Value (shares × close)</div>';
   syms.forEach(s=>{const d=snap.tickers[s],t=getTk(s);tv+=d.value;
-    h+='<div class="detail-row"><div><div class="d-sym">'+s+'</div><div class="d-name">'+(t?.name||'')+'</div></div><div class="d-nums"><div class="d-val" style="color:var(--accent)">$'+fmt(d.value)+'</div><div class="d-sub">'+d.totalShares.toFixed(2)+' × $'+fmt(d.closePrice)+'</div></div></div>'});
+    h+='<div class="detail-row"><div><div class="d-sym">'+s+'</div><div class="d-name">'+(t?.name||'')+'</div></div><div class="d-nums"><div class="d-val" style="color:var(--accent)">$'+fmt(d.value)+'</div><div class="d-sub">'+d.totalShares.toLocaleString()+' × $'+fmt(d.closePrice)+'</div></div></div>'});
   h+='<div class="detail-total"><div class="dt-label">Holdings Subtotal</div><div class="dt-val">$'+fmt(tv)+'</div></div>';
   h+='<div class="section-label" style="margin-top:16px">Dividends + MM Interest</div>';
   syms.forEach(s=>{const d=snap.tickers[s],t=getTk(s);td+=d.totalDivs;
@@ -346,8 +365,10 @@ async function simulate(){
   if(selAmt<=0){$('err').textContent='Enter a monthly investment amount';return}
   const btn=$('runBtn');btn.textContent='⏳ Running...';btn.disabled=true;$('err').textContent='';
   try{
-    const now=new Date(),ey=now.getFullYear(),em=now.getMonth()+1,sd=new Date(now);sd.setFullYear(sd.getFullYear()-selYr);
-    const sy=sd.getFullYear(),sm=sd.getMonth()+1;
+    /* Stop at prior year-end (December of last complete year) */
+    const now=new Date(),ey=now.getFullYear()-1,em=12;
+    const sd=new Date(ey-selYr+1,0,1);
+    const sy=sd.getFullYear(),sm=1;
     const active=selected.map(s=>[s,alloc[s]]).filter(([,p])=>p>0);
 
     /* Fetch ticker data AND money market rates in parallel */
@@ -364,6 +385,8 @@ async function simulate(){
     const sorted=[...months].sort();
     const st={};active.forEach(([s,p],i)=>{st[s]={p,sh:0,d:{},totalDivs:0};data[i].monthly_data?.forEach(m=>st[s].d[m.year+'-'+String(m.month).padStart(2,'0')]=m)});
 
+    /* Per-ticker accumulation buckets: each ticker keeps its own unspent $ */
+    const accum={};active.forEach(([s])=>accum[s]=0);
     let tInv=0,tDiv=0,divBal=0,mmOnlyBal=0;const bk=[];snapshots=[];
     for(const k of sorted){
       const[y,m]=k.split('-').map(Number);let mI=0,mD=0,mS=0;
@@ -374,9 +397,13 @@ async function simulate(){
       const mmIntThisMonth=Math.round((divBal*monthRate/12)*100)/100;
       divBal=Math.round((divBal+mmIntThisMonth)*100)/100;
 
-      /* MM-only benchmark: grow prior balance at MM rate, then add this month's investment */
+      /* MM-only benchmark: grow prior balance at MM rate, then add this month's investment
+         Note: MM benchmark uses exact selAmt (no carryover concept for benchmark) */
       mmOnlyBal=Math.round((mmOnlyBal*(1+monthRate/12))*100)/100;
       mmOnlyBal=Math.round((mmOnlyBal+selAmt)*100)/100;
+
+      /* This month's investable amount = flat base (no aggregate carryover) */
+      const monthBudget=selAmt;
 
       // Step 1: Find which tickers have valid data this month
       const available=[],unavailable=[];
@@ -396,19 +423,22 @@ async function simulate(){
         effectiveAlloc[s]=totalAvailPct>0?(st[s].p/totalAvailPct)*100:0;
       }
 
-      // Step 3: Invest using effective allocation
+      // Step 3: Invest using per-ticker accumulate-then-buy
       for(const s of available){
         const x=st[s],d=x.d[k];
         const effPct=effectiveAlloc[s];
-        const investAmt=(selAmt*effPct)/100;
-        const bought=investAmt/d.high;
-        x.sh+=bought;mI+=investAmt;mS+=bought;
+        const allocAmt=(monthBudget*effPct)/100;
+        accum[s]=Math.round((accum[s]+allocAmt)*100)/100; /* add this month's allocation to bucket */
+        const bought=Math.floor(accum[s]/d.high);          /* integer shares from accumulated $ */
+        const spent=bought*d.high;                          /* actual $ spent */
+        accum[s]=Math.round((accum[s]-spent)*100)/100;      /* remainder stays in this ticker's bucket */
+        x.sh+=bought;mI+=spent;mS+=bought;
 
         let divsThis=0;
         if(d.dividends){for(const dv of d.dividends){const da=dv.amount*x.sh;tDiv+=da;mD+=da;x.totalDivs+=da;divsThis+=da}}
 
         const closeP=d.close||0;
-        monthSnap.tickers[s]={boughtThisMonth:bought,investedThisMonth:investAmt,buyPrice:d.high,totalShares:x.sh,closePrice:closeP,value:x.sh*closeP,divsThisMonth:divsThis,totalDivs:x.totalDivs,origPct:x.p,effectivePct:effPct};
+        monthSnap.tickers[s]={boughtThisMonth:bought,investedThisMonth:spent,buyPrice:d.high,totalShares:x.sh,closePrice:closeP,value:x.sh*closeP,divsThisMonth:divsThis,totalDivs:x.totalDivs,origPct:x.p,effectivePct:effPct,accumBal:accum[s]};
       }
 
       // Step 4: Record unavailable tickers
@@ -417,15 +447,15 @@ async function simulate(){
         let divsThis=0;
         if(d&&d.dividends){for(const dv of d.dividends){const da=dv.amount*x.sh;tDiv+=da;mD+=da;x.totalDivs+=da;divsThis+=da}}
         const closeP=(d&&d.close)?d.close:0;
-        monthSnap.tickers[s]={boughtThisMonth:0,investedThisMonth:0,buyPrice:0,totalShares:x.sh,closePrice:closeP,value:x.sh*closeP,divsThisMonth:divsThis,totalDivs:x.totalDivs,origPct:x.p,effectivePct:0};
+        monthSnap.tickers[s]={boughtThisMonth:0,investedThisMonth:0,buyPrice:0,totalShares:x.sh,closePrice:closeP,value:x.sh*closeP,divsThisMonth:divsThis,totalDivs:x.totalDivs,origPct:x.p,effectivePct:0,accumBal:accum[s]||0};
       }
 
       /* Add this month's new dividends to the balance (after interest was applied) */
       divBal=Math.round((divBal+mD)*100)/100;
 
       tInv+=mI;
-      let pv=0;for(const[s,x]of Object.entries(st)){const d=x.d[k];if(d&&d.close)pv+=x.sh*d.close}
-      bk.push({year:y,month:m,invested:mI,shares:mS,divs:mD,tInv,tDiv,pv,divBal,mmRate:monthRate,mmOnlyBal,mmInt:mmIntThisMonth});
+      let pv=0,totalSh=0;for(const[s,x]of Object.entries(st)){const d=x.d[k];if(d&&d.close)pv+=x.sh*d.close;totalSh+=x.sh}
+      bk.push({year:y,month:m,invested:mI,shares:mS,totalShares:totalSh,divs:mD,tInv,tDiv,pv,divBal,mmRate:monthRate,mmOnlyBal,mmInt:mmIntThisMonth});
       snapshots.push(monthSnap);
     }
     breakdownData=bk;
@@ -443,7 +473,7 @@ function showResults(r){
   const mmOnlyRetP=((r.mmOnlyBal-r.tInv)/r.tInv*100).toFixed(1);
   const cards=[
     {l:'Total Invested',v:'$'+fmtW(r.tInv),s:r.n+' months × $'+fmtW(selAmt),c:'var(--text1)',i:'$',ck:''},
-    {l:'Portfolio Value',v:'$'+fmtW(r.pv),s:(r.retP>=0?'+':'')+r.retP.toFixed(1)+'% return',c:r.pv>=r.tInv?'var(--accent)':'var(--red)',i:'◆',ck:' clickable-val" onclick="openModal()" title="Click for per-ticker breakdown'},
+    {l:'Equity Value',v:'$'+fmtW(r.pv),s:(r.retP>=0?'+':'')+r.retP.toFixed(1)+'% return',c:r.pv>=r.tInv?'var(--accent)':'var(--red)',i:'◆',ck:' clickable-val" onclick="openModal()" title="Click for per-ticker breakdown'},
     {l:'Dividends Earned',v:'$'+fmtW(r.tDiv),s:'Cash accumulated',c:'var(--gold)',i:'★',ck:' clickable-val" onclick="showDivSummary()" title="Click for per-ticker dividends'},
     {l:'Cash Accrual',v:'$'+fmtW(r.divBal),s:'MM earned: $'+fmtW(divGain),c:'var(--gold)',i:'%',ck:' clickable-val" onclick="showDivValueSummary()" title="Click for details'},
     {l:'Portfolio Balance',v:'$'+fmtW(r.pv+r.divBal),s:((((r.pv+r.divBal)-r.tInv)/r.tInv)*100).toFixed(1)+'% total return',c:'var(--blue)',i:'∑',ck:' clickable-val" onclick="showTotalSummary()" title="Click for breakdown'},
@@ -456,7 +486,7 @@ function showResults(r){
   /* Chart 2: Dividend Balance + MM Interest growth */
   h+='<div class="card fade-up" style="animation-delay:.35s;padding:24px;margin-bottom:24px"><h3 class="space" style="font-size:18px;font-weight:600;margin-bottom:16px">Dividend Earned</h3><div class="chart-wrap" id="chartWrap2"><canvas id="chart2" style="width:100%;height:250px;cursor:crosshair"></canvas><div class="chart-crosshair" id="chartCross2"></div><div class="chart-tooltip" id="chartTip2"></div></div></div>';
   h+='<div class="card fade-up" style="animation-delay:.4s;padding:24px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><h3 class="space" style="font-size:18px;font-weight:600">Monthly Breakdown</h3><button class="btn-sm mono" style="background:var(--accent-dim);color:var(--accent)" onclick="togTbl()">Show All ('+r.bk.length+')</button></div>';
-  h+='<div style="overflow-x:auto"><table><thead><tr><th style="text-align:left;cursor:pointer" onclick="toggleSortOrder()" id="thMonth">Month ▼</th>'+thWithInfo('Invested','invested')+thWithInfo('Total Invested','totalinvested')+thWithInfo('Shares','shares')+thWithInfo('Dividends','dividends')+thWithInfo('Cash Accrual','divvalue')+thWithInfo('Portfolio Value','portfolio')+thWithInfo('MMF Value','mmonly')+'</tr></thead><tbody id="tblBody"></tbody></table></div></div>';
+  h+='<div style="overflow-x:auto"><table><thead><tr><th style="text-align:left;cursor:pointer" onclick="toggleSortOrder()" id="thMonth">Month ▼</th>'+thWithInfo('Invested','invested')+thWithInfo('Total Invested','totalinvested')+thWithInfo('Shares','shares')+thWithInfo('Total Shares','totalshares')+thWithInfo('Dividends','dividends')+thWithInfo('Cash Accrual','divvalue')+thWithInfo('Equity Value','portfolio')+thWithInfo('MMF Value','mmonly')+'</tr></thead><tbody id="tblBody"></tbody></table></div></div>';
   /* Tax Impact section */
   h+='<div class="card fade-up" style="animation-delay:.5s;padding:24px;margin-top:24px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><h3 class="space" style="font-size:18px;font-weight:600">Tax Impact</h3><div style="display:flex;align-items:center;gap:8px"><label style="font-size:12px;color:var(--text3);font-family:JetBrains Mono,monospace">Tax Rate %</label><input type="number" id="taxRate" class="inp" style="width:80px;margin:0;padding:6px 10px;font-size:14px" value="30" min="0" max="60" step="1" oninput="renderTaxImpact()"></div></div><div id="taxBody"></div></div>';
   el.innerHTML=h;window._bk=r.bk;window._exp=false;window._sortAsc=false;fillTbl(r.bk.slice(-24),r.bk.length-24);
@@ -468,7 +498,7 @@ function fillTbl(rows,startIdx){
   /* Build display list with original indices, then apply sort */
   let display=rows.map((r,i)=>({r,gi:startIdx+i}));
   if(!window._sortAsc) display=[...display].reverse();
-  $('tblBody').innerHTML=display.map(({r,gi})=>'<tr><td style="color:var(--text2)">'+MO[r.month-1]+' '+r.year+'</td><td class="clickable-cell" onclick="openModal('+gi+',\'invested\')">$'+fmt(r.invested)+'</td><td>$'+fmt(r.tInv)+'</td><td class="clickable-cell" onclick="openModal('+gi+',\'shares\')" style="color:var(--text2)">'+r.shares.toFixed(4)+'</td><td class="clickable-cell" onclick="openModal('+gi+',\'dividends\')" style="color:'+(r.divs>0?'var(--gold)':'var(--text3)')+'">$'+fmt(r.divs)+'</td><td style="color:var(--gold)">$'+fmt(r.divBal)+'</td><td class="clickable-cell" onclick="openModal('+gi+',\'portfolio\')" style="color:var(--accent);font-weight:600">$'+fmt(r.pv)+'</td><td style="color:var(--text2)">$'+fmt(r.mmOnlyBal)+'</td></tr>').join('');
+  $('tblBody').innerHTML=display.map(({r,gi})=>'<tr><td style="color:var(--text2)">'+MO[r.month-1]+' '+r.year+'</td><td class="clickable-cell" onclick="openModal('+gi+',\'invested\')">$'+fmt(r.invested)+'</td><td>$'+fmt(r.tInv)+'</td><td class="clickable-cell" onclick="openModal('+gi+',\'shares\')" style="color:var(--text2)">'+r.shares.toLocaleString()+'</td><td class="clickable-cell" onclick="openModal('+gi+',\'totalshares\')" style="color:var(--text2)">'+r.totalShares.toLocaleString()+'</td><td class="clickable-cell" onclick="openModal('+gi+',\'dividends\')" style="color:'+(r.divs>0?'var(--gold)':'var(--text3)')+'">$'+fmt(r.divs)+'</td><td style="color:var(--gold)">$'+fmt(r.divBal)+'</td><td class="clickable-cell" onclick="openModal('+gi+',\'portfolio\')" style="color:var(--accent);font-weight:600">$'+fmt(r.pv)+'</td><td style="color:var(--text2)">$'+fmt(r.mmOnlyBal)+'</td></tr>').join('');
 }
 function togTbl(){window._exp=!window._exp;if(window._exp)fillTbl(window._bk,0);else fillTbl(window._bk.slice(-24),window._bk.length-24)}
 function toggleSortOrder(){
@@ -629,20 +659,17 @@ function buildReturnTable(rows,sortAsc){
   const display=sortAsc?[...rows]:[...rows].reverse();
   const arrow=sortAsc?'▲':'▼';
   let h='<h4 style="font-size:14px;font-weight:600;color:var(--text1);margin:24px 0 10px">Annual Portfolio Return</h4>';
-  h+='<div style="overflow-x:auto"><table><thead><tr><th style="text-align:left;cursor:pointer" onclick="toggleReturnSort()" id="thRetYear">Year '+arrow+'</th><th>Invested</th><th>Dividends</th><th>MM Interest</th><th>Stock Value<span class="col-info">*<span class="col-tooltip">Shares held × December closing price</span></span></th><th>Portfolio Value<span class="col-info">*<span class="col-tooltip">Stock Value + accumulated dividend balance (dividends + MM interest)</span></span></th><th>After-Tax Value<span class="col-info">*<span class="col-tooltip">Portfolio Value − taxes on this year\'s dividends and MM interest</span></span></th><th>Pre-Tax Return<span class="col-info">*<span class="col-tooltip">Return = (stock gain + dividends + MM interest) ÷ (beginning stock value + avg invested capital)</span></span></th><th>After-Tax Return<span class="col-info">*<span class="col-tooltip">Return = (stock gain + after-tax dividends + after-tax MM interest) ÷ (beginning stock value + avg invested capital)</span></span></th></tr></thead><tbody>';
+  h+='<div style="overflow-x:auto"><table><thead><tr><th style="text-align:left;cursor:pointer" onclick="toggleReturnSort()" id="thRetYear">Year '+arrow+'</th><th>Invested</th><th>Dividends</th><th>MM Interest</th><th>Stock Value<span class="col-info">*<span class="col-tooltip">Shares held × December closing price</span></span></th><th>Portfolio Value<span class="col-info">*<span class="col-tooltip">Stock Value + accumulated dividend balance (dividends + MM interest)</span></span></th><th>Pre-Tax Return<span class="col-info">*<span class="col-tooltip">Return = (stock gain + dividends + MM interest) ÷ (beginning stock value + avg invested capital)</span></span></th></tr></thead><tbody>';
 
   display.forEach(r=>{
     const retColor=r.preTaxRet>=0?'var(--accent)':'var(--red)';
-    const atRetColor=r.afterTaxRet>=0?'var(--accent)':'var(--red)';
     h+='<tr><td style="color:var(--text2)">'+r.year+'</td>';
     h+='<td>$'+fmt(r.invested)+'</td>';
     h+='<td style="color:var(--gold)">$'+fmt(r.divs)+'</td>';
     h+='<td style="color:var(--accent)">$'+fmt(r.mmInt)+'</td>';
     h+='<td class="clickable-cell" onclick="showReturnCalc(\''+r.year+'\',\'stockVal\')" title="Click to see calculation">$'+fmt(r.stockVal)+'</td>';
     h+='<td class="clickable-cell" onclick="showReturnCalc(\''+r.year+'\',\'portfolioVal\')" style="font-weight:600" title="Click to see calculation">$'+fmt(r.portfolioVal)+'</td>';
-    h+='<td class="clickable-cell" onclick="showReturnCalc(\''+r.year+'\',\'afterTax\')" style="color:var(--accent)" title="Click to see calculation">$'+fmt(r.portfolioVal-r.yearTax)+'</td>';
     h+='<td class="clickable-cell" onclick="showReturnCalc(\''+r.year+'\',\'preTaxRet\')" style="color:'+retColor+';font-weight:600" title="Click to see calculation">'+(r.preTaxRet>=0?'+':'')+r.preTaxRet.toFixed(1)+'%</td>';
-    h+='<td class="clickable-cell" onclick="showReturnCalc(\''+r.year+'\',\'afterTaxRet\')" style="color:'+atRetColor+';font-weight:600" title="Click to see calculation">'+(r.afterTaxRet>=0?'+':'')+r.afterTaxRet.toFixed(1)+'%</td>';
     h+='</tr>';
   });
   h+='</tbody></table></div>';

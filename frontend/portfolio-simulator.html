@@ -48,8 +48,9 @@ window.createAuth0Client = window.auth0 ? window.auth0.createAuth0Client : null;
           <h3 class="space">What This Tool Does</h3>
           <ul class="welcome-list">
             <li>Simulates investing a <strong>fixed monthly amount</strong> across ETFs, stocks, and funds</li>
-            <li>Uses <strong>real historical prices</strong> from Yahoo Finance — not projections</li>
-            <li>Buys at the <strong>monthly high price</strong> (worst-case entry point)</li>
+            <li>Uses <strong>historical prices</strong> from Yahoo Finance — not projections</li>
+            <li>Buys <strong>whole shares</strong> at the monthly high price (worst-case entry)</li>
+            <li>If allocation can't buy a share, it <strong>accumulates</strong> in that ticker's bucket until it can</li>
             <li>Tracks dividends as <strong>cash</strong> — not reinvested into equities</li>
           </ul>
         </div>
@@ -71,11 +72,11 @@ window.createAuth0Client = window.auth0 ? window.auth0.createAuth0Client : null;
         <div>
           <h3 class="space">What You'll See</h3>
           <ul class="welcome-list">
-            <li><strong>6 summary tiles</strong> — Invested, Portfolio Value, Dividends, Cash Accrual, Balance, Money Market benchmark</li>
+            <li><strong>6 summary tiles</strong> — Invested, Equity Value, Dividends, Cash Accrual, Balance, Money Market benchmark</li>
             <li><strong>Interactive charts</strong> — hover for month-by-month growth and dividend details</li>
             <li><strong>Monthly breakdown table</strong> — click any highlighted cell for per-ticker detail</li>
             <li><strong>Tax impact section</strong> — adjust tax rate to see yearly liability on dividends and interest</li>
-            <li><strong>Annual returns</strong> — pre-tax and after-tax performance per calendar year</li>
+            <li><strong>Annual returns</strong> — pre-tax performance per calendar year</li>
           </ul>
         </div>
       </div>
@@ -132,6 +133,6 @@ window.createAuth0Client = window.auth0 ? window.auth0.createAuth0Client : null;
 <div id="modalOverlay" class="modal-overlay" onclick="if(event.target===this)closeModal()">
   <div class="modal"><h3 class="space"><span id="modalTitle">Portfolio Breakdown</span><button class="close-btn" onclick="closeModal()">✕</button></h3><div id="modalSub" class="modal-sub"></div><div id="modalBody"></div></div>
 </div>
-<script src="portfolio-simulator.js?v=7"></script>
+<script src="portfolio-simulator.js?v=10"></script>
 </body>
 </html>
