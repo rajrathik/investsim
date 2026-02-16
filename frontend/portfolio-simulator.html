@@ -47,7 +47,7 @@ window.createAuth0Client = window.auth0 ? window.auth0.createAuth0Client : null;
         <div>
           <h3 class="space">What This Tool Does</h3>
           <ul class="welcome-list">
-            <li>Simulates investing a <strong>fixed monthly amount</strong> across ETFs, stocks, and funds</li>
+            <li>Simulates investing a <strong>fixed monthly amount</strong> across asset mix</li>
             <li>Uses <strong>historical prices</strong> from Yahoo Finance — not projections</li>
             <li>Buys <strong>whole shares</strong> at the monthly high price (worst-case entry)</li>
             <li>If allocation can't buy a share, it <strong>accumulates</strong> in that ticker's bucket until it can</li>
@@ -86,9 +86,21 @@ window.createAuth0Client = window.auth0 ? window.auth0.createAuth0Client : null;
           <h3 class="space">Key Things to Know</h3>
           <ul class="welcome-list">
             <li>All summary values are <strong>clickable</strong> — cards, table cells, and chart points reveal detailed breakdowns</li>
-            <li>If a ticker has no data for a month, its allocation is <strong>redistributed</strong> to available tickers</li>
+            <li>If an asset wasn't available to invest in a given month, its share of the budget <strong>automatically flows</strong> to the other assets that month</li>
             <li>The <strong>MMF column</strong> shows what the same money would earn in a money market fund — a risk-free benchmark</li>
           </ul>
+        </div>
+      </div>
+      <div class="welcome-section">
+        <div class="welcome-icon">🧮</div>
+        <div>
+          <h3 class="space">How Money Is Invested — A Simple Example</h3>
+          <p class="welcome-list" style="padding-left:0;list-style:none;font-size:13px;color:var(--text2);line-height:1.8">
+            Say you invest <strong>$1,000/month</strong> split 60% Holding A and 40% Holding B.<br><br>
+            <strong>Each month:</strong> $600 goes into Holding A's bucket, $400 into Holding B's bucket.<br><br>
+            <strong>Buying shares:</strong> If Holding A costs $250/share, your $600 buys <strong>2 shares</strong> ($500) and the leftover <strong>$100 stays in the bucket</strong>. Next month, $600 more arrives → bucket has $700 → buys <strong>2 more shares</strong>, $200 carries forward. Your money is never lost — it just waits until there's enough for the next whole share.<br><br>
+            <strong>If a holding isn't available:</strong> Suppose Holding B wasn't available to invest one month. Instead of sitting idle, that $400 <strong>automatically shifts to Holding A</strong> for that month — so your full $1,000 stays at work. Next month, when both are available, the normal 60/40 split resumes.
+          </p>
         </div>
       </div>
     </div>
