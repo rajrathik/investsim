@@ -24,11 +24,18 @@ Endpoints:
   Batch:
     POST   /api/batch/full               - Trigger full history load (async)
     POST   /api/batch/incremental        - Trigger incremental load (async)
+    POST   /api/batch/fred-full          - Trigger full FRED rate load (async)
+    POST   /api/batch/fred-incremental   - Trigger incremental FRED rate load (async)
     GET    /api/batch/status             - Get last batch run info
+
+  Admin:
+    GET    /api/admin/write-status       - Check if write API is enabled
+    GET    /admin.html                   - Admin dashboard (no auth)
 """
 import os
 import re
 import uuid
+import time
 import logging
 import threading
 import traceback
@@ -48,8 +55,18 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 import pathlib
 
+# Load .env BEFORE importing config so environment variables are available
+env_path = os.path.join(os.path.dirname(__file__), '..', '.env')
+if os.path.exists(env_path):
+    with open(env_path) as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith('#') and '=' in line:
+                key, value = line.split('=', 1)
+                os.environ.setdefault(key.strip(), value.strip())
+
 from app.database import SessionLocal, init_db, engine
-from app.models import Ticker, MonthlyPrice, Dividend, UserLogin
+from app.models import Ticker, MonthlyPrice, Dividend, UserLogin, UserAdmin, ApiRequestLog
 from app.config import MAX_TICKERS, ENABLE_WRITE_API
 from app.auth import get_current_user
 
@@ -60,16 +77,6 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 logger = logging.getLogger(__name__)
-
-# Load .env
-env_path = os.path.join(os.path.dirname(__file__), '..', '.env')
-if os.path.exists(env_path):
-    with open(env_path) as f:
-        for line in f:
-            line = line.strip()
-            if line and not line.startswith('#') and '=' in line:
-                key, value = line.split('=', 1)
-                os.environ.setdefault(key.strip(), value.strip())
 
 
 # --- Lifespan (replaces deprecated on_event) ---
@@ -108,21 +115,75 @@ class ErrorResponse(BaseModel):
     request_id: Optional[str] = None
 
 
+def _extract_email_from_token(request: Request) -> Optional[str]:
+    """Try to extract user email from Bearer token without failing."""
+    try:
+        from app.auth import get_token_from_header, verify_token
+        token = get_token_from_header(request)
+        user = verify_token(token)
+        return user.get("email") or user.get("name")
+    except Exception:
+        return None
+
+
+def _log_request_to_db(request_id, method, path, status_code,
+                       response_time_ms, ip, ua, user_email, error_detail=None):
+    """Write API request log to database (fire-and-forget)."""
+    try:
+        # Skip logging for static files (html, css, js, images)
+        if not path.startswith("/api"):
+            return
+        db = SessionLocal()
+        try:
+            log = ApiRequestLog(
+                request_id=request_id,
+                user_email=user_email,
+                method=method,
+                path=path,
+                status_code=status_code,
+                response_time_ms=response_time_ms,
+                ip_address=ip,
+                user_agent=ua[:500] if ua else None,
+                error_detail=error_detail[:1000] if error_detail else None,
+            )
+            db.add(log)
+            db.commit()
+        finally:
+            db.close()
+    except Exception as e:
+        logger.warning(f"Failed to log API request to DB: {e}")
+
+
 @app.middleware("http")
 async def request_logging_middleware(request: Request, call_next):
     """Log every request and attach a request ID."""
     request_id = str(uuid.uuid4())[:8]
     request.state.request_id = request_id
+    start_time = time.time()
 
     logger.info(f"[{request_id}] {request.method} {request.url.path}")
 
+    ip = request.client.host if request.client else None
+    ua = request.headers.get("user-agent")
+    user_email = _extract_email_from_token(request)
+
     try:
         response = await call_next(request)
-        logger.info(f"[{request_id}] {request.method} {request.url.path} -> {response.status_code}")
+        elapsed_ms = int((time.time() - start_time) * 1000)
+        logger.info(f"[{request_id}] {request.method} {request.url.path} -> {response.status_code} ({elapsed_ms}ms)")
         response.headers["X-Request-ID"] = request_id
+
+        _log_request_to_db(request_id, request.method, request.url.path,
+                           response.status_code, elapsed_ms, ip, ua, user_email)
+
         return response
     except Exception as e:
+        elapsed_ms = int((time.time() - start_time) * 1000)
         logger.error(f"[{request_id}] Unhandled error in middleware: {e}")
+
+        _log_request_to_db(request_id, request.method, request.url.path,
+                           500, elapsed_ms, ip, ua, user_email, str(e))
+
         return JSONResponse(
             status_code=500,
             content={"error": "Internal Server Error", "detail": "An unexpected error occurred", "request_id": request_id},
@@ -290,6 +351,7 @@ class SimulationDataResponse(BaseModel):
 
 class BatchRequest(BaseModel):
     symbols: Optional[list[str]] = None  # None = all active tickers
+    months: Optional[int] = None  # For incremental: how many months back (default 2)
 
     @field_validator("symbols")
     @classmethod
@@ -304,6 +366,14 @@ class BatchRequest(BaseModel):
                     raise ValueError(f"Invalid ticker symbol: {s}")
                 cleaned.append(s)
             return cleaned
+        return v
+
+    @field_validator("months")
+    @classmethod
+    def validate_months(cls, v):
+        if v is not None:
+            if v < 1 or v > 240:
+                raise ValueError("Months must be between 1 and 240")
         return v
 
 
@@ -398,6 +468,43 @@ def health_check():
 
 
 # ===========================================
+# ADMIN ENDPOINTS
+# ===========================================
+
+@app.get("/api/admin/write-status")
+def admin_write_status():
+    """Check if the write API is enabled. Used by admin dashboard."""
+    return {"write_enabled": ENABLE_WRITE_API}
+
+
+@app.get("/api/admin/verify")
+def admin_verify(user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Verify the logged-in user is an authorized admin.
+
+    Checks the user's email against the user_admin table.
+    Returns the user's email and admin status.
+    """
+    email = (user.get("email") or "").lower().strip()
+    if not email:
+        raise HTTPException(status_code=403, detail="No email associated with this account")
+
+    admin_row = db.query(UserAdmin).filter(
+        UserAdmin.email == email
+    ).first()
+
+    if not admin_row:
+        logger.warning(f"Admin access denied for {email}")
+        raise HTTPException(status_code=403, detail="You are not authorized to access the admin dashboard")
+
+    logger.info(f"Admin access granted for {email}")
+    return {
+        "authorized": True,
+        "email": email,
+        "name": admin_row.name or user.get("name", ""),
+    }
+
+
+# ===========================================
 # AUTH ENDPOINTS
 # ===========================================
 
@@ -455,14 +562,17 @@ def list_tickers(user: dict = Depends(get_current_user), db: Session = Depends(g
 
 
 @app.get("/api/tickers/active", response_model=list[TickerResponse])
-def list_active_tickers(user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
-    """List only active tickers."""
+def list_active_tickers(db: Session = Depends(get_db)):
+    """List only active tickers (no auth — used by admin page and simulator)."""
     return db.query(Ticker).filter(Ticker.active == True).order_by(Ticker.symbol).all()
 
 
 @app.post("/api/tickers", response_model=TickerResponse, status_code=201)
-def create_ticker(data: TickerCreate, user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
-    """Add a new ticker."""
+def create_ticker(data: TickerCreate, db: Session = Depends(get_db)):
+    """Add a new ticker.
+
+    No auth required — gated by ENABLE_WRITE_API instead.
+    """
     require_write_enabled()
     symbol = data.symbol  # Already validated and uppercased by Pydantic
 
@@ -761,7 +871,7 @@ def get_annual_mm_rate_by_year(year: int, user: dict = Depends(get_current_user)
 # BATCH ENDPOINTS (async via background thread)
 # ===========================================
 
-def _run_batch_in_background(symbols: list[str], mode: str):
+def _run_batch_in_background(symbols: list[str], mode: str, months: int = None):
     """Run batch fetch+load in a background thread."""
     _update_batch_status(
         status="running",
@@ -776,7 +886,7 @@ def _run_batch_in_background(symbols: list[str], mode: str):
         from app.loader import load_all
         from app.fetcher import fetch_all_tickers
 
-        fetch_results = fetch_all_tickers(symbols, mode=mode, delay_seconds=1.0)
+        fetch_results = fetch_all_tickers(symbols, mode=mode, delay_seconds=1.0, months=months)
 
         db = SessionLocal()
         try:
@@ -800,9 +910,54 @@ def _run_batch_in_background(symbols: list[str], mode: str):
         )
 
 
+def _run_fred_in_background(mode: str):
+    """Run FRED rate fetch+load in a background thread."""
+    _update_batch_status(
+        status="running",
+        mode=f"fred-{mode}",
+        started_at=datetime.now(timezone.utc).isoformat(),
+        completed_at=None,
+        tickers_requested=["FRED:FEDFUNDS"],
+        summary=None,
+    )
+
+    try:
+        from app.fred_fetcher import get_monthly_rates, get_monthly_rates_incremental
+        from app.mm_rates import load_all_rates
+
+        if mode == "full":
+            monthly_df = get_monthly_rates()
+        else:
+            monthly_df = get_monthly_rates_incremental()
+
+        db = SessionLocal()
+        try:
+            summary = load_all_rates(db, monthly_df, mode=mode)
+        finally:
+            db.close()
+
+        _update_batch_status(
+            status="completed",
+            summary=summary,
+            completed_at=datetime.now(timezone.utc).isoformat(),
+        )
+        logger.info(f"FRED {mode} load completed")
+
+    except Exception as e:
+        logger.error(f"FRED {mode} failed: {traceback.format_exc()}")
+        _update_batch_status(
+            status="failed",
+            summary={"error": str(e)},
+            completed_at=datetime.now(timezone.utc).isoformat(),
+        )
+
+
 @app.post("/api/batch/full", response_model=BatchResponse)
-def run_batch_full(data: BatchRequest = BatchRequest(), user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
-    """Trigger a full history data load (runs in background)."""
+def run_batch_full(data: BatchRequest = BatchRequest(), db: Session = Depends(get_db)):
+    """Trigger a full history data load (runs in background).
+
+    No auth required — gated by ENABLE_WRITE_API instead.
+    """
     require_write_enabled()
     # Check if a batch is already running
     current = _get_batch_status()
@@ -829,8 +984,11 @@ def run_batch_full(data: BatchRequest = BatchRequest(), user: dict = Depends(get
 
 
 @app.post("/api/batch/incremental", response_model=BatchResponse)
-def run_batch_incremental(data: BatchRequest = BatchRequest(), user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
-    """Trigger an incremental data load (runs in background)."""
+def run_batch_incremental(data: BatchRequest = BatchRequest(), db: Session = Depends(get_db)):
+    """Trigger an incremental data load (runs in background).
+
+    No auth required — gated by ENABLE_WRITE_API instead.
+    """
     require_write_enabled()
     current = _get_batch_status()
     if current["status"] == "running":
@@ -845,12 +1003,54 @@ def run_batch_incremental(data: BatchRequest = BatchRequest(), user: dict = Depe
     if not symbols:
         raise HTTPException(status_code=400, detail="No active tickers found")
 
-    thread = threading.Thread(target=_run_batch_in_background, args=(symbols, "incremental"), daemon=True)
+    months = data.months
+    thread = threading.Thread(target=_run_batch_in_background, args=(symbols, "incremental", months), daemon=True)
+    thread.start()
+
+    months_msg = f" ({months} months)" if months else ""
+    return BatchResponse(
+        status="started",
+        message=f"Incremental load started for {len(symbols)} tickers{months_msg}. Check /api/batch/status for progress.",
+    )
+
+
+@app.post("/api/batch/fred-full", response_model=BatchResponse)
+def run_fred_full():
+    """Trigger a full FRED federal funds rate load (runs in background).
+
+    No auth required — gated by ENABLE_WRITE_API instead.
+    """
+    require_write_enabled()
+    current = _get_batch_status()
+    if current["status"] == "running":
+        raise HTTPException(status_code=409, detail="A batch job is already running. Check /api/batch/status")
+
+    thread = threading.Thread(target=_run_fred_in_background, args=("full",), daemon=True)
     thread.start()
 
     return BatchResponse(
         status="started",
-        message=f"Incremental load started for {len(symbols)} tickers. Check /api/batch/status for progress.",
+        message="FRED full rate load started. Check /api/batch/status for progress.",
+    )
+
+
+@app.post("/api/batch/fred-incremental", response_model=BatchResponse)
+def run_fred_incremental():
+    """Trigger an incremental FRED rate load (last 3 months, runs in background).
+
+    No auth required — gated by ENABLE_WRITE_API instead.
+    """
+    require_write_enabled()
+    current = _get_batch_status()
+    if current["status"] == "running":
+        raise HTTPException(status_code=409, detail="A batch job is already running. Check /api/batch/status")
+
+    thread = threading.Thread(target=_run_fred_in_background, args=("incremental",), daemon=True)
+    thread.start()
+
+    return BatchResponse(
+        status="started",
+        message="FRED incremental rate load started (last 3 months). Check /api/batch/status for progress.",
     )
 
 
@@ -871,5 +1071,10 @@ if _frontend_dir.exists():
     def serve_index():
         """Redirect root to the main HTML page."""
         return FileResponse(str(_frontend_dir / "portfolio-simulator.html"))
+
+    @app.get("/admin.html")
+    def serve_admin():
+        """Serve the admin dashboard page (no auth)."""
+        return FileResponse(str(_frontend_dir / "admin.html"))
 
     app.mount("/", StaticFiles(directory=str(_frontend_dir)), name="frontend")

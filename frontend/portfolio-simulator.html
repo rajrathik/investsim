@@ -47,7 +47,7 @@ window.createAuth0Client = window.auth0 ? window.auth0.createAuth0Client : null;
         <div>
           <h3 class="space">What This Tool Does</h3>
           <ul class="welcome-list">
-            <li>Simulates investing a <strong>fixed monthly amount</strong> across asset mix</li>
+            <li>Simulates investing a <strong>monthly amount</strong> (optionally growing each year) across asset mix</li>
             <li>Uses <strong>historical prices</strong> from Yahoo Finance — not projections</li>
             <li>Buys <strong>whole shares</strong> at the monthly high price (worst-case entry)</li>
             <li>If allocation can't buy a share, it <strong>accumulates</strong> in that ticker's bucket until it can</li>
@@ -60,7 +60,7 @@ window.createAuth0Client = window.auth0 ? window.auth0.createAuth0Client : null;
         <div>
           <h3 class="space">How to Use It</h3>
           <ol class="welcome-list welcome-list-num">
-            <li><strong>Set your monthly amount</strong> and investment period (1–20 years)</li>
+            <li><strong>Set your monthly amount</strong>, optional annual growth, and investment period (1–20 years)</li>
             <li><strong>Pick tickers</strong> from the dropdown — search or browse</li>
             <li><strong>Set allocation %</strong> using sliders — must total 100%</li>
             <li>Click <strong>▶ Run Simulation</strong></li>
@@ -98,8 +98,8 @@ window.createAuth0Client = window.auth0 ? window.auth0.createAuth0Client : null;
           <p class="welcome-list" style="padding-left:0;list-style:none;font-size:13px;color:var(--text2);line-height:1.8">
             Say you invest <strong>$1,000/month</strong> split 60% Holding A and 40% Holding B.<br><br>
             <strong>Each month:</strong> $600 goes into Holding A's bucket, $400 into Holding B's bucket.<br><br>
-            <strong>Buying shares:</strong> If Holding A costs $250/share, your $600 buys <strong>2 shares</strong> ($500) and the leftover <strong>$100 stays in the bucket</strong>. Next month, $600 more arrives → bucket has $700 → buys <strong>2 more shares</strong>, $200 carries forward. Your money is never lost — it just waits until there's enough for the next whole share.<br><br>
-            <strong>If a holding isn't available:</strong> Suppose Holding B wasn't available to invest one month. Instead of sitting idle, that $400 <strong>automatically shifts to Holding A</strong> for that month — so your full $1,000 stays at work. Next month, when both are available, the normal 60/40 split resumes.
+            <strong>Buying shares:</strong> If Holding A costs $250/share, your $600 buys <strong>2 shares</strong> ($500) and the leftover <strong>$100 stays in the bucket</strong>. Next month, $600 more arrives → bucket has $700 → buys <strong>2 more shares</strong>, $200 carries forward. Your money is accumulated and waits until there's enough for the next whole share.<br><br>
+            <strong>If a holding isn't available:</strong> Suppose Holding B wasn't available to invest — in that case that $400 <strong>automatically shifts to Holding A</strong> for that month — so your full $1,000 stays at work. Next month, when both are available, the normal 60/40 split resumes.
           </p>
         </div>
       </div>
@@ -125,6 +125,7 @@ window.createAuth0Client = window.auth0 ? window.auth0.createAuth0Client : null;
     <div class="card fade-up">
       <h2 class="space">💰 Investment Parameters</h2>
       <div style="margin-bottom:24px"><div class="label">Monthly Investment</div><div class="btn-row" id="amtBtns"></div><input type="number" id="amt" class="inp" value="1000" min="1" placeholder="Or enter custom amount..."></div>
+      <div style="margin-bottom:24px"><div class="label">Annual Deposit Growth</div><input type="number" id="growthInp" class="inp" value="0" min="0" step="50" placeholder="$ increase per year (0 = flat)"><div style="font-size:11px;color:var(--text3);margin-top:4px;font-family:'JetBrains Mono',monospace">Year 1: base amount, Year 2: +growth, Year 3: +2&times;growth...</div></div>
       <div><div class="label">Investment Period (Years)</div><div class="btn-row" id="yrBtns"></div><input type="number" id="yrInp" class="inp" value="10" min="1" max="20" placeholder="Or enter years..."></div>
     </div>
     <div class="card fade-up" style="animation-delay:.1s">
@@ -145,6 +146,6 @@ window.createAuth0Client = window.auth0 ? window.auth0.createAuth0Client : null;
 <div id="modalOverlay" class="modal-overlay" onclick="if(event.target===this)closeModal()">
   <div class="modal"><h3 class="space"><span id="modalTitle">Portfolio Breakdown</span><button class="close-btn" onclick="closeModal()">✕</button></h3><div id="modalSub" class="modal-sub"></div><div id="modalBody"></div></div>
 </div>
-<script src="portfolio-simulator.js?v=10"></script>
+<script src="portfolio-simulator.js?v=11"></script>
 </body>
 </html>

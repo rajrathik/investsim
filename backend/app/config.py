@@ -24,7 +24,8 @@ MAX_TICKERS = 50
 FULL_HISTORY_YEARS = 30
 
 # Set to True when ready to allow POST/PUT/DELETE from API
-ENABLE_WRITE_API = False
+# Reads from .env: ENABLE_WRITE_API=True
+ENABLE_WRITE_API = os.getenv("ENABLE_WRITE_API", "False").strip().lower() in ("true", "1", "yes")
 
 # Auth0 settings
 AUTH0_DOMAIN = os.getenv("AUTH0_DOMAIN", "")

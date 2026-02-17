@@ -92,6 +92,12 @@
 |--------|-------------|
 | `3cb8dff` | Replaced aggregate carryover with per-ticker accumulation buckets. Each ticker keeps its own unspent dollars — money never crosses between tickers. Monthly budget is flat (no carryover addition). Excel generator expanded to 9 columns per ticker (Accum In, Allocated, Accum Bal, Shares, Spent, Accum Out, Cum Shares, Divs, Value). Updated welcome guide, Architecture.md, README.md, Spreadsheet_Guide.md. Branch: `feature/accumulate-then-buy` |
 
+### Phase 10 — Annual Deposit Growth (Feb 16)
+
+| Commit | Description |
+|--------|-------------|
+| TBD | Annual deposit growth feature: optional $ increase to monthly investment each year. Year 1 uses base amount, each subsequent year adds the growth amount. New UI input field in Investment Parameters card. Deposit column in monthly breakdown. MM-only benchmark uses same growing schedule. Spreadsheet generator reads `annual_growth` from config file. Auth token expiry now redirects to login screen (not generic error). API request logging to `api_request_logs` table (method, path, user, response time, status). Auth failure logging with IP and path. Admin dashboard (`admin.html`): browser-based ticker management and data loading (Yahoo Finance + FRED) with Auth0 login + `user_admin` table whitelist, custom incremental months, batch status auto-polling, write-API warning banner. `UserAdmin` model maps `user_admin` table (email PK, name). `GET /api/admin/verify` endpoint checks logged-in user against admin whitelist. FRED batch API endpoints (`POST /api/batch/fred-full`, `POST /api/batch/fred-incremental`). `ENABLE_WRITE_API` now configurable via `.env`. `fetcher.py` accepts custom `months` parameter for incremental loads. Batch endpoints no longer require Auth0 (gated by ENABLE_WRITE_API instead). Updated welcome guide, Architecture.md, README.md, QUICKSTART.md. Branch: `feature/annual-deposit-growth` |
+
 ---
 
 ## Branch History
@@ -100,6 +106,7 @@
 main
  └── feature/round-lot-shares  (Phase 8)
       └── feature/accumulate-then-buy  (Phase 9)
+ └── feature/annual-deposit-growth  (Phase 10)
 ```
 
 ---
@@ -110,7 +117,7 @@ main
 |------|---------|
 | `backend/app/config.py` | Settings: DB connection, Auth0, constants |
 | `backend/app/database.py` | SQLAlchemy engine & session factory |
-| `backend/app/models.py` | ORM models: Ticker, MonthlyPrice, Dividend, UserLogin |
+| `backend/app/models.py` | ORM models: Ticker, MonthlyPrice, Dividend, UserLogin, UserAdmin, ApiRequestLog |
 | `backend/app/mm_rates.py` | Money market rate models & loaders |
 | `backend/app/fetcher.py` | Yahoo Finance data fetcher |
 | `backend/app/fred_fetcher.py` | FRED federal funds rate fetcher |
@@ -128,8 +135,9 @@ main
 | `frontend/portfolio-simulator.html` | HTML structure + auth + welcome guide |
 | `frontend/portfolio-simulator.css` | All styles |
 | `frontend/portfolio-simulator.js` | Simulation engine + UI rendering |
+| `frontend/admin.html` | Admin dashboard (manage tickers + data loads, no auth) |
 | `tools/generate_test_spreadsheet.py` | Excel workbook generator |
-| `tools/spreadsheet_config.txt` | Spreadsheet config (tickers, amount, years, tax) |
+| `tools/spreadsheet_config.txt` | Spreadsheet config (tickers, amount, years, tax, annual growth) |
 | `tools/Spreadsheet_Guide.md` | Spreadsheet user guide |
 | `tools/create_user_logins.sql` | SQL script for user_logins table |
 | `docs/Auth0_Integration_Plan.md` | Auth0 implementation plan |

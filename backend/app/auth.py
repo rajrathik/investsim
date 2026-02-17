@@ -137,4 +137,9 @@ def get_current_user(request: Request) -> dict:
         token = get_token_from_header(request)
         return verify_token(token)
     except AuthError as e:
+        ip = request.client.host if request.client else "unknown"
+        logger.warning(
+            f"Auth failure: {e.detail} | IP={ip} | "
+            f"Path={request.method} {request.url.path}"
+        )
         raise HTTPException(status_code=e.status_code, detail=e.detail)

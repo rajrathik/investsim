@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portfolio Simulator — Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.auth0.com/js/auth0-spa-js/2.1/auth0-spa-js.production.js"></script>
+<style>
+:root{--bg:#0a0e17;--card:#111827;--border:#1e293b;--accent:#10b981;--accent-dim:rgba(16,185,129,0.15);--accent-glow:rgba(16,185,129,0.4);--red:#ef4444;--red-dim:rgba(239,68,68,0.15);--gold:#f59e0b;--gold-dim:rgba(245,158,11,0.15);--blue:#3b82f6;--blue-dim:rgba(59,130,246,0.15);--text1:#f1f5f9;--text2:#94a3b8;--text3:#64748b}
+*{box-sizing:border-box;margin:0;padding:0}
+body{min-height:100vh;background:var(--bg);color:var(--text1);font-family:'DM Sans',sans-serif}
+
+/* Auth overlay */
+.auth-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(10,14,23,0.95);backdrop-filter:blur(8px);z-index:1000;display:flex;align-items:center;justify-content:center;transition:opacity 0.3s}
+.auth-overlay.hidden{opacity:0;pointer-events:none}
+.auth-card{text-align:center;padding:48px;background:var(--card);border:1px solid var(--border);border-radius:20px;max-width:440px}
+.auth-card p{color:var(--text3);margin-bottom:24px;font-size:14px}
+.auth-btn{display:inline-block;padding:14px 36px;border:none;border-radius:14px;font-size:15px;font-weight:700;font-family:'Space Grotesk',sans-serif;cursor:pointer;transition:all .3s;background:var(--accent);color:var(--bg);text-decoration:none}
+.auth-btn:hover{box-shadow:0 0 20px var(--accent-glow)}
+.denied-msg{color:var(--red);font-size:14px;margin-top:16px;display:none}
+
+.header{border-bottom:1px solid var(--border);padding:20px 32px;display:flex;justify-content:space-between;align-items:center}
+.header h1{font-size:24px;font-weight:700}
+.header-right{display:flex;align-items:center;gap:16px}
+.header a{color:var(--accent);text-decoration:none;font-size:14px;font-family:'JetBrains Mono',monospace}
+.header a:hover{text-decoration:underline}
+.user-info{font-size:13px;color:var(--text2);font-family:'JetBrains Mono',monospace}
+.logout-btn{padding:6px 14px;border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;background:var(--bg);color:var(--text3);font-family:'JetBrains Mono',monospace;transition:all .2s}
+.logout-btn:hover{border-color:var(--red);color:var(--red)}
+
+.container{max-width:900px;margin:0 auto;padding:32px 24px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px;margin-bottom:24px}
+.card h2{font-size:18px;font-weight:600;margin-bottom:20px;font-family:'Space Grotesk',sans-serif}
+.label{font-size:12px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;font-family:'JetBrains Mono',monospace}
+.inp{padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text1);font-size:14px;outline:none;font-family:'JetBrains Mono',monospace;width:100%}
+.inp:focus{border-color:var(--accent)}
+.inp-sm{width:80px}
+.btn{padding:10px 20px;border:1px solid var(--border);border-radius:10px;cursor:pointer;font-size:14px;font-weight:600;background:var(--bg);color:var(--text2);transition:all .2s;font-family:'JetBrains Mono',monospace}
+.btn:hover{border-color:var(--accent);color:var(--text1)}
+.btn:disabled{cursor:not-allowed;opacity:.5}
+.btn-accent{background:var(--accent);color:var(--bg);border-color:var(--accent)}
+.btn-accent:hover{box-shadow:0 0 16px var(--accent-glow)}
+.btn-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.form-row{display:flex;gap:12px;align-items:flex-end;margin-bottom:16px}
+.form-row .field{flex:1}
+.form-row .field.sym{max-width:140px}
+
+/* Warning banner */
+.banner{padding:14px 20px;border-radius:12px;margin-bottom:24px;font-size:14px;font-weight:500;display:none}
+.banner-warn{background:var(--gold-dim);border:1px solid rgba(245,158,11,.3);color:var(--gold)}
+.banner-ok{background:var(--accent-dim);border:1px solid rgba(16,185,129,.3);color:var(--accent)}
+.banner-err{background:var(--red-dim);border:1px solid rgba(239,68,68,.3);color:var(--red)}
+.banner.show{display:block}
+
+/* Ticker list */
+.ticker-list{display:flex;flex-wrap:wrap;gap:8px}
+.ticker-tag{padding:8px 14px;background:var(--accent-dim);border:1px solid rgba(16,185,129,.2);border-radius:10px;font-size:13px;font-weight:600;color:var(--accent);font-family:'JetBrains Mono',monospace}
+.ticker-tag .tn{font-size:11px;color:var(--text3);font-weight:400;margin-left:6px}
+
+/* Status panel */
+.status-panel{padding:16px 20px;background:var(--bg);border:1px solid var(--border);border-radius:12px;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--text2);line-height:1.8}
+.status-panel .st-label{color:var(--text3);font-size:11px;text-transform:uppercase;letter-spacing:.06em}
+.status-panel .st-val{color:var(--text1);font-weight:600}
+.status-idle{color:var(--text3)}
+.status-running{color:var(--gold)}
+.status-completed{color:var(--accent)}
+.status-failed{color:var(--red)}
+
+/* Log area */
+.log{margin-top:16px;padding:12px 16px;background:var(--bg);border:1px solid var(--border);border-radius:10px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text2);max-height:200px;overflow-y:auto;line-height:1.8}
+.log-entry{border-bottom:1px solid rgba(30,41,59,.3);padding:4px 0}
+.log-entry:last-child{border-bottom:none}
+.log-ok{color:var(--accent)}
+.log-err{color:var(--red)}
+.log-info{color:var(--text2)}
+</style>
+</head>
+<body>
+
+<!-- Auth Overlay — blocks admin until login + admin verification -->
+<div id="authOverlay" class="auth-overlay">
+  <div class="auth-card">
+    <div style="font-size:48px;margin-bottom:16px">🔒</div>
+    <h2 class="space" style="margin-bottom:8px">Admin Authentication</h2>
+    <p>Log in to access the Admin Dashboard</p>
+    <a href="javascript:void(0)" id="loginBtn" class="auth-btn" onclick="doLogin()">Log In with Auth0</a>
+    <div id="deniedMsg" class="denied-msg"></div>
+  </div>
+</div>
+
+<div id="mainHeader" class="header" style="display:none">
+  <h1>⚙️ Admin Dashboard</h1>
+  <div class="header-right">
+    <a href="/portfolio-simulator.html">← Back to Simulator</a>
+    <span id="userEmail" class="user-info"></span>
+    <button class="logout-btn" onclick="doLogout()">Log Out</button>
+  </div>
+</div>
+
+<div id="mainContainer" class="container" style="display:none">
+
+  <!-- Write API Warning Banner -->
+  <div id="bannerWarn" class="banner banner-warn">
+    ⚠️ Write API is <strong>disabled</strong>. Set <code>ENABLE_WRITE_API=True</code> in <code>backend/.env</code> and restart the server to enable ticker creation and data loading.
+  </div>
+  <div id="bannerOk" class="banner banner-ok">
+    ✅ Write API is <strong>enabled</strong>. You can add tickers and load data.
+  </div>
+
+  <!-- Add Ticker -->
+  <div class="card">
+    <h2>Add Ticker</h2>
+    <div class="form-row">
+      <div class="field sym">
+        <div class="label">Symbol</div>
+        <input id="tickerSymbol" class="inp" type="text" placeholder="XLK" maxlength="10" style="text-transform:uppercase">
+      </div>
+      <div class="field">
+        <div class="label">Name (optional)</div>
+        <input id="tickerName" class="inp" type="text" placeholder="Technology Select Sector SPDR" maxlength="200">
+      </div>
+      <button id="btnAddTicker" class="btn btn-accent" onclick="addTicker()">Add</button>
+    </div>
+    <div id="addTickerMsg" class="banner" style="margin-bottom:0"></div>
+  </div>
+
+  <!-- Active Tickers -->
+  <div class="card">
+    <h2>Active Tickers</h2>
+    <div id="tickerList" class="ticker-list">
+      <span style="color:var(--text3)">Loading...</span>
+    </div>
+  </div>
+
+  <!-- Data Loading -->
+  <div class="card">
+    <h2>Yahoo Finance — Price &amp; Dividend Data</h2>
+    <div class="btn-row" style="margin-bottom:16px">
+      <button id="btnFull" class="btn" onclick="runBatch('full')">📥 Full History Load</button>
+      <button id="btnIncr" class="btn" onclick="runBatch('incremental')">🔄 Incremental Update</button>
+      <div style="display:flex;align-items:center;gap:8px;margin-left:8px">
+        <span class="label" style="margin-bottom:0">Months:</span>
+        <input id="incrMonths" class="inp inp-sm" type="number" value="2" min="1" max="240" style="width:70px">
+      </div>
+    </div>
+    <p style="font-size:12px;color:var(--text3);margin-bottom:16px">
+      <strong>Full</strong> loads all history (up to 30 years). <strong>Incremental</strong> fetches the last N months (default 2) and merges with existing data.
+    </p>
+  </div>
+
+  <!-- FRED Rates -->
+  <div class="card">
+    <h2>FRED — Federal Funds Rate Data</h2>
+    <div class="btn-row">
+      <button id="btnFredFull" class="btn" onclick="runFred('full')">📥 Full History</button>
+      <button id="btnFredIncr" class="btn" onclick="runFred('incremental')">🔄 Incremental (3 months)</button>
+    </div>
+  </div>
+
+  <!-- Batch Status -->
+  <div class="card">
+    <h2>Batch Status</h2>
+    <div id="statusPanel" class="status-panel">
+      <div><span class="st-label">Status: </span><span id="stStatus" class="st-val status-idle">idle</span></div>
+      <div><span class="st-label">Mode: </span><span id="stMode" class="st-val">—</span></div>
+      <div><span class="st-label">Tickers: </span><span id="stTickers" class="st-val">—</span></div>
+      <div><span class="st-label">Started: </span><span id="stStarted" class="st-val">—</span></div>
+      <div><span class="st-label">Completed: </span><span id="stCompleted" class="st-val">—</span></div>
+      <div><span class="st-label">Summary: </span><span id="stSummary" class="st-val">—</span></div>
+    </div>
+    <div id="logArea" class="log" style="display:none"></div>
+  </div>
+
+</div>
+
+<script>
+const API = window.location.origin;
+let auth0Client = null;
+let currentUser = null;
+let authToken = null;
+let writeEnabled = false;
+let pollTimer = null;
+
+// ========== AUTH0 INTEGRATION ==========
+
+async function initAuth() {
+  try {
+    const config = await fetch(API + '/api/auth/config').then(r => r.json());
+    if (!config.domain) { showDenied('Auth0 is not configured'); return; }
+
+    const authParams = {
+      redirect_uri: window.location.origin + window.location.pathname,
+      scope: 'openid profile email',
+    };
+    if (config.audience) authParams.audience = config.audience;
+
+    auth0Client = await auth0.createAuth0Client({
+      domain: config.domain,
+      clientId: config.clientId,
+      authorizationParams: authParams,
+      cacheLocation: 'localstorage',
+    });
+
+    // Handle Auth0 redirect callback
+    const query = window.location.search;
+    if (query.includes('code=') && query.includes('state=')) {
+      await auth0Client.handleRedirectCallback();
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
+    const isAuth = await auth0Client.isAuthenticated();
+    if (isAuth) {
+      currentUser = await auth0Client.getUser();
+      authToken = await auth0Client.getTokenSilently();
+      await verifyAdmin();
+    } else {
+      showLoginScreen();
+    }
+  } catch (e) {
+    console.error('Auth0 init failed:', e);
+    showDenied('Authentication failed: ' + e.message);
+  }
+}
+
+async function doLogin() {
+  if (!auth0Client) return;
+  await auth0Client.loginWithRedirect({
+    authorizationParams: { redirect_uri: window.location.origin + window.location.pathname }
+  });
+}
+
+function doLogout() {
+  if (!auth0Client) return;
+  auth0Client.logout({ logoutParams: { returnTo: window.location.origin + window.location.pathname } });
+}
+
+async function verifyAdmin() {
+  try {
+    const r = await fetch(API + '/api/admin/verify', {
+      headers: { 'Authorization': 'Bearer ' + authToken },
+    });
+    if (r.ok) {
+      const d = await r.json();
+      onAdminVerified(d.email);
+    } else {
+      const d = await r.json().catch(() => ({}));
+      showDenied(d.detail || 'Access denied — your email is not in the admin list');
+    }
+  } catch (e) {
+    showDenied('Failed to verify admin access: ' + e.message);
+  }
+}
+
+function showLoginScreen() {
+  document.getElementById('authOverlay').classList.remove('hidden');
+  document.getElementById('loginBtn').style.display = 'inline-block';
+  document.getElementById('deniedMsg').style.display = 'none';
+}
+
+function showDenied(msg) {
+  document.getElementById('authOverlay').classList.remove('hidden');
+  document.getElementById('loginBtn').style.display = 'none';
+  const el = document.getElementById('deniedMsg');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function onAdminVerified(email) {
+  // Hide auth overlay, show admin dashboard
+  document.getElementById('authOverlay').classList.add('hidden');
+  document.getElementById('mainHeader').style.display = '';
+  document.getElementById('mainContainer').style.display = '';
+  document.getElementById('userEmail').textContent = email;
+  adminInit();
+}
+
+// Helper: fetch with auth token
+async function adminFetch(url, options = {}) {
+  if (!authToken) { showLoginScreen(); throw new Error('Not authenticated'); }
+  try {
+    authToken = await auth0Client.getTokenSilently();
+    const headers = { ...options.headers, 'Authorization': 'Bearer ' + authToken };
+    const resp = await fetch(url, { ...options, headers });
+    if (resp.status === 401) { showLoginScreen(); throw new Error('Session expired'); }
+    return resp;
+  } catch (e) {
+    if (e.message === 'Session expired') throw e;
+    showLoginScreen(); throw e;
+  }
+}
+
+// ========== ADMIN DASHBOARD ==========
+
+async function adminInit() {
+  await detectWriteApi();
+  await loadTickers();
+  await pollStatus();
+}
+
+async function detectWriteApi() {
+  try {
+    const r = await fetch(API + '/api/admin/write-status');
+    const d = await r.json();
+    writeEnabled = d.write_enabled;
+  } catch (e) {
+    writeEnabled = false;
+  }
+  if (writeEnabled) {
+    document.getElementById('bannerOk').classList.add('show');
+    document.getElementById('bannerWarn').classList.remove('show');
+  } else {
+    document.getElementById('bannerWarn').classList.add('show');
+    document.getElementById('bannerOk').classList.remove('show');
+  }
+  document.getElementById('btnAddTicker').disabled = !writeEnabled;
+  document.getElementById('btnFull').disabled = !writeEnabled;
+  document.getElementById('btnIncr').disabled = !writeEnabled;
+  document.getElementById('btnFredFull').disabled = !writeEnabled;
+  document.getElementById('btnFredIncr').disabled = !writeEnabled;
+}
+
+// ---- Tickers ----
+async function loadTickers() {
+  try {
+    const r = await fetch(API + '/api/tickers/active');
+    const tickers = await r.json();
+    const el = document.getElementById('tickerList');
+    if (!tickers.length) {
+      el.innerHTML = '<span style="color:var(--text3)">No active tickers. Add one above.</span>';
+      return;
+    }
+    el.innerHTML = tickers.map(t =>
+      '<span class="ticker-tag">' + t.symbol +
+      (t.name ? '<span class="tn">' + t.name + '</span>' : '') +
+      '</span>'
+    ).join('');
+  } catch (e) {
+    document.getElementById('tickerList').innerHTML =
+      '<span style="color:var(--red)">Failed to load tickers</span>';
+  }
+}
+
+async function addTicker() {
+  const sym = document.getElementById('tickerSymbol').value.trim().toUpperCase();
+  const name = document.getElementById('tickerName').value.trim();
+  const msgEl = document.getElementById('addTickerMsg');
+
+  if (!sym) {
+    showInlineMsg(msgEl, 'banner-err', 'Symbol is required');
+    return;
+  }
+
+  try {
+    const r = await adminFetch(API + '/api/tickers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ symbol: sym, name: name || null }),
+    });
+    const d = await r.json();
+    if (r.ok) {
+      showInlineMsg(msgEl, 'banner-ok', '✅ Added ' + d.symbol + (d.name ? ' (' + d.name + ')' : ''));
+      document.getElementById('tickerSymbol').value = '';
+      document.getElementById('tickerName').value = '';
+      await loadTickers();
+    } else {
+      showInlineMsg(msgEl, 'banner-err', '❌ ' + (d.detail || d.error || 'Failed'));
+    }
+  } catch (e) {
+    showInlineMsg(msgEl, 'banner-err', '❌ Network error: ' + e.message);
+  }
+}
+
+// ---- Yahoo Batch ----
+async function runBatch(mode) {
+  const months = parseInt(document.getElementById('incrMonths').value) || 2;
+  const body = {};
+  if (mode === 'incremental') body.months = months;
+
+  try {
+    disableBatchButtons(true);
+    addLog('Starting Yahoo ' + mode + ' load...' + (mode === 'incremental' ? ' (' + months + ' months)' : ''), 'info');
+
+    const r = await adminFetch(API + '/api/batch/' + mode, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const d = await r.json();
+
+    if (r.ok) {
+      addLog('✓ ' + d.message, 'ok');
+      startPolling();
+    } else {
+      addLog('✗ ' + (d.detail || d.error || 'Failed'), 'err');
+      disableBatchButtons(false);
+    }
+  } catch (e) {
+    addLog('✗ Network error: ' + e.message, 'err');
+    disableBatchButtons(false);
+  }
+}
+
+// ---- FRED Batch ----
+async function runFred(mode) {
+  try {
+    disableBatchButtons(true);
+    addLog('Starting FRED ' + mode + ' load...', 'info');
+
+    const r = await adminFetch(API + '/api/batch/fred-' + mode, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const d = await r.json();
+
+    if (r.ok) {
+      addLog('✓ ' + d.message, 'ok');
+      startPolling();
+    } else {
+      addLog('✗ ' + (d.detail || d.error || 'Failed'), 'err');
+      disableBatchButtons(false);
+    }
+  } catch (e) {
+    addLog('✗ Network error: ' + e.message, 'err');
+    disableBatchButtons(false);
+  }
+}
+
+// ---- Batch Status Polling ----
+async function pollStatus() {
+  try {
+    const r = await fetch(API + '/api/batch/status');
+    const d = await r.json();
+    updateStatusPanel(d);
+
+    if (d.status === 'running') {
+      disableBatchButtons(true);
+    } else {
+      disableBatchButtons(false);
+      if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+    }
+  } catch (e) {
+    // Ignore polling errors
+  }
+}
+
+function startPolling() {
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(pollStatus, 2000);
+}
+
+function updateStatusPanel(d) {
+  const stEl = document.getElementById('stStatus');
+  stEl.textContent = d.status;
+  stEl.className = 'st-val status-' + d.status;
+
+  document.getElementById('stMode').textContent = d.mode || '—';
+  document.getElementById('stTickers').textContent =
+    d.tickers_requested && d.tickers_requested.length
+      ? d.tickers_requested.join(', ')
+      : '—';
+  document.getElementById('stStarted').textContent = d.started_at ? formatTime(d.started_at) : '—';
+  document.getElementById('stCompleted').textContent = d.completed_at ? formatTime(d.completed_at) : '—';
+
+  const sumEl = document.getElementById('stSummary');
+  if (d.summary) {
+    if (d.summary.error) {
+      sumEl.textContent = 'Error: ' + d.summary.error;
+      sumEl.style.color = 'var(--red)';
+    } else {
+      sumEl.textContent = JSON.stringify(d.summary, null, 0);
+      sumEl.style.color = '';
+    }
+  } else {
+    sumEl.textContent = '—';
+    sumEl.style.color = '';
+  }
+
+  if (d.status === 'completed' && d.completed_at) {
+    addLog('✓ Batch ' + (d.mode || '') + ' completed at ' + formatTime(d.completed_at), 'ok');
+  } else if (d.status === 'failed') {
+    addLog('✗ Batch failed: ' + (d.summary?.error || 'Unknown error'), 'err');
+  }
+}
+
+// ---- Helpers ----
+function disableBatchButtons(disabled) {
+  ['btnFull', 'btnIncr', 'btnFredFull', 'btnFredIncr'].forEach(id => {
+    const el = document.getElementById(id);
+    if (writeEnabled) el.disabled = disabled;
+  });
+}
+
+function showInlineMsg(el, cls, msg) {
+  el.className = 'banner ' + cls + ' show';
+  el.innerHTML = msg;
+  setTimeout(() => { el.classList.remove('show'); }, 5000);
+}
+
+function addLog(msg, type) {
+  const area = document.getElementById('logArea');
+  area.style.display = 'block';
+  const entry = document.createElement('div');
+  entry.className = 'log-entry log-' + type;
+  entry.textContent = new Date().toLocaleTimeString() + '  ' + msg;
+  area.appendChild(entry);
+  area.scrollTop = area.scrollHeight;
+}
+
+function formatTime(iso) {
+  if (!iso) return '—';
+  try {
+    const d = new Date(iso);
+    return d.toLocaleString();
+  } catch (e) {
+    return iso;
+  }
+}
+
+// Enter key on symbol input triggers add
+document.getElementById('tickerSymbol').addEventListener('keydown', e => {
+  if (e.key === 'Enter') addTicker();
+});
+
+// ---- Start ----
+initAuth();
+</script>
+</body>
+</html>
