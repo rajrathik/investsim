@@ -68,8 +68,8 @@ Create tables and load historical data (one-time):
 ```bash
 cd backend
 python test_connection.py          # Creates all DB tables
-python run_batch.py full           # Loads 20 years of ETF price/dividend data
-python run_fred_batch.py full      # Loads 20 years of federal funds rate data
+python run_batch.py full           # Loads 30 years of ETF price/dividend data
+python run_fred_batch.py full      # Loads 30 years of federal funds rate data
 ```
 
 ---
@@ -120,8 +120,9 @@ A browser-based admin page for managing tickers and loading data.
 **Features:**
 - **Add Ticker** — enter symbol + optional name, adds to database
 - **Active Tickers** — see all tickers currently in the system
-- **Full Data Load** — fetches all history (prices + dividends) from Yahoo Finance for all active tickers
-- **Incremental Update** — fetches the last N months (default 2, configurable) and merges with existing data
+- **Load New Tickers** — fetches full history (30 yrs) only for tickers with no data yet (newly added tickers)
+- **Refresh Recent Data** — fetches the last N months (default 2, configurable) for all tickers and merges with existing
+- **Reload All Tickers** — re-downloads full history for every ticker (with confirmation dialog; existing data is skipped, not overwritten)
 - **FRED Rates** — load federal funds rate data (full history or incremental)
 - **Batch Status** — auto-polling display shows running/completed/failed status with summary
 
