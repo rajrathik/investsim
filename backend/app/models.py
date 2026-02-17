@@ -113,6 +113,21 @@ class UserLogin(Base):
         return f"<UserLogin(user={self.email}, time={self.login_time})>"
 
 
+class UserAdmin(Base):
+    """Whitelist of users authorized to access the admin dashboard.
+
+    The table is managed manually (INSERT via SQL).
+    Admin pages check if the logged-in user's email exists here.
+    """
+    __tablename__ = "user_admin"
+
+    email = Column(String(255), primary_key=True)
+    name = Column(String(255), nullable=True)
+
+    def __repr__(self):
+        return f"<UserAdmin(email='{self.email}')>"
+
+
 class ApiRequestLog(Base):
     """Log every API request for audit and debugging.
 

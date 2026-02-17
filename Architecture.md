@@ -53,7 +53,7 @@ User opens http://localhost:8000/portfolio-simulator.html
 
 ---
 
-## Database Schema (6 Tables)
+## Database Schema (8 Tables)
 
 **tickers** — Master list of ETF symbols (XLK, XLV, XLE, etc.)
 Each ticker has: symbol, name, active flag, created/updated timestamps.
@@ -68,6 +68,10 @@ Each ticker has: symbol, name, active flag, created/updated timestamps.
 
 **user_logins** — One row per login event. Stores auth0_user_id, email, name, login_time, ip_address, user_agent. Used for audit trail and future per-user simulation storage.
 
+**user_admin** — Whitelist of emails authorized to access the admin dashboard. Managed manually via SQL INSERT. Columns: email (PK), name.
+
+**api_request_logs** — One row per API request. Stores request_id, user_email, method, path, status_code, response_time_ms, ip_address, user_agent, error_detail, created_at.
+
 ---
 
 ## Module Purpose
@@ -76,13 +80,13 @@ Each ticker has: symbol, name, active flag, created/updated timestamps.
 |--------|-------------|
 | `config.py` | All settings: DB connection string, max tickers (50), history depth (20 yrs), write API toggle |
 | `database.py` | Creates SQLAlchemy engine and session factory. `init_db()` ensures all tables exist at startup |
-| `models.py` | ORM models for `Ticker`, `MonthlyPrice`, `Dividend`, `UserLogin`, `ApiRequestLog` with constraints and relationships |
+| `models.py` | ORM models for `Ticker`, `MonthlyPrice`, `Dividend`, `UserLogin`, `UserAdmin`, `ApiRequestLog` with constraints and relationships |
 | `mm_rates.py` | ORM models for `MonthlyMoneyMarketRate`, `AnnualMoneyMarketRate` plus loader functions |
 | `fetcher.py` | Pulls monthly OHLCV prices and dividend history from Yahoo Finance. Handles full (20 yr) and incremental (3 month) modes |
 | `fred_fetcher.py` | Pulls federal funds rate from FRED public CSV endpoint. No API key needed. Computes annual averages |
 | `loader.py` | Takes fetcher output DataFrames and upserts into SQL Server. Handles skip-if-exists (full) and update-if-exists (incremental) |
 | `auth.py` | Auth0 token verification (opaque tokens via /userinfo endpoint), `get_current_user` FastAPI dependency, auth failure logging |
-| `api.py` | FastAPI app with all REST endpoints, auth protection, static file serving, CORS, error handling, request IDs, API request logging to DB |
+| `api.py` | FastAPI app with all REST endpoints, auth protection, static file serving, CORS, error handling, request IDs, API request logging to DB, FRED batch endpoints, admin write-status endpoint |
 | `run_batch.py` | CLI entry point: `python run_batch.py full` or `incremental` — orchestrates fetcher → loader for Yahoo data |
 | `run_fred_batch.py` | CLI entry point: same pattern for FRED data |
 | `test_connection.py` | Quick script to verify DB connectivity and create tables |
@@ -90,6 +94,11 @@ Each ticker has: symbol, name, active flag, created/updated timestamps.
 | `generate_test_spreadsheet.py` | Reads `spreadsheet_config.txt` (or interactive prompts), queries DB for prices/dividends/MM rates, generates 5-sheet Excel workbook with formulas mirroring the JS simulation logic |
 | `spreadsheet_config.txt` | User-editable config: tickers + allocations, monthly amount, years, tax rate, annual deposit growth |
 | `Spreadsheet_Guide.md` | One-page walkthrough for users navigating the Excel workbook |
+| **frontend/** | |
+| `portfolio-simulator.html` | Main simulator page (Auth0 login required) |
+| `portfolio-simulator.css` | Simulator styles (dark theme) |
+| `portfolio-simulator.js` | Simulation engine + UI rendering |
+| `admin.html` | Admin dashboard — manage tickers and trigger data loads (Auth0 login + user_admin whitelist) |
 
 ---
 
@@ -147,9 +156,23 @@ Key endpoints the frontend uses:
 | `GET /api/simulation-data/{symbol}?start_year&start_month&end_year&end_month` | Yes | Returns monthly prices + dividends merged for a ticker |
 | `GET /api/mm-rates/monthly?start_year&end_year` | Yes | Returns monthly federal funds rates for MM interest calculation |
 
-All data endpoints require a valid Auth0 Bearer token. The frontend's `authFetch()` wrapper injects the token automatically. Static files (HTML, CSS, JS) are served via FastAPI's `StaticFiles` mount at `/`.
+Most data endpoints require a valid Auth0 Bearer token. The frontend's `authFetch()` wrapper injects the token automatically. Static files (HTML, CSS, JS) are served via FastAPI's `StaticFiles` mount at `/`.
 
-Write endpoints (POST/PUT/DELETE) are disabled via `ENABLE_WRITE_API = False` in config.
+**Admin/batch endpoints (no auth — gated by ENABLE_WRITE_API):**
+
+| Endpoint | Auth | Usage |
+|----------|------|-------|
+| `GET /api/admin/write-status` | No | Returns whether write API is enabled |
+| `GET /api/admin/verify` | Yes | Checks logged-in user's email against user_admin table |
+| `GET /api/tickers/active` | No | Lists active tickers (used by admin page and simulator) |
+| `POST /api/tickers` | No | Add a new ticker (requires ENABLE_WRITE_API=True) |
+| `POST /api/batch/full` | No | Trigger full Yahoo Finance data load (requires ENABLE_WRITE_API=True) |
+| `POST /api/batch/incremental` | No | Trigger incremental Yahoo load with optional months param (requires ENABLE_WRITE_API=True) |
+| `POST /api/batch/fred-full` | No | Trigger full FRED rate load (requires ENABLE_WRITE_API=True) |
+| `POST /api/batch/fred-incremental` | No | Trigger incremental FRED load (requires ENABLE_WRITE_API=True) |
+| `GET /api/batch/status` | No | Check batch job status |
+
+Write endpoints are disabled by default (`ENABLE_WRITE_API=False` in config). Set `ENABLE_WRITE_API=True` in `backend/.env` to enable.
 
 ---
 
@@ -198,7 +221,7 @@ When user clicks "Run Simulation", the browser executes this flow:
 - **Tax impact analysis**: User-adjustable tax rate (0–60%) applied to dividends and MM interest per year. Shows yearly tax liability breakdown and after-tax portfolio values.
 - **Annual return calculation**: Pre-tax returns per calendar year using DCA mid-year approximation (contributions × 0.542). Returns computed against beginning stock value + average invested capital.
 - **Security-agnostic labeling**: UI avoids ETF-specific language — supports ETFs, mutual funds, individual stocks, or any ticker in the database.
-- **Read-only API**: Write endpoints disabled by default. Data loads only through CLI batch scripts.
+- **Read-only API by default**: Write endpoints disabled by default (`ENABLE_WRITE_API=False`). Set `ENABLE_WRITE_API=True` in `.env` to enable ticker creation and data loading via the admin dashboard or API.
 - **Split frontend**: HTML, CSS, and JS in separate files — no build tools, no Node.js — just open the HTML file in a browser.
 - **Excel verification tool**: A Python script generates a multi-sheet workbook that mirrors the JS simulation using Excel formulas. Users edit a plain-text config file, re-run the script, and open the spreadsheet to trace every calculation step. The spreadsheet reads real data from the same SQL Server DB used by the API.
 - **Clickable calculation modals**: Both the monthly breakdown table and annual return table have clickable cells that show full calculation breakdowns (numerator/denominator for returns, per-ticker share purchases, dividend sources, etc.).
@@ -206,3 +229,4 @@ When user clicks "Run Simulation", the browser executes this flow:
 - **Opaque token verification**: With no Auth0 audience configured, Auth0 issues opaque tokens instead of JWTs. Backend validates these by calling Auth0's `/userinfo` endpoint. Simpler setup — no Custom API registration needed in Auth0 Dashboard.
 - **Welcome guide overlay**: Shown after login and before simulator loads. Uses the same overlay pattern as the auth screen (fixed position, backdrop blur, hidden via CSS class toggle). Content is concise — four sections with icons covering what the tool does, how to use it, what results show, and key tips. Single button dismisses the guide and triggers ticker loading.
 - **Frontend served by FastAPI**: HTML, CSS, and JS are served via FastAPI's `StaticFiles` mount. Required because Auth0 SPA SDK needs HTTP origin (not `file://`) for PKCE redirects. Access via `http://localhost:8000/portfolio-simulator.html`.
+- **Admin dashboard**: Self-contained HTML page at `/admin.html` for managing tickers and triggering data loads (Yahoo Finance prices+dividends and FRED rates). Two layers of security: (1) Auth0 login required, (2) logged-in user's email must exist in the `user_admin` database table. Write operations additionally gated by `ENABLE_WRITE_API` config flag. Supports custom incremental month range (default 2 months). Auto-polls batch status during loads.

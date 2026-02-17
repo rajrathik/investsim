@@ -23,6 +23,7 @@ Leave this terminal open.
 Go to: **http://localhost:8000/portfolio-simulator.html**
 
 - Log in with Auth0 when prompted
+- Admin dashboard: **http://localhost:8000/admin.html** (no login needed)
 - Swagger API docs at: **http://localhost:8000/docs**
 
 ## 4. View any Markdown file in the browser

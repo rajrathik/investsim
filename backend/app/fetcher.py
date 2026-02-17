@@ -133,13 +133,15 @@ def fetch_all_tickers(
     symbols: list[str],
     mode: str = "full",
     delay_seconds: float = 1.0,
+    months: int = None,
 ) -> dict:
     """Fetch price and dividend data for multiple tickers.
 
     Args:
         symbols: List of ticker symbols
-        mode: 'full' for all history, 'incremental' for last 2 months
+        mode: 'full' for all history, 'incremental' for last N months
         delay_seconds: Pause between tickers to avoid rate limiting
+        months: For incremental mode, how many months back (default 2)
 
     Returns:
         Dict with structure:
@@ -160,9 +162,10 @@ def fetch_all_tickers(
     end_date = None
     if mode == "incremental":
         today = date.today()
-        start_date = (today - relativedelta(months=2)).replace(day=1).isoformat()
+        incr_months = months if months else 2
+        start_date = (today - relativedelta(months=incr_months)).replace(day=1).isoformat()
         end_date = today.isoformat()
-        logger.info(f"Incremental mode: {start_date} to {end_date}")
+        logger.info(f"Incremental mode: {start_date} to {end_date} ({incr_months} months)")
 
     results = {
         "prices": {},

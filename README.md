@@ -15,7 +15,7 @@ C:\Raj\python\portfolio-simulator\
 │   │   ├── auth.py                 ← Auth0 JWT/token verification
 │   │   ├── config.py               ← Settings (DB connection, Auth0, constants)
 │   │   ├── database.py             ← SQLAlchemy engine & session
-│   │   ├── models.py               ← DB models (Ticker, MonthlyPrice, Dividend, UserLogin)
+│   │   ├── models.py               ← DB models (Ticker, MonthlyPrice, Dividend, UserLogin, UserAdmin, ApiRequestLog)
 │   │   ├── mm_rates.py             ← Money market rate models & loaders
 │   │   ├── fetcher.py              ← Yahoo Finance data fetcher
 │   │   ├── fred_fetcher.py         ← FRED federal funds rate fetcher
@@ -36,7 +36,8 @@ C:\Raj\python\portfolio-simulator\
 ├── frontend\                       ← Browser-based UI
 │   ├── portfolio-simulator.html    ← HTML structure
 │   ├── portfolio-simulator.css     ← Styles
-│   └── portfolio-simulator.js      ← Application logic & simulation engine
+│   ├── portfolio-simulator.js      ← Application logic & simulation engine
+│   └── admin.html                  ← Admin dashboard (manage tickers & data loads)
 │
 ├── tools\                          ← Utilities & verification
 │   ├── generate_test_spreadsheet.py ← Generates Excel workbook from DB data
@@ -102,11 +103,37 @@ The simulator requires Auth0 authentication. On first visit:
 4. Click **"Got It — Let's Start"** to proceed to the simulator
 5. Header shows your email and a **"Log Out"** button
 
-Auth0 configuration is stored in `backend/.env` (AUTH0_DOMAIN, AUTH0_CLIENT_ID). Auth0 Dashboard must have `http://localhost:8000/portfolio-simulator.html` in Allowed Callback URLs, Allowed Logout URLs, and `http://localhost:8000` in Allowed Web Origins.
+Auth0 configuration is stored in `backend/.env` (AUTH0_DOMAIN, AUTH0_CLIENT_ID). Auth0 Dashboard must have `http://localhost:8000/portfolio-simulator.html` and `http://localhost:8000/admin.html` in Allowed Callback URLs and Allowed Logout URLs, and `http://localhost:8000` in Allowed Web Origins.
+
+---
+
+## Admin Dashboard
+
+A browser-based admin page for managing tickers and loading data.
+
+**URL:** `http://localhost:8000/admin.html`
+
+**Access:** Requires Auth0 login. Only users whose email is in the `user_admin` database table can access the dashboard. Add admin users via SQL: `INSERT INTO user_admin (email, name) VALUES ('you@example.com', 'Your Name')`.
+
+**Setup:** Set `ENABLE_WRITE_API=True` in `backend/.env` and restart the server. Auth0 Dashboard must include `http://localhost:8000/admin.html` in Allowed Callback URLs and Allowed Logout URLs.
+
+**Features:**
+- **Add Ticker** — enter symbol + optional name, adds to database
+- **Active Tickers** — see all tickers currently in the system
+- **Full Data Load** — fetches all history (prices + dividends) from Yahoo Finance for all active tickers
+- **Incremental Update** — fetches the last N months (default 2, configurable) and merges with existing data
+- **FRED Rates** — load federal funds rate data (full history or incremental)
+- **Batch Status** — auto-polling display shows running/completed/failed status with summary
 
 ---
 
 ## Ongoing Data Updates
+
+**Option 1 — Admin Dashboard (recommended):**
+
+Open `http://localhost:8000/admin.html` and click the buttons.
+
+**Option 2 — CLI:**
 
 ```bash
 cd backend
@@ -198,6 +225,7 @@ venv\Scripts\grip tools\Spreadsheet_Guide.md
 - **Auth0 authentication** — login required before accessing the simulator; supports email/password and social login providers; expired tokens automatically redirect to login screen
 - **API request logging** — every API call logged to database with user, method, path, status code, response time, and IP address
 - **Welcome guide** — after login, a concise training overlay explains the simulator's purpose, how to use it, and what results mean
+- **Admin dashboard** — browser-based page to add tickers and trigger Yahoo Finance/FRED data loads without CLI; configurable incremental month range; auto-polling batch status; secured by Auth0 login + `user_admin` table whitelist
 
 ---
 
