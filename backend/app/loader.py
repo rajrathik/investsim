@@ -20,6 +20,24 @@ def get_active_tickers(db: Session) -> list[str]:
     return [t.symbol for t in tickers]
 
 
+def get_tickers_without_data(db: Session) -> list[str]:
+    """Return active ticker symbols that have zero price records.
+
+    These are newly added tickers that need a full history load.
+    """
+    from sqlalchemy import func, outerjoin
+
+    results = (
+        db.query(Ticker.symbol, func.count(MonthlyPrice.id).label("cnt"))
+        .outerjoin(MonthlyPrice, Ticker.id == MonthlyPrice.ticker_id)
+        .filter(Ticker.active == True)
+        .group_by(Ticker.symbol)
+        .having(func.count(MonthlyPrice.id) == 0)
+        .all()
+    )
+    return [r.symbol for r in results]
+
+
 def get_ticker_id(db: Session, symbol: str) -> int | None:
     """Get ticker ID by symbol. Returns None if not found."""
     ticker = db.query(Ticker).filter(Ticker.symbol == symbol.upper()).first()

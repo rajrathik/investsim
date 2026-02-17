@@ -22,7 +22,8 @@ Endpoints:
     GET    /api/simulation-data/{symbol} - Get combined prices + dividends for simulation
 
   Batch:
-    POST   /api/batch/full               - Trigger full history load (async)
+    POST   /api/batch/full               - Trigger full history load for ALL tickers (async)
+    POST   /api/batch/full-new           - Trigger full history load for NEW tickers only (async)
     POST   /api/batch/incremental        - Trigger incremental load (async)
     POST   /api/batch/fred-full          - Trigger full FRED rate load (async)
     POST   /api/batch/fred-incremental   - Trigger incremental FRED rate load (async)
@@ -980,6 +981,38 @@ def run_batch_full(data: BatchRequest = BatchRequest(), db: Session = Depends(ge
     return BatchResponse(
         status="started",
         message=f"Full load started for {len(symbols)} tickers. Check /api/batch/status for progress.",
+    )
+
+
+@app.post("/api/batch/full-new", response_model=BatchResponse)
+def run_batch_full_new(db: Session = Depends(get_db)):
+    """Trigger a full history load ONLY for tickers that have no price data yet.
+
+    Skips tickers that already have data — safe and efficient for loading
+    newly added tickers without re-fetching everything.
+    No auth required — gated by ENABLE_WRITE_API instead.
+    """
+    require_write_enabled()
+    current = _get_batch_status()
+    if current["status"] == "running":
+        raise HTTPException(status_code=409, detail="A batch job is already running. Check /api/batch/status")
+
+    from app.loader import get_tickers_without_data
+
+    symbols = get_tickers_without_data(db)
+
+    if not symbols:
+        return BatchResponse(
+            status="skipped",
+            message="All active tickers already have price data. Nothing to load.",
+        )
+
+    thread = threading.Thread(target=_run_batch_in_background, args=(symbols, "full"), daemon=True)
+    thread.start()
+
+    return BatchResponse(
+        status="started",
+        message=f"Full load started for {len(symbols)} new tickers: {', '.join(symbols)}. Check /api/batch/status for progress.",
     )
 
 
