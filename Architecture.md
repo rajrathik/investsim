@@ -76,13 +76,13 @@ Each ticker has: symbol, name, active flag, created/updated timestamps.
 |--------|-------------|
 | `config.py` | All settings: DB connection string, max tickers (50), history depth (20 yrs), write API toggle |
 | `database.py` | Creates SQLAlchemy engine and session factory. `init_db()` ensures all tables exist at startup |
-| `models.py` | ORM models for `Ticker`, `MonthlyPrice`, `Dividend` with constraints and relationships |
+| `models.py` | ORM models for `Ticker`, `MonthlyPrice`, `Dividend`, `UserLogin`, `ApiRequestLog` with constraints and relationships |
 | `mm_rates.py` | ORM models for `MonthlyMoneyMarketRate`, `AnnualMoneyMarketRate` plus loader functions |
 | `fetcher.py` | Pulls monthly OHLCV prices and dividend history from Yahoo Finance. Handles full (20 yr) and incremental (3 month) modes |
 | `fred_fetcher.py` | Pulls federal funds rate from FRED public CSV endpoint. No API key needed. Computes annual averages |
 | `loader.py` | Takes fetcher output DataFrames and upserts into SQL Server. Handles skip-if-exists (full) and update-if-exists (incremental) |
-| `auth.py` | Auth0 token verification (opaque tokens via /userinfo endpoint), `get_current_user` FastAPI dependency |
-| `api.py` | FastAPI app with all REST endpoints, auth protection, static file serving, CORS, error handling, request IDs |
+| `auth.py` | Auth0 token verification (opaque tokens via /userinfo endpoint), `get_current_user` FastAPI dependency, auth failure logging |
+| `api.py` | FastAPI app with all REST endpoints, auth protection, static file serving, CORS, error handling, request IDs, API request logging to DB |
 | `run_batch.py` | CLI entry point: `python run_batch.py full` or `incremental` — orchestrates fetcher → loader for Yahoo data |
 | `run_fred_batch.py` | CLI entry point: same pattern for FRED data |
 | `test_connection.py` | Quick script to verify DB connectivity and create tables |

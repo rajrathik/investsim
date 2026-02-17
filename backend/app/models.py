@@ -111,3 +111,30 @@ class UserLogin(Base):
 
     def __repr__(self):
         return f"<UserLogin(user={self.email}, time={self.login_time})>"
+
+
+class ApiRequestLog(Base):
+    """Log every API request for audit and debugging.
+
+    Captures who called what endpoint, when, how long it took,
+    and whether it succeeded or failed.
+    """
+    __tablename__ = "api_request_logs"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    request_id = Column(String(8), nullable=False, index=True)
+    user_email = Column(String(255), nullable=True, index=True)
+    method = Column(String(10), nullable=False)
+    path = Column(String(500), nullable=False)
+    status_code = Column(Integer, nullable=True)
+    response_time_ms = Column(Integer, nullable=True)
+    ip_address = Column(String(45), nullable=True)
+    user_agent = Column(String(500), nullable=True)
+    error_detail = Column(String(1000), nullable=True)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+
+    def __repr__(self):
+        return (
+            f"<ApiRequestLog({self.method} {self.path} "
+            f"-> {self.status_code}, user={self.user_email})>"
+        )

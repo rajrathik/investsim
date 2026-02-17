@@ -73,10 +73,17 @@ function showLoginRequired(){
 }
 
 async function authFetch(url,options={}){
-  if(!auth0Client)throw new Error('Not authenticated');
-  const token=await auth0Client.getTokenSilently();
-  const headers={...options.headers,'Authorization':'Bearer '+token};
-  return fetch(url,{...options,headers});
+  if(!auth0Client){showLoginRequired();throw new Error('Not authenticated');}
+  try{
+    const token=await auth0Client.getTokenSilently();
+    const headers={...options.headers,'Authorization':'Bearer '+token};
+    const resp=await fetch(url,{...options,headers});
+    if(resp.status===401){showLoginRequired();throw new Error('Session expired');}
+    return resp;
+  }catch(e){
+    if(e.message==='Session expired')throw e;
+    showLoginRequired();throw e;
+  }
 }
 
 async function loadTickers(){

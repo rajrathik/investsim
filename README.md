@@ -195,7 +195,8 @@ venv\Scripts\grip tools\Spreadsheet_Guide.md
 - **Multi-select ticker dropdown** — checkbox-based selection with search filtering
 - **Proportional redistribution** — when a ticker has no data for a month, its allocation flows to available tickers
 - **Excel test spreadsheet** — generate a multi-sheet workbook with real data and Excel formulas to verify every calculation
-- **Auth0 authentication** — login required before accessing the simulator; supports email/password and social login providers
+- **Auth0 authentication** — login required before accessing the simulator; supports email/password and social login providers; expired tokens automatically redirect to login screen
+- **API request logging** — every API call logged to database with user, method, path, status code, response time, and IP address
 - **Welcome guide** — after login, a concise training overlay explains the simulator's purpose, how to use it, and what results mean
 
 ---

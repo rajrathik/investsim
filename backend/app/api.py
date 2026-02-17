@@ -29,6 +29,7 @@ Endpoints:
 import os
 import re
 import uuid
+import time
 import logging
 import threading
 import traceback
@@ -49,7 +50,7 @@ from fastapi.responses import FileResponse
 import pathlib
 
 from app.database import SessionLocal, init_db, engine
-from app.models import Ticker, MonthlyPrice, Dividend, UserLogin
+from app.models import Ticker, MonthlyPrice, Dividend, UserLogin, ApiRequestLog
 from app.config import MAX_TICKERS, ENABLE_WRITE_API
 from app.auth import get_current_user
 
@@ -108,21 +109,75 @@ class ErrorResponse(BaseModel):
     request_id: Optional[str] = None
 
 
+def _extract_email_from_token(request: Request) -> Optional[str]:
+    """Try to extract user email from Bearer token without failing."""
+    try:
+        from app.auth import get_token_from_header, verify_token
+        token = get_token_from_header(request)
+        user = verify_token(token)
+        return user.get("email") or user.get("name")
+    except Exception:
+        return None
+
+
+def _log_request_to_db(request_id, method, path, status_code,
+                       response_time_ms, ip, ua, user_email, error_detail=None):
+    """Write API request log to database (fire-and-forget)."""
+    try:
+        # Skip logging for static files (html, css, js, images)
+        if not path.startswith("/api"):
+            return
+        db = SessionLocal()
+        try:
+            log = ApiRequestLog(
+                request_id=request_id,
+                user_email=user_email,
+                method=method,
+                path=path,
+                status_code=status_code,
+                response_time_ms=response_time_ms,
+                ip_address=ip,
+                user_agent=ua[:500] if ua else None,
+                error_detail=error_detail[:1000] if error_detail else None,
+            )
+            db.add(log)
+            db.commit()
+        finally:
+            db.close()
+    except Exception as e:
+        logger.warning(f"Failed to log API request to DB: {e}")
+
+
 @app.middleware("http")
 async def request_logging_middleware(request: Request, call_next):
     """Log every request and attach a request ID."""
     request_id = str(uuid.uuid4())[:8]
     request.state.request_id = request_id
+    start_time = time.time()
 
     logger.info(f"[{request_id}] {request.method} {request.url.path}")
 
+    ip = request.client.host if request.client else None
+    ua = request.headers.get("user-agent")
+    user_email = _extract_email_from_token(request)
+
     try:
         response = await call_next(request)
-        logger.info(f"[{request_id}] {request.method} {request.url.path} -> {response.status_code}")
+        elapsed_ms = int((time.time() - start_time) * 1000)
+        logger.info(f"[{request_id}] {request.method} {request.url.path} -> {response.status_code} ({elapsed_ms}ms)")
         response.headers["X-Request-ID"] = request_id
+
+        _log_request_to_db(request_id, request.method, request.url.path,
+                           response.status_code, elapsed_ms, ip, ua, user_email)
+
         return response
     except Exception as e:
+        elapsed_ms = int((time.time() - start_time) * 1000)
         logger.error(f"[{request_id}] Unhandled error in middleware: {e}")
+
+        _log_request_to_db(request_id, request.method, request.url.path,
+                           500, elapsed_ms, ip, ua, user_email, str(e))
+
         return JSONResponse(
             status_code=500,
             content={"error": "Internal Server Error", "detail": "An unexpected error occurred", "request_id": request_id},

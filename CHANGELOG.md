@@ -96,7 +96,7 @@
 
 | Commit | Description |
 |--------|-------------|
-| TBD | Annual deposit growth feature: optional $ increase to monthly investment each year. Year 1 uses base amount, each subsequent year adds the growth amount. New UI input field in Investment Parameters card. MM-only benchmark uses same growing schedule. Spreadsheet generator reads `annual_growth` from config file. Updated welcome guide, Architecture.md, README.md, Spreadsheet_Guide.md. Branch: `feature/annual-deposit-growth` |
+| TBD | Annual deposit growth feature: optional $ increase to monthly investment each year. Year 1 uses base amount, each subsequent year adds the growth amount. New UI input field in Investment Parameters card. Deposit column in monthly breakdown. MM-only benchmark uses same growing schedule. Spreadsheet generator reads `annual_growth` from config file. Auth token expiry now redirects to login screen (not generic error). API request logging to `api_request_logs` table (method, path, user, response time, status). Auth failure logging with IP and path. Updated welcome guide, Architecture.md, README.md. Branch: `feature/annual-deposit-growth` |
 
 ---
 
