@@ -78,13 +78,13 @@ Each ticker has: symbol, name, active flag, created/updated timestamps.
 
 | Module | What It Does |
 |--------|-------------|
-| `config.py` | All settings: DB connection string, max tickers (50), history depth (20 yrs), write API toggle |
+| `config.py` | All settings: DB connection string, max tickers (50), history depth (30 yrs), write API toggle (reads from `.env`) |
 | `database.py` | Creates SQLAlchemy engine and session factory. `init_db()` ensures all tables exist at startup |
 | `models.py` | ORM models for `Ticker`, `MonthlyPrice`, `Dividend`, `UserLogin`, `UserAdmin`, `ApiRequestLog` with constraints and relationships |
 | `mm_rates.py` | ORM models for `MonthlyMoneyMarketRate`, `AnnualMoneyMarketRate` plus loader functions |
-| `fetcher.py` | Pulls monthly OHLCV prices and dividend history from Yahoo Finance. Handles full (20 yr) and incremental (3 month) modes |
+| `fetcher.py` | Pulls monthly OHLCV prices and dividend history from Yahoo Finance. Handles full (30 yr) and incremental (configurable months, default 2) modes |
 | `fred_fetcher.py` | Pulls federal funds rate from FRED public CSV endpoint. No API key needed. Computes annual averages |
-| `loader.py` | Takes fetcher output DataFrames and upserts into SQL Server. Handles skip-if-exists (full) and update-if-exists (incremental) |
+| `loader.py` | Takes fetcher output DataFrames and upserts into SQL Server. Handles skip-if-exists (full) and update-if-exists (incremental). `get_tickers_without_data()` identifies new tickers needing initial load |
 | `auth.py` | Auth0 token verification (opaque tokens via /userinfo endpoint), `get_current_user` FastAPI dependency, auth failure logging |
 | `api.py` | FastAPI app with all REST endpoints, auth protection, static file serving, CORS, error handling, request IDs, API request logging to DB, FRED batch endpoints, admin write-status endpoint |
 | `run_batch.py` | CLI entry point: `python run_batch.py full` or `incremental` — orchestrates fetcher → loader for Yahoo data |
@@ -106,19 +106,19 @@ Each ticker has: symbol, name, active flag, created/updated timestamps.
 
 ```
 run_batch.py full
-  → fetcher.get_monthly_prices(ticker, 20 years)    ← Yahoo Finance HTTP
-  → fetcher.get_dividends(ticker, 20 years)          ← Yahoo Finance HTTP
+  → fetcher.get_monthly_prices(ticker, 30 years)    ← Yahoo Finance HTTP
+  → fetcher.get_dividends(ticker, 30 years)          ← Yahoo Finance HTTP
   → loader.load_monthly_prices(db, dataframe)        ← INSERT, skip duplicates
   → loader.load_dividends(db, dataframe)             ← INSERT, skip duplicates
   → repeat for each ticker in DB
 
 run_fred_batch.py full
-  → fred_fetcher.get_monthly_rates(20 years)         ← FRED CSV download
+  → fred_fetcher.get_monthly_rates(30 years)         ← FRED CSV download
   → fred_fetcher.compute_annual_averages(dataframe)
   → mm_rates.load_all_rates(db, dataframe)           ← INSERT/UPSERT
 ```
 
-Incremental mode is identical but fetches only the last 3 months and upserts (update existing, insert new).
+Incremental mode is identical but fetches only the last N months (default 2, configurable) and upserts (update existing, insert new).
 
 **Spreadsheet generation** (tools/generate_test_spreadsheet.py):
 ```
@@ -166,7 +166,8 @@ Most data endpoints require a valid Auth0 Bearer token. The frontend's `authFetc
 | `GET /api/admin/verify` | Yes | Checks logged-in user's email against user_admin table |
 | `GET /api/tickers/active` | No | Lists active tickers (used by admin page and simulator) |
 | `POST /api/tickers` | No | Add a new ticker (requires ENABLE_WRITE_API=True) |
-| `POST /api/batch/full` | No | Trigger full Yahoo Finance data load (requires ENABLE_WRITE_API=True) |
+| `POST /api/batch/full` | No | Trigger full Yahoo Finance data load for ALL tickers (requires ENABLE_WRITE_API=True) |
+| `POST /api/batch/full-new` | No | Trigger full load only for tickers with no price data yet (requires ENABLE_WRITE_API=True) |
 | `POST /api/batch/incremental` | No | Trigger incremental Yahoo load with optional months param (requires ENABLE_WRITE_API=True) |
 | `POST /api/batch/fred-full` | No | Trigger full FRED rate load (requires ENABLE_WRITE_API=True) |
 | `POST /api/batch/fred-incremental` | No | Trigger incremental FRED load (requires ENABLE_WRITE_API=True) |

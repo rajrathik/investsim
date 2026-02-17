@@ -136,17 +136,22 @@ body{min-height:100vh;background:var(--bg);color:var(--text1);font-family:'DM Sa
   <!-- Data Loading -->
   <div class="card">
     <h2>Yahoo Finance — Price &amp; Dividend Data</h2>
-    <div class="btn-row" style="margin-bottom:16px">
-      <button id="btnFull" class="btn" onclick="runBatch('full')">📥 Full History Load</button>
-      <button id="btnIncr" class="btn" onclick="runBatch('incremental')">🔄 Incremental Update</button>
+    <div class="btn-row" style="margin-bottom:12px">
+      <button id="btnFullNew" class="btn btn-accent" onclick="runBatch('full-new')">📥 Load New Tickers</button>
+      <button id="btnIncr" class="btn" onclick="runBatch('incremental')">🔄 Refresh Recent Data</button>
       <div style="display:flex;align-items:center;gap:8px;margin-left:8px">
         <span class="label" style="margin-bottom:0">Months:</span>
         <input id="incrMonths" class="inp inp-sm" type="number" value="2" min="1" max="240" style="width:70px">
       </div>
     </div>
-    <p style="font-size:12px;color:var(--text3);margin-bottom:16px">
-      <strong>Full</strong> loads all history (up to 30 years). <strong>Incremental</strong> fetches the last N months (default 2) and merges with existing data.
-    </p>
+    <div class="btn-row" style="margin-bottom:16px">
+      <button id="btnFull" class="btn" onclick="confirmFullReload()">⚠️ Reload All Tickers</button>
+    </div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:0;line-height:1.8">
+      <strong style="color:var(--accent)">Load New Tickers</strong> — fetches full history (30 yrs) only for tickers with no data yet. Best for newly added tickers.<br>
+      <strong style="color:var(--text2)">Refresh Recent Data</strong> — fetches the last N months for all tickers and merges with existing data. Use for regular updates.<br>
+      <strong style="color:var(--gold)">Reload All Tickers</strong> — re-downloads full history for every ticker. Slow and rarely needed; existing data is skipped, not overwritten.
+    </div>
   </div>
 
   <!-- FRED Rates -->
@@ -314,6 +319,7 @@ async function detectWriteApi() {
     document.getElementById('bannerOk').classList.remove('show');
   }
   document.getElementById('btnAddTicker').disabled = !writeEnabled;
+  document.getElementById('btnFullNew').disabled = !writeEnabled;
   document.getElementById('btnFull').disabled = !writeEnabled;
   document.getElementById('btnIncr').disabled = !writeEnabled;
   document.getElementById('btnFredFull').disabled = !writeEnabled;
@@ -372,14 +378,22 @@ async function addTicker() {
 }
 
 // ---- Yahoo Batch ----
+function confirmFullReload() {
+  if (!confirm('⚠️ Reload All Tickers will re-download full history (30 years) for every active ticker.\n\nThis is slow and rarely needed. Existing data will be skipped, not overwritten.\n\nProceed?')) return;
+  runBatch('full');
+}
+
 async function runBatch(mode) {
   const months = parseInt(document.getElementById('incrMonths').value) || 2;
   const body = {};
   if (mode === 'incremental') body.months = months;
 
+  const labels = { 'full': 'Reload All', 'full-new': 'Load New Tickers', 'incremental': 'Refresh Recent' };
+  const label = labels[mode] || mode;
+
   try {
     disableBatchButtons(true);
-    addLog('Starting Yahoo ' + mode + ' load...' + (mode === 'incremental' ? ' (' + months + ' months)' : ''), 'info');
+    addLog('Starting Yahoo — ' + label + '...' + (mode === 'incremental' ? ' (' + months + ' months)' : ''), 'info');
 
     const r = await adminFetch(API + '/api/batch/' + mode, {
       method: 'POST',
@@ -390,7 +404,11 @@ async function runBatch(mode) {
 
     if (r.ok) {
       addLog('✓ ' + d.message, 'ok');
-      startPolling();
+      if (d.status === 'skipped') {
+        disableBatchButtons(false);
+      } else {
+        startPolling();
+      }
     } else {
       addLog('✗ ' + (d.detail || d.error || 'Failed'), 'err');
       disableBatchButtons(false);
@@ -485,7 +503,7 @@ function updateStatusPanel(d) {
 
 // ---- Helpers ----
 function disableBatchButtons(disabled) {
-  ['btnFull', 'btnIncr', 'btnFredFull', 'btnFredIncr'].forEach(id => {
+  ['btnFullNew', 'btnFull', 'btnIncr', 'btnFredFull', 'btnFredIncr'].forEach(id => {
     const el = document.getElementById(id);
     if (writeEnabled) el.disabled = disabled;
   });

@@ -1,7 +1,7 @@
 # Plan: Admin Dashboard HTML
 
 ## Context
-Adding tickers and loading Yahoo Finance/FRED data currently requires CLI commands. The user wants a simple browser-based admin page to manage tickers and trigger data loads — no auth, just a utility page.
+Adding tickers and loading Yahoo Finance/FRED data currently requires CLI commands. The user wants a simple browser-based admin page to manage tickers and trigger data loads — secured by Auth0 login + user_admin whitelist.
 
 ## Branch
 Same branch: `feature/annual-deposit-growth`
