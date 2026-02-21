@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>$10K Growth Chart</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared-analytics.css">
+<style>
+  .growth-line-wrap{position:relative;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;margin-bottom:32px;overflow:hidden}
+  .growth-canvas{width:100%;height:450px;position:relative;cursor:crosshair}
+  .ticker-picker{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:20px}
+  .ticker-chip{padding:8px 14px;border-radius:10px;font-size:12px;font-weight:600;font-family:'JetBrains Mono',monospace;cursor:pointer;transition:all .2s;border:2px solid var(--border);background:var(--bg);color:var(--text3);user-select:none}
+  .ticker-chip.active{color:#fff}
+  .ticker-chip:hover{border-color:var(--text3)}
+  .crosshair-info{position:absolute;top:8px;right:12px;background:rgba(10,14,23,0.9);border:1px solid var(--border);border-radius:10px;padding:10px 14px;font-size:11px;font-family:'JetBrains Mono',monospace;pointer-events:none;min-width:160px;z-index:10}
+  .ch-year{font-weight:700;color:var(--text1);font-size:13px;margin-bottom:6px;font-family:'Space Grotesk',sans-serif}
+  .ch-row{display:flex;justify-content:space-between;gap:16px;padding:2px 0}
+  .ch-sym{font-weight:600}
+  .ch-val{font-weight:600}
+  .final-values{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-top:24px}
+  .fv-item{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px;display:flex;justify-content:space-between;align-items:center}
+  .fv-sym{font-weight:700;font-size:13px;font-family:'Space Grotesk',sans-serif}
+  .fv-val{font-weight:600;font-size:13px;font-family:'JetBrains Mono',monospace}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div><h1 class="space"><span style="color:var(--accent)">◆</span> $10,000 Growth</h1></div>
+  <div class="nav-links" id="navLinks"></div>
+</div>
+
+<div class="container">
+  <p class="page-desc">
+    If you invested $10,000 in each sector ETF at the start of the selected period, what would it be worth today?
+    Shows cumulative growth using annual total returns (price + cash dividends).
+    Dividends are <em>not</em> reinvested &mdash; they are added as cash to the total value.
+  </p>
+
+  <div class="controls">
+    <label>From</label>
+    <select id="yearStart" onchange="onYearChange()"></select>
+    <label>To</label>
+    <select id="yearEnd" onchange="onYearChange()"></select>
+  </div>
+
+  <p style="font-size:12px;color:var(--text3);margin-bottom:8px">Click sectors to add or remove from chart:</p>
+  <div class="ticker-picker" id="tickerPicker"></div>
+
+  <div class="growth-line-wrap">
+    <canvas class="growth-canvas" id="chartCanvas"></canvas>
+    <div class="crosshair-info" id="crosshairInfo" style="display:none"></div>
+  </div>
+
+  <h2 class="section-title">Final Values</h2>
+  <div class="final-values" id="finalValues"></div>
+</div>
+
+<script src="shared-analytics.js?v=1"></script>
+<script src="growth-chart.js?v=2"></script>
+</body>
+</html>

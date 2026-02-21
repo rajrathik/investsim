@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CD Portfolio Advisor - Smart Investment Planning</title>
+    <link rel="stylesheet" href="cdstyles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="40" height="40" rx="8" fill="url(#gradient1)"/>
+                    <path d="M20 10L28 16V24L20 30L12 24V16L20 10Z" stroke="white" stroke-width="2" stroke-linejoin="round"/>
+                    <circle cx="20" cy="20" r="4" fill="white"/>
+                    <defs>
+                        <linearGradient id="gradient1" x1="0" y1="0" x2="40" y2="40">
+                            <stop offset="0%" stop-color="#667eea"/>
+                            <stop offset="100%" stop-color="#764ba2"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+                <h1>CD Portfolio Advisor</h1>
+            </div>
+            <p class="tagline">AI-Powered Certificate of Deposit Portfolio Planning</p>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Input Section -->
+            <section class="input-section card">
+                <h2>Tell Us About Your Investment Goals</h2>
+                <p class="subtitle">Describe your investment needs in your own words</p>
+                
+                <form id="investment-form">
+                    <div class="form-group">
+                        <label for="investment-amount">Investment Amount ($)</label>
+                        <div class="input-wrapper">
+                            <span class="input-prefix">$</span>
+                            <input 
+                                type="number" 
+                                id="investment-amount" 
+                                name="investment-amount" 
+                                placeholder="50000"
+                                min="1000"
+                                step="1000"
+                                required
+                            >
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="user-input">Your Investment Goals & Preferences</label>
+                        <textarea 
+                            id="user-input" 
+                            name="user-input" 
+                            rows="4"
+                            placeholder="Example: I want to save for my daughter's college education in 10 years. I prefer safe investments and want to lock in current rates..."
+                            required
+                        ></textarea>
+                        <div class="input-hints">
+                            <span class="hint">💡 Try: "I'm retired and need conservative investments"</span>
+                            <span class="hint">💡 Try: "Saving for a house down payment in 3-5 years"</span>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" id="analyze-btn">
+                        <span class="btn-text">Analyze & Recommend</span>
+                        <svg class="btn-icon" width="20" height="20" viewBox="0 0 20 20" fill="none">
+                            <path d="M4 10H16M16 10L11 5M16 10L11 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                </form>
+            </section>
+
+            <!-- Loading State -->
+            <div id="loading" class="loading hidden">
+                <div class="spinner"></div>
+                <p>Analyzing your needs and market conditions...</p>
+            </div>
+
+            <!-- Error Message -->
+            <div id="error-message" class="error-message hidden">
+                <div class="error-content">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                        <path d="M12 8V12M12 16H12.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                    <div>
+                        <strong>Error</strong>
+                        <p id="error-text"></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div id="results" class="results hidden">
+                <!-- Preferences Summary -->
+                <section class="preferences-section card">
+                    <h3>Your Investment Profile</h3>
+                    <div class="preferences-grid" id="preferences-grid">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                </section>
+
+                <!-- Market Sentiment -->
+                <section class="market-section card">
+                    <div class="market-header">
+                        <h3>Current Market Insights</h3>
+                        <div class="sentiment-badge" id="sentiment-badge">
+                            <!-- Populated by JavaScript -->
+                        </div>
+                    </div>
+                    <div class="market-content" id="market-content">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                </section>
+
+                <!-- Portfolio Comparison -->
+                <section class="comparison-section">
+                    <h2 class="section-title">Your Portfolio Options</h2>
+                    <p class="section-subtitle">Compare two strategies tailored to your needs</p>
+
+                    <div class="portfolios-container">
+                        <!-- Portfolio 1: User Need Based -->
+                        <div class="portfolio-card card">
+                            <div class="portfolio-header">
+                                <div class="portfolio-badge badge-blue">Option 1</div>
+                                <h3>Based on Your Needs</h3>
+                                <p>Focused purely on your stated goals and preferences</p>
+                            </div>
+                            <div class="portfolio-summary" id="summary-user-need">
+                                <!-- Populated by JavaScript -->
+                            </div>
+                            <div class="ai-explanation" id="explanation-user-need">
+                                <!-- AI explanation populated by JavaScript -->
+                            </div>
+                            <div class="portfolio-cds" id="cds-user-need">
+                                <!-- Populated by JavaScript -->
+                            </div>
+                        </div>
+
+                        <!-- Portfolio 2: Market Optimized -->
+                        <div class="portfolio-card card recommended">
+                            <div class="recommended-badge">
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                    <path d="M8 1L10.163 5.38L15 6.12L11.5 9.545L12.326 14.36L8 12.11L3.674 14.36L4.5 9.545L1 6.12L5.837 5.38L8 1Z" fill="currentColor"/>
+                                </svg>
+                                Recommended
+                            </div>
+                            <div class="portfolio-header">
+                                <div class="portfolio-badge badge-purple">Option 2</div>
+                                <h3>Market-Optimized Strategy</h3>
+                                <p>Incorporates current market sentiment and rate trends</p>
+                            </div>
+                            <div class="portfolio-summary" id="summary-with-market">
+                                <!-- Populated by JavaScript -->
+                            </div>
+                            <div class="ai-explanation" id="explanation-with-market">
+                                <!-- AI explanation populated by JavaScript -->
+                            </div>
+                            <div class="portfolio-cds" id="cds-with-market">
+                                <!-- Populated by JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Key Differences -->
+                <section class="differences-section card">
+                    <h3>Why Two Options?</h3>
+                    <div class="differences-grid" id="differences-grid">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                </section>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>CD Portfolio Advisor &copy; 2026 | Powered by AI & Real-time Market Data</p>
+            <p class="disclaimer">Investment recommendations are for informational purposes only. Please consult with a financial advisor.</p>
+        </footer>
+    </div>
+
+    <script src="cdapp.js"></script>
+</body>
+</html>

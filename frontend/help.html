@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Investment Tools — Help & Guide</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0e17;--card:#111827;--border:#1e293b;--accent:#10b981;--accent-dim:rgba(16,185,129,0.15);--accent-glow:rgba(16,185,129,0.4);--red:#ef4444;--red-dim:rgba(239,68,68,0.15);--gold:#f59e0b;--gold-dim:rgba(245,158,11,0.15);--blue:#3b82f6;--blue-dim:rgba(59,130,246,0.15);--text1:#f1f5f9;--text2:#94a3b8;--text3:#64748b}
+*{box-sizing:border-box;margin:0;padding:0}
+body{min-height:100vh;background:var(--bg);color:var(--text1);font-family:'DM Sans',sans-serif}
+
+.header{border-bottom:1px solid var(--border);padding:20px 32px;display:flex;justify-content:space-between;align-items:center}
+.header h1{font-size:22px;font-weight:700;font-family:'Space Grotesk',sans-serif}
+.nav-links{display:flex;gap:20px;align-items:center;font-family:'JetBrains Mono',monospace;font-size:13px;flex-wrap:wrap}
+.nav-links a{color:var(--text2);text-decoration:none;transition:color .2s}
+.nav-links a:hover{color:var(--accent)}
+
+.container{max-width:880px;margin:0 auto;padding:40px 24px}
+
+.hero{text-align:center;margin-bottom:52px}
+.hero-icon{font-size:52px;margin-bottom:16px}
+.hero h2{font-size:28px;font-weight:700;font-family:'Space Grotesk',sans-serif;margin-bottom:10px}
+.hero p{color:var(--text2);font-size:15px;max-width:560px;margin:0 auto;line-height:1.7}
+
+/* Tool cards grid */
+.tools-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin-bottom:48px}
+.tool-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;text-decoration:none;color:inherit;transition:border-color .2s,box-shadow .2s;display:block}
+.tool-card:hover{border-color:var(--accent);box-shadow:0 0 20px rgba(16,185,129,0.1)}
+.tool-icon{font-size:28px;margin-bottom:12px}
+.tool-name{font-size:15px;font-weight:700;font-family:'Space Grotesk',sans-serif;margin-bottom:6px;color:var(--text1)}
+.tool-desc{font-size:13px;color:var(--text2);line-height:1.6}
+.tool-tag{display:inline-block;margin-top:10px;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:600;font-family:'JetBrains Mono',monospace;background:var(--accent-dim);color:var(--accent);border:1px solid rgba(16,185,129,.2)}
+
+/* Guide sections */
+.guide-section{margin-bottom:40px}
+.guide-section h3{font-size:17px;font-weight:700;font-family:'Space Grotesk',sans-serif;margin-bottom:16px;color:var(--text1);display:flex;align-items:center;gap:10px}
+.guide-section h3 span{font-size:20px}
+
+.guide-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:12px}
+.guide-card h4{font-size:14px;font-weight:600;color:var(--accent);font-family:'JetBrains Mono',monospace;margin-bottom:10px;text-transform:uppercase;letter-spacing:.06em}
+.guide-list{list-style:none;padding:0}
+.guide-list li{font-size:14px;color:var(--text2);line-height:1.8;padding-left:16px;position:relative}
+.guide-list li::before{content:"›";position:absolute;left:0;color:var(--accent)}
+.guide-list li strong{color:var(--text1)}
+.guide-list-num{counter-reset:item;list-style:none;padding:0}
+.guide-list-num li{counter-increment:item;font-size:14px;color:var(--text2);line-height:1.8;padding-left:24px;position:relative;margin-bottom:4px}
+.guide-list-num li::before{content:counter(item)".";position:absolute;left:0;color:var(--accent);font-weight:700;font-family:'JetBrains Mono',monospace}
+.guide-list-num li strong{color:var(--text1)}
+
+.example-box{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:16px;margin-top:12px;font-size:13px;color:var(--text2);line-height:1.9;font-family:'JetBrains Mono',monospace}
+.example-box strong{color:var(--text1)}
+
+@media(max-width:600px){
+  .header{flex-direction:column;gap:16px;align-items:flex-start}
+  .tools-grid{grid-template-columns:1fr}
+  .hero h2{font-size:22px}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1><span style="color:var(--accent)">◆</span> Investment Tools</h1>
+  <nav class="nav-links">
+    <a href="/portfolio-simulator.html">Simulator</a>
+    <a href="/sector-performance.html">Sector Performance</a>
+    <a href="/correlation.html">Correlation</a>
+    <a href="/drawdown.html">Drawdowns</a>
+    <a href="/sector-rotation.html">Rotation</a>
+    <a href="/dividend-growth.html">Div Growth</a>
+    <a href="/growth-chart.html">$10K Growth</a>
+    <a href="/risk-return.html">Risk vs Return</a>
+  </nav>
+</div>
+
+<div class="container">
+
+  <div class="hero">
+    <div class="hero-icon">📊</div>
+    <h2>Investment Analysis Tools</h2>
+    <p>A suite of tools to explore historical market data, analyze sector performance, and simulate investment strategies. All data is sourced from Yahoo Finance and FRED — no projections, no guesswork.</p>
+  </div>
+
+  <!-- Tool cards -->
+  <div class="tools-grid">
+    <a href="/portfolio-simulator.html" class="tool-card">
+      <div class="tool-icon">💼</div>
+      <div class="tool-name">Asset Allocation Simulator</div>
+      <div class="tool-desc">Simulate monthly investing across any mix of assets. Uses real historical prices to model whole-share purchases and dividend cash flows.</div>
+      <span class="tool-tag">Start Here</span>
+    </a>
+    <a href="/sector-performance.html" class="tool-card">
+      <div class="tool-icon">📈</div>
+      <div class="tool-name">Sector Performance</div>
+      <div class="tool-desc">Annual total returns and dividend payouts for all 11 S&amp;P 500 sector ETFs plus VTI. Compare year-by-year with a color-coded quilt table.</div>
+    </a>
+    <a href="/correlation.html" class="tool-card">
+      <div class="tool-icon">🔗</div>
+      <div class="tool-name">Correlation Matrix</div>
+      <div class="tool-desc">See how closely sectors move together. Low-correlation sectors can reduce portfolio volatility without sacrificing returns.</div>
+    </a>
+    <a href="/drawdown.html" class="tool-card">
+      <div class="tool-icon">📉</div>
+      <div class="tool-name">Drawdown Analysis</div>
+      <div class="tool-desc">Peak-to-trough loss analysis for each sector. Understand worst-case scenarios and how long recoveries took historically.</div>
+    </a>
+    <a href="/sector-rotation.html" class="tool-card">
+      <div class="tool-icon">🔄</div>
+      <div class="tool-name">Sector Rotation</div>
+      <div class="tool-desc">Year-by-year sector rankings #1 to #12 by performance. No sector leads every year — see the pattern.</div>
+    </a>
+    <a href="/dividend-growth.html" class="tool-card">
+      <div class="tool-icon">💰</div>
+      <div class="tool-name">Dividend Growth</div>
+      <div class="tool-desc">Year-over-year dividend growth for each sector ETF. Identify consistent payers vs sectors that cut dividends.</div>
+    </a>
+    <a href="/growth-chart.html" class="tool-card">
+      <div class="tool-icon">📊</div>
+      <div class="tool-name">$10K Growth Chart</div>
+      <div class="tool-desc">How would $10,000 invested in each sector have grown? Compare cumulative growth across sectors over any time range.</div>
+    </a>
+    <a href="/risk-return.html" class="tool-card">
+      <div class="tool-icon">⚖️</div>
+      <div class="tool-name">Risk vs Return</div>
+      <div class="tool-desc">Scatter plot of each sector by annual volatility (risk) vs total return. Find efficient sectors in the upper-left sweet spot.</div>
+    </a>
+  </div>
+
+  <!-- Simulator Guide -->
+  <div class="guide-section">
+    <h3><span>💼</span> Asset Allocation Simulator — How It Works</h3>
+
+    <div class="guide-card">
+      <h4>What It Does</h4>
+      <ul class="guide-list">
+        <li>Simulates investing a <strong>monthly amount</strong> (optionally growing each year) across your chosen asset mix</li>
+        <li>Uses <strong>actual historical prices</strong> from Yahoo Finance — not projections or averages</li>
+        <li>Buys <strong>whole shares only</strong> at the monthly high price (conservative, worst-case entry)</li>
+        <li>If allocation can't yet buy a share, funds <strong>accumulate in a per-ticker bucket</strong> until they can</li>
+        <li>Dividends are tracked as <strong>cash received</strong> — not reinvested back into equities</li>
+        <li>Cash dividends earn <strong>money market interest</strong> at the historical FRED federal funds rate</li>
+      </ul>
+    </div>
+
+    <div class="guide-card">
+      <h4>How to Use It</h4>
+      <ol class="guide-list-num">
+        <li><strong>Set your monthly amount</strong>, optional annual deposit growth, and investment period (1–20 years)</li>
+        <li><strong>Pick tickers</strong> from the dropdown — search by symbol or name, or browse the list</li>
+        <li><strong>Set allocation %</strong> using sliders — total must equal 100%</li>
+        <li>Click <strong>▶ Run Simulation</strong> to see results</li>
+      </ol>
+    </div>
+
+    <div class="guide-card">
+      <h4>What You'll See</h4>
+      <ul class="guide-list">
+        <li><strong>6 summary tiles</strong> — Total Invested, Equity Value, Dividends Received, Cash Accrual, Portfolio Balance, Money Market Benchmark</li>
+        <li><strong>Interactive charts</strong> — hover for month-by-month growth and dividend details</li>
+        <li><strong>Monthly breakdown table</strong> — click any highlighted cell for per-ticker detail</li>
+        <li><strong>Tax impact section</strong> — adjust your tax rate to see yearly liability on dividends and interest</li>
+        <li><strong>Annual returns</strong> — pre-tax performance per calendar year, with clickable detail modals</li>
+      </ul>
+    </div>
+
+    <div class="guide-card">
+      <h4>Key Things to Know</h4>
+      <ul class="guide-list">
+        <li>All summary values are <strong>clickable</strong> — cards, table cells, and chart points reveal detailed breakdowns</li>
+        <li>If an asset wasn't tradeable in a given month, its budget share <strong>automatically flows to the other assets</strong> that month</li>
+        <li>The <strong>MMF column</strong> shows what the same total invested would have earned in a money market fund — a risk-free benchmark</li>
+        <li>The <strong>Annual Deposit Growth</strong> field adds a flat dollar amount each year: Year 1 = base, Year 2 = base + growth, Year 3 = base + 2× growth, etc.</li>
+      </ul>
+    </div>
+
+    <div class="guide-card">
+      <h4>How Share Accumulation Works — Example</h4>
+      <div class="example-box">
+        <strong>Setup:</strong> $1,000/month split 60% Holding A ($250/share) and 40% Holding B ($800/share)<br><br>
+        <strong>Month 1:</strong> $600 → Holding A bucket, $400 → Holding B bucket<br>
+        Holding A: buy 2 shares ($500), carry forward $100<br>
+        Holding B: $400 not enough yet, accumulates in bucket<br><br>
+        <strong>Month 2:</strong> $600 + $100 carry = $700 for A → buy 2 shares ($500), carry $200<br>
+        $400 + $400 carry = $800 for B → buy 1 share, carry $0<br><br>
+        <strong>If a holding is unavailable:</strong> its budget automatically shifts to the other holdings that month. Normal split resumes next month.
+      </div>
+    </div>
+  </div>
+
+  <!-- Sector Tools Guide -->
+  <div class="guide-section">
+    <h3><span>📈</span> Sector Analysis Tools — How to Use Them</h3>
+
+    <div class="guide-card">
+      <h4>Sectors Covered</h4>
+      <ul class="guide-list">
+        <li><strong>XLK</strong> — Technology &nbsp;|&nbsp; <strong>XLV</strong> — Health Care &nbsp;|&nbsp; <strong>XLF</strong> — Financials</li>
+        <li><strong>XLE</strong> — Energy &nbsp;|&nbsp; <strong>XLY</strong> — Consumer Discretionary &nbsp;|&nbsp; <strong>XLP</strong> — Consumer Staples</li>
+        <li><strong>XLI</strong> — Industrials &nbsp;|&nbsp; <strong>XLB</strong> — Materials &nbsp;|&nbsp; <strong>XLU</strong> — Utilities</li>
+        <li><strong>XLC</strong> — Communication Services &nbsp;|&nbsp; <strong>XLRE</strong> — Real Estate &nbsp;|&nbsp; <strong>VTI</strong> — Total Market</li>
+      </ul>
+    </div>
+
+    <div class="guide-card">
+      <h4>Reading the Data</h4>
+      <ul class="guide-list">
+        <li><strong>Total Return</strong> = (price change + dividends) ÷ year-begin price. Dividends are counted as cash, not reinvested.</li>
+        <li><strong>CAGR</strong> — Compound Annual Growth Rate over the selected period</li>
+        <li><strong>Correlation</strong> — +1.0 means sectors move in lockstep; 0 = independent; −1.0 = opposite</li>
+        <li><strong>Drawdown</strong> — Peak-to-trough % loss from the highest point before a decline</li>
+        <li>All tools have <strong>year range controls</strong> — adjust to focus on any time window</li>
+      </ul>
+    </div>
+
+    <div class="guide-card">
+      <h4>Building a Diversified Portfolio</h4>
+      <ul class="guide-list">
+        <li>Use <strong>Sector Performance</strong> to identify sectors with strong long-term total returns</li>
+        <li>Use <strong>Correlation</strong> to find sectors that don't move together — combining them reduces volatility</li>
+        <li>Use <strong>Drawdown</strong> to understand the worst-case loss you'd have experienced</li>
+        <li>Use <strong>Risk vs Return</strong> to spot efficient sectors (high return, low volatility)</li>
+        <li>Then use the <strong>Asset Allocation Simulator</strong> to test your chosen mix with real history</li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

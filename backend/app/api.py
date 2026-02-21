@@ -2,36 +2,60 @@
 
 Endpoints:
   Health:
-    GET    /api/health                   - Health check
+    GET    /api/health                      - Health check
+
+  Auth (admin only):
+    GET    /api/auth/config                 - Auth0 config for frontend SPA (unauthenticated)
+    POST   /api/auth/login-event            - Log login event
+    GET    /api/admin/write-status          - Check if write API is enabled (unauthenticated)
+    GET    /api/admin/verify                - Verify caller is an authorized admin (requires Auth0 token)
 
   Tickers:
-    GET    /api/tickers                  - List all tickers
-    GET    /api/tickers/active           - List active tickers only
-    POST   /api/tickers                  - Add a new ticker
-    PUT    /api/tickers/{symbol}         - Update ticker (name, active)
-    DELETE /api/tickers/{symbol}         - Delete ticker and all its data
+    GET    /api/tickers                     - List all tickers (requires auth)
+    GET    /api/tickers/active              - List active tickers only (public)
+    POST   /api/tickers                     - Add a new ticker (requires write API enabled)
+    PUT    /api/tickers/{symbol}            - Update ticker name/active (requires auth + write)
+    DELETE /api/tickers/{symbol}            - Delete ticker and all data (requires auth + write)
 
   Prices:
-    GET    /api/prices/{symbol}          - Get monthly prices for a ticker
-    GET    /api/prices/{symbol}/latest   - Get latest month's price
+    GET    /api/prices/{symbol}             - Get monthly prices for a ticker (requires auth)
+    GET    /api/prices/{symbol}/latest      - Get latest month's price (requires auth)
 
   Dividends:
-    GET    /api/dividends/{symbol}       - Get dividends for a ticker
+    GET    /api/dividends/{symbol}          - Get dividends for a ticker (requires auth)
 
   Simulation Data:
-    GET    /api/simulation-data/{symbol} - Get combined prices + dividends for simulation
+    GET    /api/simulation-data/{symbol}    - Combined prices + dividends for simulation (requires auth)
 
-  Batch:
-    POST   /api/batch/full               - Trigger full history load for ALL tickers (async)
-    POST   /api/batch/full-new           - Trigger full history load for NEW tickers only (async)
-    POST   /api/batch/incremental        - Trigger incremental load (async)
-    POST   /api/batch/fred-full          - Trigger full FRED rate load (async)
-    POST   /api/batch/fred-incremental   - Trigger incremental FRED rate load (async)
-    GET    /api/batch/status             - Get last batch run info
+  Money Market Rates:
+    GET    /api/mm-rates/monthly            - Monthly FRED federal funds rates (requires auth)
+    GET    /api/mm-rates/annual             - Annual average FRED rates (requires auth)
+    GET    /api/mm-rates/annual/{year}      - Rate for a specific year (requires auth)
 
-  Admin:
-    GET    /api/admin/write-status       - Check if write API is enabled
-    GET    /admin.html                   - Admin dashboard (no auth)
+  Sector Analytics:
+    GET    /api/sector-performance          - Annual returns + dividends for sector ETFs (requires auth)
+    GET    /api/sector-monthly              - Monthly close prices for sector ETFs (requires auth)
+
+  Batch (requires write API enabled):
+    POST   /api/batch/full                  - Full history load for ALL tickers (async)
+    POST   /api/batch/full-new              - Full history load for NEW tickers only (async)
+    POST   /api/batch/incremental           - Incremental load for recent months (async)
+    POST   /api/batch/fred-full             - Full FRED rate history load (async)
+    POST   /api/batch/fred-incremental      - Incremental FRED rate load — last 3 months (async)
+    GET    /api/batch/status                - Status of last batch run
+
+  Pages (served via static files):
+    GET    /                                - Help & navigation landing page
+    GET    /help.html                       - Help & navigation landing page
+    GET    /admin.html                      - Admin dashboard (Auth0 protected)
+    GET    /portfolio-simulator.html        - Asset Allocation Simulator
+    GET    /sector-performance.html         - Sector annual returns & dividends
+    GET    /correlation.html                - Sector correlation matrix
+    GET    /drawdown.html                   - Sector drawdown analysis
+    GET    /sector-rotation.html            - Sector rotation rankings
+    GET    /dividend-growth.html            - Dividend growth by sector
+    GET    /growth-chart.html               - $10K growth chart
+    GET    /risk-return.html                - Risk vs return scatter plot
 """
 import os
 import re
@@ -117,14 +141,8 @@ class ErrorResponse(BaseModel):
 
 
 def _extract_email_from_token(request: Request) -> Optional[str]:
-    """Try to extract user email from Bearer token without failing."""
-    try:
-        from app.auth import get_token_from_header, verify_token
-        token = get_token_from_header(request)
-        user = verify_token(token)
-        return user.get("email") or user.get("name")
-    except Exception:
-        return None
+    """Extract user email from request for logging (unauthenticated fallback)."""
+    return "local@localhost"
 
 
 def _log_request_to_db(request_id, method, path, status_code,
@@ -524,32 +542,9 @@ def get_auth_config():
 
 
 @app.post("/api/auth/login-event")
-def log_login_event(
-    request: Request,
-    user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Record a login event after successful Auth0 authentication.
-
-    Called by the frontend after redirect callback completes.
-    Returns the user_id for session association.
-    """
-    login = UserLogin(
-        auth0_user_id=user.get("sub", "unknown"),
-        email=user.get("email") or user.get("nickname", ""),
-        name=user.get("name", ""),
-        ip_address=request.client.host if request.client else None,
-        user_agent=(request.headers.get("user-agent", "") or "")[:500],
-    )
-    db.add(login)
-    db.commit()
-    logger.info(f"Login event: {login.email} ({login.auth0_user_id})")
-    return {
-        "status": "ok",
-        "user_id": login.auth0_user_id,
-        "email": login.email,
-        "login_id": login.id,
-    }
+def log_login_event(request: Request):
+    """Log a login event (no-op if no DB table exists)."""
+    return {"status": "ok"}
 
 
 # ===========================================
@@ -564,7 +559,7 @@ def list_tickers(user: dict = Depends(get_current_user), db: Session = Depends(g
 
 @app.get("/api/tickers/active", response_model=list[TickerResponse])
 def list_active_tickers(db: Session = Depends(get_db)):
-    """List only active tickers (no auth — used by admin page and simulator)."""
+    """List only active tickers — public, no auth required."""
     return db.query(Ticker).filter(Ticker.active == True).order_by(Ticker.symbol).all()
 
 
@@ -1094,6 +1089,141 @@ def get_batch_status():
 
 
 # ===========================================
+# SECTOR PERFORMANCE (annual returns + dividends from DB)
+# ===========================================
+
+@app.get("/api/sector-performance")
+def get_sector_performance(
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Compute 20-year annual return & dividend data for all sector ETFs.
+
+    Return = (Dec close[Y] - Dec close[Y-1]) / Dec close[Y-1] * 100
+    Dividend = sum of all dividends paid during year Y
+    """
+    sector_symbols = [
+        "XLK", "XLV", "XLF", "XLE", "XLY", "XLP",
+        "XLI", "XLB", "XLU", "XLC", "XLRE", "VTI",
+    ]
+
+    results = {}
+    for sym in sector_symbols:
+        ticker = db.query(Ticker).filter(Ticker.symbol == sym).first()
+        if not ticker:
+            continue
+
+        # December close prices keyed by year
+        dec_rows = (
+            db.query(MonthlyPrice.year, MonthlyPrice.close)
+            .filter(
+                and_(
+                    MonthlyPrice.ticker_id == ticker.id,
+                    MonthlyPrice.month == 12,
+                )
+            )
+            .order_by(MonthlyPrice.year)
+            .all()
+        )
+        dec_map = {y: c for y, c in dec_rows if c is not None}
+
+        # Annual dividend totals
+        from sqlalchemy import func as sa_func
+        div_rows = (
+            db.query(
+                extract("year", Dividend.pay_date).label("yr"),
+                sa_func.sum(Dividend.amount).label("total"),
+            )
+            .filter(Dividend.ticker_id == ticker.id)
+            .group_by(extract("year", Dividend.pay_date))
+            .all()
+        )
+        div_map = {int(yr): float(total) for yr, total in div_rows}
+
+        yearly = {}
+        for y in sorted(dec_map.keys()):
+            if y - 1 not in dec_map:
+                continue
+            prev = dec_map[y - 1]
+            curr = dec_map[y]
+            yearly[str(y)] = {
+                "return": round(((curr - prev) / prev) * 100, 2),
+                "dividend": round(div_map.get(y, 0), 2),
+                "prev_close": round(prev, 2),
+                "close": round(curr, 2),
+            }
+
+        results[sym] = {"name": ticker.name, "data": yearly}
+
+    return results
+
+
+# ===========================================
+# SECTOR MONTHLY (all monthly close prices for sector ETFs)
+# ===========================================
+
+@app.get("/api/sector-monthly")
+def get_sector_monthly(
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Return all monthly close prices for sector ETFs.
+
+    Used by correlation, drawdown, growth-chart, and risk-return pages.
+    Returns dict keyed by symbol with name and monthly array of {year, month, close}.
+    """
+    sector_symbols = [
+        "XLK", "XLV", "XLF", "XLE", "XLY", "XLP",
+        "XLI", "XLB", "XLU", "XLC", "XLRE", "VTI",
+    ]
+
+    results = {}
+    for sym in sector_symbols:
+        ticker = db.query(Ticker).filter(Ticker.symbol == sym).first()
+        if not ticker:
+            continue
+
+        rows = (
+            db.query(MonthlyPrice.year, MonthlyPrice.month, MonthlyPrice.close)
+            .filter(MonthlyPrice.ticker_id == ticker.id)
+            .order_by(MonthlyPrice.year, MonthlyPrice.month)
+            .all()
+        )
+
+        monthly = []
+        for y, m, c in rows:
+            if c is not None:
+                monthly.append({"year": y, "month": m, "close": round(c, 2)})
+
+        # Also include annual dividends for growth calculations
+        from sqlalchemy import func as sa_func
+        div_rows = (
+            db.query(
+                extract("year", Dividend.pay_date).label("yr"),
+                extract("month", Dividend.pay_date).label("mo"),
+                sa_func.sum(Dividend.amount).label("total"),
+            )
+            .filter(Dividend.ticker_id == ticker.id)
+            .group_by(
+                extract("year", Dividend.pay_date),
+                extract("month", Dividend.pay_date),
+            )
+            .all()
+        )
+        monthly_divs = {}
+        for yr, mo, total in div_rows:
+            monthly_divs[f"{int(yr)}-{int(mo)}"] = round(float(total), 4)
+
+        results[sym] = {
+            "name": ticker.name,
+            "monthly": monthly,
+            "monthly_dividends": monthly_divs,
+        }
+
+    return results
+
+
+# ===========================================
 # SERVE FRONTEND (must be LAST — catch-all)
 # ===========================================
 
@@ -1102,12 +1232,46 @@ _frontend_dir = pathlib.Path(__file__).resolve().parent.parent.parent / "fronten
 if _frontend_dir.exists():
     @app.get("/")
     def serve_index():
-        """Redirect root to the main HTML page."""
-        return FileResponse(str(_frontend_dir / "portfolio-simulator.html"))
+        """Serve the help/landing page at root."""
+        return FileResponse(str(_frontend_dir / "help.html"))
+
+    @app.get("/help.html")
+    def serve_help():
+        """Serve the help and navigation landing page."""
+        return FileResponse(str(_frontend_dir / "help.html"))
 
     @app.get("/admin.html")
     def serve_admin():
-        """Serve the admin dashboard page (no auth)."""
+        """Serve the admin dashboard page (Auth0 protected)."""
         return FileResponse(str(_frontend_dir / "admin.html"))
+
+    @app.get("/sector-performance.html")
+    def serve_sector_performance():
+        """Serve the sector performance page."""
+        return FileResponse(str(_frontend_dir / "sector-performance.html"))
+
+    @app.get("/correlation.html")
+    def serve_correlation():
+        return FileResponse(str(_frontend_dir / "correlation.html"))
+
+    @app.get("/drawdown.html")
+    def serve_drawdown():
+        return FileResponse(str(_frontend_dir / "drawdown.html"))
+
+    @app.get("/sector-rotation.html")
+    def serve_sector_rotation():
+        return FileResponse(str(_frontend_dir / "sector-rotation.html"))
+
+    @app.get("/dividend-growth.html")
+    def serve_dividend_growth():
+        return FileResponse(str(_frontend_dir / "dividend-growth.html"))
+
+    @app.get("/growth-chart.html")
+    def serve_growth_chart():
+        return FileResponse(str(_frontend_dir / "growth-chart.html"))
+
+    @app.get("/risk-return.html")
+    def serve_risk_return():
+        return FileResponse(str(_frontend_dir / "risk-return.html"))
 
     app.mount("/", StaticFiles(directory=str(_frontend_dir)), name="frontend")

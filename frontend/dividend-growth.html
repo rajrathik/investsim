@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dividend Growth Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared-analytics.css">
+</head>
+<body>
+
+<div class="header">
+  <div><h1 class="space"><span style="color:var(--accent)">◆</span> Dividend Growth</h1></div>
+  <div class="nav-links" id="navLinks"></div>
+</div>
+
+<div class="container">
+  <p class="page-desc">
+    Year-over-year dividend growth for each sector ETF. Shows which sectors consistently
+    grow their payouts vs. those that cut dividends. Dividends are treated as cash received.
+  </p>
+
+  <div class="controls">
+    <label>From</label>
+    <select id="yearStart" onchange="onYearChange()"></select>
+    <label>To</label>
+    <select id="yearEnd" onchange="onYearChange()"></select>
+  </div>
+
+  <div class="cards-grid" id="summaryCards">
+    <div class="loading">Loading dividend data...</div>
+  </div>
+</div>
+
+<script src="shared-analytics.js?v=1"></script>
+<script src="dividend-growth.js?v=2"></script>
+</body>
+</html>

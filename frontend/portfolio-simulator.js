@@ -4,87 +4,15 @@ const MO=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec
 let allTickers=[],selected=[],alloc={},selAmt=1000,selGrowth=0,selYr=10;
 let snapshots=null,breakdownData=null;
 
-/* ========== AUTH0 INTEGRATION ========== */
-let auth0Client=null,currentUser=null;
-
-async function initAuth(){
-  try{
-    const config=await fetch(API+'/auth/config').then(r=>r.json());
-    if(!config.domain){showLoginRequired();return;}
-    const authParams={
-      redirect_uri:window.location.origin+window.location.pathname,
-      scope:'openid profile email',
-    };
-    if(config.audience)authParams.audience=config.audience;
-    auth0Client=await auth0.createAuth0Client({
-      domain:config.domain,
-      clientId:config.clientId,
-      authorizationParams:authParams,
-      cacheLocation:'localstorage',
-    });
-    const query=window.location.search;
-    if(query.includes('code=')&&query.includes('state=')){
-      await auth0Client.handleRedirectCallback();
-      window.history.replaceState({},document.title,window.location.pathname);
-    }
-    const isAuth=await auth0Client.isAuthenticated();
-    if(isAuth){currentUser=await auth0Client.getUser();await onLoginSuccess();}
-    else{showLoginRequired();}
-  }catch(e){console.error('Auth0 init failed:',e);showLoginRequired();}
-}
-
-async function doLogin(){
-  if(!auth0Client)return;
-  await auth0Client.loginWithRedirect({
-    authorizationParams:{redirect_uri:window.location.origin+window.location.pathname}
-  });
-}
-
-async function doLogout(){
-  if(!auth0Client)return;
-  auth0Client.logout({logoutParams:{returnTo:window.location.origin+window.location.pathname}});
-}
-
-async function onLoginSuccess(){
-  const overlay=$('authOverlay');if(overlay)overlay.classList.add('hidden');
-  $('loginBtn').style.display='none';
-  $('userMenu').style.display='flex';
-  $('userName').textContent=currentUser.email||currentUser.name||'User';
-  // Log login event to backend
-  try{
-    const token=await auth0Client.getTokenSilently();
-    await fetch(API+'/auth/login-event',{method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'}});
-  }catch(e){console.warn('Failed to log login event:',e);}
-  // Show welcome guide before loading simulator
-  const w=$('welcomeOverlay');if(w)w.classList.remove('hidden');
-}
-
-function dismissWelcomeGuide(){
-  const w=$('welcomeOverlay');if(w)w.classList.add('hidden');
-  const h=$('mainHeader');if(h)h.style.display='';
-  const c=$('mainContainer');if(c)c.style.display='';
-  loadTickers();
-}
-
-function showLoginRequired(){
-  const overlay=$('authOverlay');if(overlay)overlay.classList.remove('hidden');
-  $('loginBtn').style.display='inline-block';
-  $('userMenu').style.display='none';
-}
-
+/* authFetch is plain fetch (no auth required for public pages) */
 async function authFetch(url,options={}){
-  if(!auth0Client){showLoginRequired();throw new Error('Not authenticated');}
-  try{
-    const token=await auth0Client.getTokenSilently();
-    const headers={...options.headers,'Authorization':'Bearer '+token};
-    const resp=await fetch(url,{...options,headers});
-    if(resp.status===401){showLoginRequired();throw new Error('Session expired');}
-    return resp;
-  }catch(e){
-    if(e.message==='Session expired')throw e;
-    showLoginRequired();throw e;
-  }
+  return fetch(url,options);
 }
+
+/* Load tickers on page load */
+document.addEventListener('DOMContentLoaded',function(){
+  loadTickers();
+});
 
 async function loadTickers(){
   try{
@@ -771,5 +699,4 @@ function showReturnCalc(year,field){
 
 renderAmts();renderYrs();updBudget();renderAlloc();
 
-// Auth0 initializes and calls loadTickers() after successful login
-initAuth();
+// No-auth mode: welcome guide auto-shown, dismissWelcomeGuide calls loadTickers()

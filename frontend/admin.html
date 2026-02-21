@@ -23,8 +23,6 @@ body{min-height:100vh;background:var(--bg);color:var(--text1);font-family:'DM Sa
 .header{border-bottom:1px solid var(--border);padding:20px 32px;display:flex;justify-content:space-between;align-items:center}
 .header h1{font-size:24px;font-weight:700}
 .header-right{display:flex;align-items:center;gap:16px}
-.header a{color:var(--accent);text-decoration:none;font-size:14px;font-family:'JetBrains Mono',monospace}
-.header a:hover{text-decoration:underline}
 .user-info{font-size:13px;color:var(--text2);font-family:'JetBrains Mono',monospace}
 .logout-btn{padding:6px 14px;border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;background:var(--bg);color:var(--text3);font-family:'JetBrains Mono',monospace;transition:all .2s}
 .logout-btn:hover{border-color:var(--red);color:var(--red)}
@@ -82,7 +80,7 @@ body{min-height:100vh;background:var(--bg);color:var(--text1);font-family:'DM Sa
 <div id="authOverlay" class="auth-overlay">
   <div class="auth-card">
     <div style="font-size:48px;margin-bottom:16px">🔒</div>
-    <h2 class="space" style="margin-bottom:8px">Admin Authentication</h2>
+    <h2 style="font-family:'Space Grotesk',sans-serif;margin-bottom:8px">Admin Authentication</h2>
     <p>Log in to access the Admin Dashboard</p>
     <a href="javascript:void(0)" id="loginBtn" class="auth-btn" onclick="doLogin()">Log In with Auth0</a>
     <div id="deniedMsg" class="denied-msg"></div>
@@ -92,7 +90,6 @@ body{min-height:100vh;background:var(--bg);color:var(--text1);font-family:'DM Sa
 <div id="mainHeader" class="header" style="display:none">
   <h1>⚙️ Admin Dashboard</h1>
   <div class="header-right">
-    <a href="/portfolio-simulator.html">← Back to Simulator</a>
     <span id="userEmail" class="user-info"></span>
     <button class="logout-btn" onclick="doLogout()">Log Out</button>
   </div>
@@ -192,7 +189,7 @@ let pollTimer = null;
 async function initAuth() {
   try {
     const config = await fetch(API + '/api/auth/config').then(r => r.json());
-    if (!config.domain) { showDenied('Auth0 is not configured'); return; }
+    if (!config.domain) { showDenied('Auth0 is not configured on the server'); return; }
 
     const authParams = {
       redirect_uri: window.location.origin + window.location.pathname,
@@ -250,7 +247,7 @@ async function verifyAdmin() {
       onAdminVerified(d.email);
     } else {
       const d = await r.json().catch(() => ({}));
-      showDenied(d.detail || 'Access denied — your email is not in the admin list');
+      showDenied(d.detail || 'Access denied — your account is not in the admin list');
     }
   } catch (e) {
     showDenied('Failed to verify admin access: ' + e.message);
@@ -272,7 +269,6 @@ function showDenied(msg) {
 }
 
 function onAdminVerified(email) {
-  // Hide auth overlay, show admin dashboard
   document.getElementById('authOverlay').classList.add('hidden');
   document.getElementById('mainHeader').style.display = '';
   document.getElementById('mainContainer').style.display = '';
@@ -280,7 +276,7 @@ function onAdminVerified(email) {
   adminInit();
 }
 
-// Helper: fetch with auth token
+// Helper: fetch with auth token, refreshes on expiry
 async function adminFetch(url, options = {}) {
   if (!authToken) { showLoginScreen(); throw new Error('Not authenticated'); }
   try {

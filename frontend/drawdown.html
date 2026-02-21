@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Drawdown Analysis</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared-analytics.css">
+<style>
+  .dd-bar{height:18px;border-radius:4px;min-width:2px;transition:width .3s}
+  .dd-row{display:flex;align-items:center;gap:12px;padding:6px 0;border-bottom:1px solid var(--border)}
+  .dd-sym{width:50px;font-weight:700;font-size:13px;color:var(--accent);font-family:'Space Grotesk',sans-serif}
+  .dd-name{width:140px;font-size:10px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .dd-bar-wrap{flex:1;background:rgba(239,68,68,0.05);border-radius:4px;overflow:hidden}
+  .dd-val{width:70px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;color:#ef4444}
+  .dd-period{width:120px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text3)}
+  .dd-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:16px}
+  .dd-card-title{font-size:14px;font-weight:600;color:var(--text1);margin-bottom:12px;font-family:'Space Grotesk',sans-serif}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div><h1 class="space"><span style="color:var(--accent)">◆</span> Drawdown Analysis</h1></div>
+  <div class="nav-links" id="navLinks"></div>
+</div>
+
+<div class="container">
+  <div class="glossary" style="margin-bottom:24px">
+    <span style="display:block;width:100%;font-size:14px;color:var(--text1);font-weight:600;margin-bottom:6px">What does this tell me?</span>
+    <span style="display:block;width:100%">A <strong>drawdown</strong> is how much a sector fell from its highest point to its lowest point before recovering. Think of it as the worst-case scenario &mdash; if you bought at the peak and held through the bottom, how much would you have lost on paper?</span>
+    <span style="display:block;width:100%;margin-top:10px;font-size:14px;color:var(--text1);font-weight:600;margin-bottom:4px">What should I do with this?</span>
+    <span><strong style="color:var(--accent)">&#10003;</strong> <strong>Know your pain tolerance.</strong> If a &minus;50% drawdown would make you panic sell, avoid sectors with that history. You need to be able to hold through the dip.</span>
+    <span><strong style="color:var(--accent)">&#10003;</strong> <strong>Check recovery time.</strong> A big drop that recovers in 12 months is very different from one that takes 5 years. Longer recovery = more patience required.</span>
+    <span><strong style="color:var(--accent)">&#10003;</strong> <strong>Compare to the total market (VTI).</strong> If a sector drops much more than VTI during a crisis, it's riskier. If it drops less, it's more defensive.</span>
+    <span style="display:block;width:100%;margin-top:6px;font-style:italic;color:var(--text3);font-size:11px"><strong style="color:var(--gold)">Remember:</strong> Past drawdowns don't predict future ones exactly, but sectors that fell hard before tend to be more volatile. Plan for the worst, hope for the best.</span>
+  </div>
+
+  <div class="controls">
+    <label>From</label>
+    <select id="yearStart" onchange="onFilterChange()"></select>
+    <label>To</label>
+    <select id="yearEnd" onchange="onFilterChange()"></select>
+  </div>
+
+  <div id="content">
+    <div class="loading">Loading drawdown data...</div>
+  </div>
+</div>
+
+<div class="cell-tooltip" id="tooltip"></div>
+<script src="shared-analytics.js?v=1"></script>
+<script src="drawdown.js?v=2"></script>
+</body>
+</html>

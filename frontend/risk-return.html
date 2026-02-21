@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Risk vs Return</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared-analytics.css">
+<style>
+  .scatter-container{position:relative;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;margin-bottom:32px;overflow:hidden}
+  .scatter-canvas{width:100%;height:500px}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div><h1 class="space"><span style="color:var(--accent)">◆</span> Risk vs Return</h1></div>
+  <div class="nav-links" id="navLinks"></div>
+</div>
+
+<div class="container">
+  <div class="glossary" style="margin-bottom:24px">
+    <span style="display:block;width:100%;font-size:14px;color:var(--text1);font-weight:600;margin-bottom:6px">What does this tell me?</span>
+    <span style="display:block;width:100%">This chart plots each sector by two things: <strong>how much it returned</strong> (up = better, on the Y-axis) and <strong>how bumpy the ride was</strong> (right = wilder swings, on the X-axis). The best spot is the <strong>upper-left corner</strong> &mdash; high return with low volatility.</span>
+    <span style="display:block;width:100%;margin-top:10px;font-size:14px;color:var(--text1);font-weight:600;margin-bottom:4px">What should I do with this?</span>
+    <span><strong style="color:var(--accent)">&#10003;</strong> <strong>Upper-left = sweet spot.</strong> These sectors gave you the most return per unit of risk. They're the efficient performers.</span>
+    <span><strong style="color:var(--accent)">&#10003;</strong> <strong>Lower-right = danger zone.</strong> High volatility but low return means you took big risks for little reward. Think twice before overweighting these.</span>
+    <span><strong style="color:var(--accent)">&#10003;</strong> <strong>Check the Return/Risk number</strong> in the cards below. Higher is better &mdash; it tells you how much return you got for each unit of risk.</span>
+    <span><strong style="color:var(--accent)">&#10003;</strong> <strong>Match your comfort level.</strong> If wild swings stress you out, lean towards sectors on the left side of the chart, even if their returns are slightly lower.</span>
+    <span style="display:block;width:100%;margin-top:6px;font-style:italic;color:var(--text3);font-size:11px"><strong style="color:var(--gold)">Remember:</strong> Higher returns almost always come with higher risk. The goal isn't to avoid all risk &mdash; it's to make sure you're being properly rewarded for the risk you take.</span>
+  </div>
+
+  <div class="controls">
+    <label>From</label>
+    <select id="yearStart" onchange="onYearChange()"></select>
+    <label>To</label>
+    <select id="yearEnd" onchange="onYearChange()"></select>
+  </div>
+
+  <div class="scatter-container">
+    <canvas class="scatter-canvas" id="scatterCanvas"></canvas>
+  </div>
+
+  <h2 class="section-title">Risk-Return Summary</h2>
+  <div class="cards-grid" id="summaryCards"></div>
+</div>
+
+<div class="cell-tooltip" id="tooltip"></div>
+<script src="shared-analytics.js?v=1"></script>
+<script src="risk-return.js?v=1"></script>
+</body>
+</html>

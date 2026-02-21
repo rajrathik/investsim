@@ -5,57 +5,92 @@
 ## System Overview
 
 ```
-┌─────────────────────┐     HTTP/JSON      ┌──────────────────┐
-│   Browser Frontend   │ ◄───────────────► │   FastAPI Server  │
-│  (portfolio-sim.html)│   localhost:8000   │    (api.py)       │
-└─────────────────────┘                    └────────┬─────────┘
-                                                    │ SQLAlchemy ORM
-                                                    ▼
-                                           ┌──────────────────┐
-                                           │   SQL Server DB   │
-                                           │ REDACTED-DB-NAME │
-                                           └──────────────────┘
-                                                    ▲
-                                  One-time & incremental loads
-                                    ┌───────────────┴───────────────┐
-                                    │                               │
-                            ┌───────┴───────┐             ┌────────┴────────┐
-                            │ Yahoo Finance  │             │   FRED (CSV)    │
-                            │  (fetcher.py)  │             │(fred_fetcher.py)│
-                            └───────────────┘             └─────────────────┘
+┌──────────────────────────────────┐     HTTP/JSON      ┌──────────────────┐
+│         Browser Frontend          │ ◄───────────────► │   FastAPI Server  │
+│  help.html / simulator / analytics│   localhost:8000   │    (api.py)       │
+│  admin.html (Auth0 protected)      │                    └────────┬─────────┘
+└──────────────────────────────────┘                              │ SQLAlchemy ORM
+                                                                  ▼
+                                                        ┌──────────────────┐
+                                                        │   SQL Server DB   │
+                                                        │ REDACTED-DB-NAME │
+                                                        └──────────────────┘
+                                                                  ▲
+                                            One-time & incremental loads
+                                              ┌───────────────┴───────────────┐
+                                              │                               │
+                                      ┌───────┴───────┐             ┌────────┴────────┐
+                                      │ Yahoo Finance  │             │      FRED       │
+                                      │  (fetcher.py)  │             │(fred_fetcher.py)│
+                                      └───────────────┘             └─────────────────┘
 ```
+
+---
+
+## Page Architecture & Navigation
+
+```
+http://localhost:8000/   →   help.html  (landing page — no auth)
+                                │
+                ┌───────────────┼───────────────────────────────┐
+                ▼               ▼                               ▼
+    portfolio-simulator.html  sector-performance.html    [all analytics pages]
+         (no auth)              (no auth)               correlation, drawdown,
+                │                    │                  rotation, div-growth,
+                └────────────────────┘                  growth-chart, risk-return
+                  all link to each other
+                  via shared navLinks()
+
+http://localhost:8000/admin.html  →  Auth0 lock screen
+                                          │ login + user_admin check
+                                          ▼
+                                     Admin Dashboard
+                                     (completely isolated — no links to/from public pages)
+```
+
+**Navigation rules:**
+- All public pages share a consistent nav bar (Help, Simulator, Sector Returns, Correlation, Drawdowns, Rotation, Div Growth, $10K Growth, Risk vs Return)
+- `shared-analytics.js` `navLinks()` generates nav HTML for analytics pages; `sector-performance.html` has it hardcoded
+- Admin has no nav links — `admin.html` contains only a Logout button once authenticated
+- Root `/` serves `help.html`
 
 ---
 
 ## Frontend User Flow
 
+### Public Pages
 ```
-User opens http://localhost:8000/portfolio-simulator.html
-  → Auth overlay shown (z-index: 1000, blocks simulator)
-  → User clicks "Log In with Auth0"
-  → Redirected to Auth0 hosted login page (email/password or Google)
-  → Auth0 redirects back with authorization code
-  → initAuth() handles callback, gets user profile
-  → onLoginSuccess():
-      - Hide auth overlay
-      - Show user email + Log Out button in header
-      - Log login event to user_logins table via POST /api/auth/login-event
-      - Show Welcome Guide overlay (z-index: 500)
-  → User reads 4-section guide (what it does, how to use, what you'll see, tips)
-  → Clicks "Got It — Let's Start"
-  → dismissWelcomeGuide():
-      - Hide welcome overlay
-      - loadTickers() → populate dropdown → simulator ready
-  → User configures simulation and clicks "Run Simulation"
+User opens http://localhost:8000/
+  → help.html served (landing/guide page)
+  → User clicks any tool card or nav link
+  → Page loads, fetches data from API (no auth required)
+  → Simulator: loadTickers() on DOMContentLoaded → populate dropdown → ready
+  → Analytics pages: load sector data on DOMContentLoaded → render
 ```
 
-**Overlay z-index layering:** Auth (1000) > Welcome Guide (500) > Result Modals (200)
+### Admin Dashboard
+```
+User opens http://localhost:8000/admin.html
+  → Auth overlay shown (z-index: 1000, blocks entire page)
+  → initAuth() fetches /api/auth/config → creates Auth0 SPA client
+  → User clicks "Log In with Auth0"
+  → Redirected to Auth0 hosted login page
+  → Auth0 redirects back with authorization code
+  → handleRedirectCallback() → getTokenSilently()
+  → verifyAdmin() calls GET /api/admin/verify with Bearer token
+      → Backend checks user_admin table
+      → If authorized: hide overlay, show dashboard + user email + Logout
+      → If denied: show error message, hide login button
+  → Admin can add tickers, trigger batch loads, monitor status
+  → All write calls use adminFetch() which injects Bearer token
+  → Token auto-refreshed via getTokenSilently() on each request
+```
 
 ---
 
 ## Database Schema (8 Tables)
 
-**tickers** — Master list of ETF symbols (XLK, XLV, XLE, etc.)
+**tickers** — Master list of asset symbols (XLK, XLV, XLE, etc.)
 Each ticker has: symbol, name, active flag, created/updated timestamps.
 
 **monthly_prices** — One row per ticker per month. Stores open, high, low, close, volume. Linked to tickers via foreign key.
@@ -66,7 +101,7 @@ Each ticker has: symbol, name, active flag, created/updated timestamps.
 
 **annual_mm_rates** — Yearly average of monthly rates. Computed from monthly_mm_rates during load.
 
-**user_logins** — One row per login event. Stores auth0_user_id, email, name, login_time, ip_address, user_agent. Used for audit trail and future per-user simulation storage.
+**user_logins** — One row per login event. Stores auth0_user_id, email, name, login_time, ip_address, user_agent. Used for audit trail.
 
 **user_admin** — Whitelist of emails authorized to access the admin dashboard. Managed manually via SQL INSERT. Columns: email (PK), name.
 
@@ -78,27 +113,32 @@ Each ticker has: symbol, name, active flag, created/updated timestamps.
 
 | Module | What It Does |
 |--------|-------------|
-| `config.py` | All settings: DB connection string, max tickers (50), history depth (30 yrs), write API toggle (reads from `.env`) |
+| `config.py` | All settings: DB connection string, Auth0 config, max tickers (50), history depth (30 yrs), write API toggle (reads from `.env`) |
 | `database.py` | Creates SQLAlchemy engine and session factory. `init_db()` ensures all tables exist at startup |
 | `models.py` | ORM models for `Ticker`, `MonthlyPrice`, `Dividend`, `UserLogin`, `UserAdmin`, `ApiRequestLog` with constraints and relationships |
 | `mm_rates.py` | ORM models for `MonthlyMoneyMarketRate`, `AnnualMoneyMarketRate` plus loader functions |
 | `fetcher.py` | Pulls monthly OHLCV prices and dividend history from Yahoo Finance. Handles full (30 yr) and incremental (configurable months, default 2) modes |
 | `fred_fetcher.py` | Pulls federal funds rate from FRED public CSV endpoint. No API key needed. Computes annual averages |
-| `loader.py` | Takes fetcher output DataFrames and upserts into SQL Server. Handles skip-if-exists (full) and update-if-exists (incremental). `get_tickers_without_data()` identifies new tickers needing initial load |
-| `auth.py` | Auth0 token verification (opaque tokens via /userinfo endpoint), `get_current_user` FastAPI dependency, auth failure logging |
-| `api.py` | FastAPI app with all REST endpoints, auth protection, static file serving, CORS, error handling, request IDs, API request logging to DB, FRED batch endpoints, admin write-status endpoint |
+| `loader.py` | Takes fetcher output DataFrames and upserts into SQL Server. `get_tickers_without_data()` identifies new tickers needing initial load |
+| `auth.py` | Auth0 token verification. Two modes: JWT via JWKS (when audience is set) or opaque token via `/userinfo` endpoint. `get_current_user` FastAPI dependency. Auth failure logging with IP and path. |
+| `api.py` | FastAPI app: all REST endpoints, Auth0 protection on admin routes, public access on all data/analytics endpoints, static file serving, CORS, request ID middleware, API request logging to DB |
 | `run_batch.py` | CLI entry point: `python run_batch.py full` or `incremental` — orchestrates fetcher → loader for Yahoo data |
 | `run_fred_batch.py` | CLI entry point: same pattern for FRED data |
 | `test_connection.py` | Quick script to verify DB connectivity and create tables |
 | **tools/** | |
-| `generate_test_spreadsheet.py` | Reads `spreadsheet_config.txt` (or interactive prompts), queries DB for prices/dividends/MM rates, generates 5-sheet Excel workbook with formulas mirroring the JS simulation logic |
-| `spreadsheet_config.txt` | User-editable config: tickers + allocations, monthly amount, years, tax rate, annual deposit growth |
-| `Spreadsheet_Guide.md` | One-page walkthrough for users navigating the Excel workbook |
+| `generate_test_spreadsheet.py` | Reads `spreadsheet_config.txt`, queries DB for prices/dividends/MM rates, generates 5-sheet Excel workbook with formulas mirroring the JS simulation logic |
 | **frontend/** | |
-| `portfolio-simulator.html` | Main simulator page (Auth0 login required) |
-| `portfolio-simulator.css` | Simulator styles (dark theme) |
-| `portfolio-simulator.js` | Simulation engine + UI rendering |
-| `admin.html` | Admin dashboard — manage tickers and trigger data loads (Auth0 login + user_admin whitelist) |
+| `help.html` | Landing page: tool overview cards, simulator how-to guide, nav to all public pages. Served at `/` |
+| `portfolio-simulator.html/css/js` | Asset Allocation Simulator — no auth required, loads tickers on DOMContentLoaded |
+| `sector-performance.html/css/js` | Annual sector returns & dividends quilt, summary stats |
+| `correlation.html/js` | Sector correlation matrix (Pearson) |
+| `drawdown.html/js` | Peak-to-trough drawdown analysis |
+| `sector-rotation.html/js` | Year-by-year sector performance rankings |
+| `dividend-growth.html/js` | Year-over-year dividend growth by sector |
+| `growth-chart.html/js` | $10K cumulative growth chart (interactive canvas) |
+| `risk-return.html/js` | Risk vs return scatter plot |
+| `shared-analytics.css/js` | Shared dark theme styles, API utilities (authFetch, getSectorPerformance, getMonthlyPrices), nav link generator, chart tooltip helpers |
+| `admin.html` | Admin dashboard — Auth0 protected, isolated, no cross-links to public pages |
 
 ---
 
@@ -112,15 +152,20 @@ run_batch.py full
   → loader.load_dividends(db, dataframe)             ← INSERT, skip duplicates
   → repeat for each ticker in DB
 
+run_batch.py full-new  (via API: POST /api/batch/full-new)
+  → loader.get_tickers_without_data(db)              ← only tickers with zero price rows
+  → same fetch+load flow as above, skipped if all have data
+
+run_batch.py incremental  (via API: POST /api/batch/incremental)
+  → fetcher fetches only last N months (configurable, default 2)
+  → loader upserts — updates existing rows, inserts new ones
+
 run_fred_batch.py full
   → fred_fetcher.get_monthly_rates(30 years)         ← FRED CSV download
-  → fred_fetcher.compute_annual_averages(dataframe)
   → mm_rates.load_all_rates(db, dataframe)           ← INSERT/UPSERT
 ```
 
-Incremental mode is identical but fetches only the last N months (default 2, configurable) and upserts (update existing, insert new).
-
-**Spreadsheet generation** (tools/generate_test_spreadsheet.py):
+Spreadsheet generation (tools/generate_test_spreadsheet.py):
 ```
 Read spreadsheet_config.txt (tickers, amount, years, tax rate, annual growth)
   → Query DB: Ticker, MonthlyPrice, Dividend, MonthlyMoneyMarketRate
@@ -138,96 +183,125 @@ All endpoints live in `api.py`. Request flow:
 
 ```
 HTTP Request
-  → CORS middleware (localhost:8000)
-  → Request ID middleware (generates UUID, adds X-Request-ID header)
-  → Auth0 token verification (Bearer token → get_current_user dependency)
-  → Pydantic validation (symbol format, year/month ranges)
-  → Route handler → SQLAlchemy query → JSON response
-  → Global error handler catches exceptions → structured error JSON
+  → CORS middleware (allow all origins for development)
+  → Request ID middleware (generates UUID, logs method/path, adds X-Request-ID header)
+  → Route handler:
+      Public endpoints  → no auth check → SQLAlchemy query → JSON response
+      Admin endpoints   → get_current_user dependency → Auth0 token verification → handler
+  → API request logged to DB (api_request_logs table)
+  → Global error handlers catch exceptions → structured error JSON (never leaks stack traces)
 ```
 
-Key endpoints the frontend uses:
+### Public endpoints (no auth required)
 
-| Endpoint | Auth | Frontend Usage |
-|----------|------|---------------|
-| `GET /api/auth/config` | No | Returns Auth0 domain + clientId for SPA SDK initialization |
-| `POST /api/auth/login-event` | Yes | Logs login to user_logins table (auth0_user_id, email, IP, user agent) |
-| `GET /api/tickers/active` | Yes | Populates ticker dropdown on page load |
-| `GET /api/simulation-data/{symbol}?start_year&start_month&end_year&end_month` | Yes | Returns monthly prices + dividends merged for a ticker |
-| `GET /api/mm-rates/monthly?start_year&end_year` | Yes | Returns monthly federal funds rates for MM interest calculation |
+| Endpoint | Usage |
+|----------|-------|
+| `GET /api/health` | Health check — DB connectivity + record counts |
+| `GET /api/auth/config` | Returns Auth0 domain + clientId for admin SPA SDK |
+| `GET /api/admin/write-status` | Returns whether write API is enabled |
+| `GET /api/tickers/active` | Lists active tickers (used by simulator dropdown) |
+| `GET /api/tickers` | Lists all tickers (requires auth token) |
+| `GET /api/simulation-data/{symbol}` | Combined monthly prices + dividends for simulation |
+| `GET /api/mm-rates/monthly` | Monthly FRED federal funds rates |
+| `GET /api/mm-rates/annual` | Annual average FRED rates |
+| `GET /api/mm-rates/annual/{year}` | Rate for a specific year |
+| `GET /api/sector-performance` | Annual returns + dividends for 12 sector ETFs |
+| `GET /api/sector-monthly` | Monthly close prices + dividends for sector analytics |
+| `GET /api/batch/status` | Status of last batch job |
 
-Most data endpoints require a valid Auth0 Bearer token. The frontend's `authFetch()` wrapper injects the token automatically. Static files (HTML, CSS, JS) are served via FastAPI's `StaticFiles` mount at `/`.
+### Admin endpoints (Auth0 Bearer token required)
 
-**Admin/batch endpoints (no auth — gated by ENABLE_WRITE_API):**
+| Endpoint | Usage |
+|----------|-------|
+| `GET /api/admin/verify` | Checks token + `user_admin` table — grants or denies admin access |
+| `POST /api/tickers` | Add new ticker (also requires ENABLE_WRITE_API=True) |
+| `PUT /api/tickers/{symbol}` | Update ticker name/active |
+| `DELETE /api/tickers/{symbol}` | Delete ticker + all data |
+| `POST /api/batch/full` | Full Yahoo data load for all tickers (async, background thread) |
+| `POST /api/batch/full-new` | Full load for new tickers only (skips those with data) |
+| `POST /api/batch/incremental` | Incremental load — configurable months param (default 2) |
+| `POST /api/batch/fred-full` | Full FRED rate history load (async) |
+| `POST /api/batch/fred-incremental` | Incremental FRED load — last 3 months (async) |
 
-| Endpoint | Auth | Usage |
-|----------|------|-------|
-| `GET /api/admin/write-status` | No | Returns whether write API is enabled |
-| `GET /api/admin/verify` | Yes | Checks logged-in user's email against user_admin table |
-| `GET /api/tickers/active` | No | Lists active tickers (used by admin page and simulator) |
-| `POST /api/tickers` | No | Add a new ticker (requires ENABLE_WRITE_API=True) |
-| `POST /api/batch/full` | No | Trigger full Yahoo Finance data load for ALL tickers (requires ENABLE_WRITE_API=True) |
-| `POST /api/batch/full-new` | No | Trigger full load only for tickers with no price data yet (requires ENABLE_WRITE_API=True) |
-| `POST /api/batch/incremental` | No | Trigger incremental Yahoo load with optional months param (requires ENABLE_WRITE_API=True) |
-| `POST /api/batch/fred-full` | No | Trigger full FRED rate load (requires ENABLE_WRITE_API=True) |
-| `POST /api/batch/fred-incremental` | No | Trigger incremental FRED load (requires ENABLE_WRITE_API=True) |
-| `GET /api/batch/status` | No | Check batch job status |
-
-Write endpoints are disabled by default (`ENABLE_WRITE_API=False` in config). Set `ENABLE_WRITE_API=True` in `backend/.env` to enable.
+Write endpoints additionally gated by `ENABLE_WRITE_API=True` in `.env`.
 
 ---
 
 ## Frontend Simulation Logic
 
-When user clicks "Run Simulation", the browser executes this flow:
+When user clicks "Run Simulation":
 
-**1. Fetch data** — For each allocated ticker, calls `/api/simulation-data/{symbol}` with the date range. Also fetches `/api/mm-rates/monthly` for money market rates. All fetches run in parallel via `Promise.all`.
+**1. Fetch data** — For each allocated ticker, calls `/api/simulation-data/{symbol}` with date range. Also fetches `/api/mm-rates/monthly`. All fetches run in parallel via `Promise.all`.
 
 **2. Build timeline** — Collects all unique year-month keys across all tickers, sorts chronologically.
 
-**3. Redistribute allocation** — For each month, checks which tickers have valid price data. If a ticker has no data (e.g., ETF didn't exist yet), its allocation percentage is redistributed proportionally among available tickers. This ensures the full monthly amount is always invested.
+**3. Redistribute allocation** — Each month, checks which tickers have valid price data. If a ticker has no data (e.g., ETF didn't exist yet), its allocation % is redistributed proportionally to available tickers — full monthly amount is always deployed.
 
-**4. Compute month budget** — The investable amount each month is: `base_monthly_amount + (year_offset × annual_growth)`. Year 1 uses the base amount; each subsequent year adds the growth amount. Default growth is $0 (flat — existing behavior). No aggregate carryover between months.
+**4. Compute month budget** — `base_monthly_amount + (year_offset × annual_growth)`. Year 1 = base; each subsequent year adds the growth amount. Default growth = $0 (flat).
 
-**5. Accumulate-then-buy (round lot)** — Each ticker maintains its own accumulation bucket. For each ticker with data: `allocated = month_budget × effective_%`, then the allocated amount is added to that ticker's bucket. `shares = floor(bucket / high_price)` (integer shares only). Actual cost = shares × high price. The remainder stays in that ticker's bucket for next month. No money crosses between tickers — each ticker's unspent dollars are earmarked for that ticker only.
+**5. Accumulate-then-buy (round lot)** — Each ticker has its own accumulation bucket. Each month: `allocated = month_budget × effective_%`, added to that ticker's bucket. `shares = floor(bucket / high_price)` — whole shares only. Cost = shares × high price. Remainder stays in bucket for next month. No money crosses between tickers.
 
-**6. Calculate dividends** — For each dividend payment in the month, calculates: `dividend_cash = dividend_per_share × total_shares_held`. Accumulated as cash (not reinvested into equities).
+**6. Calculate dividends** — `dividend_cash = dividend_per_share × total_shares_held`. Accumulated as cash, not reinvested.
 
-**7. Apply money market interest** — Prior month's accumulated dividend balance grows at that month's federal funds rate ÷ 12 (monthly compounding). New dividends are then added. This models parking dividends in a money market fund.
+**7. Apply money market interest** — Prior month's dividend balance grows at `FRED_rate ÷ 12` (monthly compounding). New dividends added after interest. Models parking dividends in a money market fund.
 
-**8. Compute MM-only benchmark** — A separate running balance tracks what would happen if the entire monthly investment went into money market instead of equities. Each month: prior balance grows at MM rate ÷ 12, then the same growing month budget is added (matching the equity simulation's annual growth schedule). This provides a "what if you didn't invest in equities at all" comparison.
+**8. MM-only benchmark** — Separate running balance: each month prior balance grows at MM rate ÷ 12, then same growing month budget is added. Answers "what if you skipped equities entirely?"
 
-**9. Value portfolio** — At month end: `portfolio_value = Σ (shares_held × close_price)` across all tickers.
+**9. Value portfolio** — `portfolio_value = Σ (shares_held × close_price)` across all tickers at month end.
 
-**10. Store snapshots** — Each month's per-ticker detail (integer shares bought, actual $ spent, accumulation bucket balance, running totals, dividends, effective allocation, dividend balance with MM interest, MM-only balance) is stored for the drill-down modals.
+**10. Store snapshots** — Per-ticker detail per month stored for drill-down modals (shares bought, $ spent, bucket balance, running totals, dividends, effective allocation, dividend balance, MM balance).
 
-**11. Render results** — Summary cards (6 tiles: Total Invested, Equity Value, Dividends Earned, Cash Accrual, Portfolio Balance, MMF Value), two interactive charts (Growth Over Time with portfolio/invested/money market lines, and Dividend Earned), clickable monthly breakdown table (with Total Invested running total, Total Shares, Cash Accrual, Equity Value, and MMF Value columns), tax impact section, and annual return table. Charts show tooltips on hover with crosshair tracking.
+**11. Render results** — 6 summary tiles, two interactive canvas charts, monthly breakdown table (clickable cells → per-ticker modals), tax impact section, annual returns table.
 
-**12. Compute tax impact** — User-adjustable tax rate (0–60%) applied per year to dividends and MM interest separately. Renders a Tax Liability by Year table showing dividends, tax on dividends, MM interest, tax on interest, and total taxes per year.
+**12. Tax impact** — User-adjustable tax rate (0–60%) applied per year to dividends and MM interest separately. Shows yearly tax liability breakdown.
 
-**13. Compute annual returns** — For each calendar year, calculates pre-tax returns using a DCA mid-year approximation. Stock value = shares × December close price. Portfolio value = stock value + accumulated dividend balance. Average invested capital ≈ year's new contributions × 0.542 (reflects that monthly DCA dollars are invested ~6.5 months on average). Pre-tax return = (stock gain + dividends + MM interest) ÷ (beginning stock value + avg invested capital). Beginning stock value is the prior year's ending stock value (0 for the first year).
+**13. Annual returns** — Pre-tax returns per calendar year using DCA mid-year approximation (contributions × 0.542 ≈ 6.5 months average hold). Return = (stock gain + dividends + MM interest) ÷ (beginning stock value + avg invested capital).
+
+---
+
+## Sector Analytics Logic
+
+All analytics pages share `shared-analytics.js` which provides:
+
+- `authFetch()` — plain fetch (no auth needed for public pages)
+- `getSectorPerformance()` — cached call to `/api/sector-performance` (annual returns + dividends)
+- `getMonthlyPrices()` — cached call to `/api/sector-monthly` (monthly closes + monthly dividends)
+- `pearsonCorrelation()`, `stdDev()`, `totalReturn()` — shared math utilities
+- `navLinks()` — nav HTML injected into `#navLinks` div on each page
+- Tooltip helpers, sector color/order constants
+
+Individual page logic:
+
+| Page | Data Used | Key Calculation |
+|------|-----------|----------------|
+| `sector-performance.js` | Annual returns + dividends | Quilt table colored by return magnitude; CAGR, best/worst year, dividend stats per sector |
+| `correlation.js` | Monthly prices | Pearson correlation matrix between all sector pairs over selected year range |
+| `drawdown.js` | Monthly prices | Max peak-to-trough % loss; time to recovery for each sector |
+| `sector-rotation.js` | Annual returns | Year-by-year rank ordering; leadership count (top 1, top 3, bottom 3) |
+| `dividend-growth.js` | Annual dividends | YoY % change in dividends per sector |
+| `growth-chart.js` | Monthly prices + annual dividends | Cumulative growth of $10K invested; interactive canvas with sector toggles |
+| `risk-return.js` | Annual returns | StdDev of annual returns (X) vs average total return (Y); scatter plot |
 
 ---
 
 ## Key Design Decisions
 
-- **Buy at monthly high**: Conservative — simulates worst-case dollar-cost averaging entry each month.
-- **Round-lot (integer) share buying with per-ticker accumulation**: Only whole shares are purchased: `floor(bucket / high_price)`. No fractional shares. Each ticker keeps its own accumulation bucket — unspent dollars stay earmarked for that ticker until enough accumulates to buy a whole share. Example: $100/month budget, XLRE at 10% = $10/month, share price $40 → accumulates $10, $20, $30, $40 → buys 1 share in month 4. This preserves the user's allocation intent even at low dollar amounts.
-- **Prior year-end cutoff**: Simulation runs from January of (current year − N) through December of the prior complete calendar year. This avoids partial-year data for the current year.
-- **Dividends as cash**: Not reinvested into equities — tracked separately so user sees true cash generation.
-- **Dividends earn money market interest**: Accumulated dividends are modeled as invested in a money market fund at the federal funds rate (monthly compounding). The "Cash Accrual" column and summary tile show the impact.
-- **MM-only benchmark**: A separate calculation shows what the same monthly investment would grow to if invested entirely in money market (no securities). Helps answer "was the investment strategy worth the risk?"
-- **Interactive charts**: Charts respond to mouse hover — a crosshair tracks position and a tooltip shows values at that point. No click needed, just hover.
-- **Proportional redistribution**: When a ticker has no data for a month, its allocation flows to available tickers proportionally, ensuring 100% of monthly investment is always deployed.
-- **Tax impact analysis**: User-adjustable tax rate (0–60%) applied to dividends and MM interest per year. Shows yearly tax liability breakdown and after-tax portfolio values.
-- **Annual return calculation**: Pre-tax returns per calendar year using DCA mid-year approximation (contributions × 0.542). Returns computed against beginning stock value + average invested capital.
-- **Security-agnostic labeling**: UI avoids ETF-specific language — supports ETFs, mutual funds, individual stocks, or any ticker in the database.
-- **Read-only API by default**: Write endpoints disabled by default (`ENABLE_WRITE_API=False`). Set `ENABLE_WRITE_API=True` in `.env` to enable ticker creation and data loading via the admin dashboard or API.
-- **Split frontend**: HTML, CSS, and JS in separate files — no build tools, no Node.js — just open the HTML file in a browser.
-- **Excel verification tool**: A Python script generates a multi-sheet workbook that mirrors the JS simulation using Excel formulas. Users edit a plain-text config file, re-run the script, and open the spreadsheet to trace every calculation step. The spreadsheet reads real data from the same SQL Server DB used by the API.
-- **Clickable calculation modals**: Both the monthly breakdown table and annual return table have clickable cells that show full calculation breakdowns (numerator/denominator for returns, per-ticker share purchases, dividend sources, etc.).
-- **Auth0 authentication**: All API endpoints (except `/api/health` and `/api/auth/config`) require a valid Bearer token. Frontend injects the token via `authFetch()` wrapper. Auth0 SPA SDK handles login/logout with PKCE flow (no client secret in browser). Login events logged to `user_logins` table for audit and future per-user features.
-- **Opaque token verification**: With no Auth0 audience configured, Auth0 issues opaque tokens instead of JWTs. Backend validates these by calling Auth0's `/userinfo` endpoint. Simpler setup — no Custom API registration needed in Auth0 Dashboard.
-- **Welcome guide overlay**: Shown after login and before simulator loads. Uses the same overlay pattern as the auth screen (fixed position, backdrop blur, hidden via CSS class toggle). Content is concise — four sections with icons covering what the tool does, how to use it, what results show, and key tips. Single button dismisses the guide and triggers ticker loading.
-- **Frontend served by FastAPI**: HTML, CSS, and JS are served via FastAPI's `StaticFiles` mount. Required because Auth0 SPA SDK needs HTTP origin (not `file://`) for PKCE redirects. Access via `http://localhost:8000/portfolio-simulator.html`.
-- **Admin dashboard**: Self-contained HTML page at `/admin.html` for managing tickers and triggering data loads (Yahoo Finance prices+dividends and FRED rates). Two layers of security: (1) Auth0 login required, (2) logged-in user's email must exist in the `user_admin` database table. Write operations additionally gated by `ENABLE_WRITE_API` config flag. Supports custom incremental month range (default 2 months). Auto-polls batch status during loads.
+- **Buy at monthly high**: Conservative worst-case dollar-cost averaging entry.
+- **Round-lot accumulation per ticker**: Only whole shares; each ticker keeps its own bucket. Preserves allocation intent even at low dollar amounts or high share prices.
+- **Prior year-end cutoff**: Simulation ends December of last complete year — no partial-year data.
+- **Dividends as cash**: Not reinvested into equities — tracked separately for true cash generation visibility.
+- **Dividends earn MM interest**: Accumulated dividends modeled as parked in a money market fund at the FRED rate (monthly compounding).
+- **MM-only benchmark**: Parallel calculation showing the same contributions in money market only — answers "was equity risk worth it?"
+- **Public pages, isolated admin**: All analytics and simulation pages are freely accessible. Admin is Auth0-protected with zero navigation overlap — you cannot reach admin from any public page, and admin has no links out.
+- **Help as landing page**: Root URL serves `help.html` — a guide with tool cards and full simulator how-to. Simulator loads directly to the simulation UI (welcome overlay removed).
+- **Auth0 admin only**: `auth.py` provides full JWT/JWKS + opaque token `/userinfo` verification. `get_current_user` dependency used only on admin-relevant routes. All data/analytics endpoints are public.
+- **Two-layer admin security**: (1) Auth0 login, (2) email checked against `user_admin` DB table. Write operations additionally gated by `ENABLE_WRITE_API` config flag.
+- **Opaque token support**: With no Auth0 audience configured, Auth0 issues opaque tokens. Backend validates via `/userinfo` endpoint — simpler setup, no Custom API registration needed.
+- **Smart batch loading**: Three modes — full-new (only new tickers), incremental (configurable months, default 2), full (all tickers, rare). Background threads keep the API responsive during long loads.
+- **Read-only API by default**: `ENABLE_WRITE_API=False` in config. Write endpoints return 403 until explicitly enabled in `.env`.
+- **No build tools**: Vanilla HTML/CSS/JS. No Node.js, no webpack, no framework. All static files served by FastAPI's `StaticFiles` mount.
+- **Shared analytics layer**: `shared-analytics.js` and `shared-analytics.css` provide a single source of truth for API calls (with caching), math utilities, nav links, and dark theme styles across all analytics pages.
+- **Interactive canvas charts**: Custom canvas rendering with crosshair and hover tooltip. No chart library dependency.
+- **Excel verification tool**: Python script generates a 5-sheet Excel workbook from real DB data using formulas that mirror the JS simulation. Users can trace every calculation step. Reads from a plain-text config file.
+- **API request logging**: Every API call (path starting with `/api`) logged to `api_request_logs` table. Static file requests skipped to avoid noise.
+- **Structured error responses**: Global exception handlers catch all errors — never leaks stack traces. Returns consistent `{error, detail, request_id}` JSON. Request IDs in headers for correlation.

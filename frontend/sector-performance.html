@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sector Performance - Annual Returns &amp; Dividends</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="sector-performance.css">
+</head>
+<body>
+
+<!-- Header -->
+<div class="header" id="mainHeader">
+  <div>
+    <h1 class="space"><span style="color:var(--accent)">◆</span> Sector Performance</h1>
+  </div>
+  <div style="display:flex;align-items:center;gap:20px">
+    <div class="nav-links" id="navLinks">
+      <a href="/help.html">Help</a>
+      <a href="/portfolio-simulator.html">Simulator</a>
+      <a href="/correlation.html">Correlation</a>
+      <a href="/drawdown.html">Drawdowns</a>
+      <a href="/sector-rotation.html">Rotation</a>
+      <a href="/dividend-growth.html">Div Growth</a>
+      <a href="/growth-chart.html">$10K Growth</a>
+      <a href="/risk-return.html">Risk vs Return</a>
+    </div>
+  </div>
+</div>
+
+<!-- Main Content -->
+<div class="container" id="mainContainer">
+
+  <p style="color:var(--text2);margin-bottom:24px;font-size:14px;max-width:750px">
+    Annual total returns and dividends for S&amp;P 500 sector ETFs.
+    <strong>Total Return</strong> = (price change + dividends) &div; year-begin price.
+    <strong>Dividends are treated as cash received</strong> &mdash; they are <em>not</em> reinvested back into the ETF.
+    Hover any cell for a detailed breakdown.
+  </p>
+
+  <!-- Controls Row -->
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;margin-bottom:24px">
+    <div class="view-toggle">
+      <button class="active" data-view="returns" onclick="setView('returns')">Total Returns</button>
+      <button data-view="dividends" onclick="setView('dividends')">Dividends</button>
+    </div>
+    <div class="controls">
+      <label>From</label>
+      <select id="yearStart" onchange="onYearChange()"></select>
+      <label>To</label>
+      <select id="yearEnd" onchange="onYearChange()"></select>
+    </div>
+  </div>
+
+  <!-- Quilt Table -->
+  <div class="quilt-wrap" id="quiltContainer">
+    <div style="text-align:center;padding:60px;color:var(--text3)">Loading sector data...</div>
+  </div>
+
+  <!-- Summary Stats -->
+  <h2 class="space" style="margin-bottom:8px;font-size:18px;color:var(--text1)">Summary Statistics</h2>
+  <div class="glossary">
+    <span><strong>Price CAGR</strong> &mdash; compound annual growth rate based on price appreciation only</span>
+    <span><strong>Total CAGR</strong> &mdash; compound annual growth rate including dividends</span>
+    <span><strong>Best / Worst Year</strong> &mdash; highest and lowest single-year total return (price + dividends)</span>
+    <span><strong>Positive Years</strong> &mdash; years with a positive total return vs total years</span>
+    <span><strong>Total Dividends</strong> &mdash; sum of all cash distributions paid over the period</span>
+    <span><strong>Avg Dividend/Yr</strong> &mdash; average annual cash dividend payout</span>
+    <span style="display:block;width:100%;margin-top:4px;font-style:italic;color:var(--text3);font-size:10px"><strong style="color:var(--gold)">Note:</strong> Dividends are counted as cash received and are <em>not</em> reinvested back into the ETF.</span>
+  </div>
+  <div class="stats-grid" id="statsContainer"></div>
+
+</div>
+
+<!-- Tooltip -->
+<div class="cell-tooltip" id="tooltip"></div>
+
+<script src="sector-performance.js?v=8"></script>
+</body>
+</html>
