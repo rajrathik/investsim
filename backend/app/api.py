@@ -1233,6 +1233,11 @@ if _frontend_dir.exists():
         """Serve the help and navigation landing page."""
         return FileResponse(str(_frontend_dir / "help.html"))
 
+    @app.get("/simulator-guide.html")
+    def serve_simulator_guide():
+        """Serve the simulator how-it-works guide page."""
+        return FileResponse(str(_frontend_dir / "simulator-guide.html"))
+
     @app.get("/admin.html")
     def serve_admin():
         """Serve the admin dashboard page (Auth0 protected)."""

@@ -16,7 +16,7 @@
   <div style="display:flex;gap:20px;align-items:center;font-family:'JetBrains Mono',monospace;font-size:13px">
     <a href="/help.html" style="color:var(--text2);text-decoration:none">Home</a>
     <a href="/sector-performance.html" style="color:var(--text2);text-decoration:none">Sector Performance</a>
-    <a href="#guide" style="color:var(--text2);text-decoration:none">How It Works</a>
+    <a href="/simulator-guide.html" style="color:var(--text2);text-decoration:none">How It Works</a>
   </div>
 </div>
 <div class="container" id="mainContainer">
@@ -46,75 +46,5 @@
   <div class="modal"><h3 class="space"><span id="modalTitle">Portfolio Breakdown</span><button class="close-btn" onclick="closeModal()">✕</button></h3><div id="modalSub" class="modal-sub"></div><div id="modalBody"></div></div>
 </div>
 <script src="portfolio-simulator.js?v=13"></script>
-
-<!-- ===== HOW IT WORKS GUIDE ===== -->
-<div id="guide" style="max-width:860px;margin:0 auto;padding:0 24px 60px;display:none">
-  <div style="border-top:1px solid var(--border);padding-top:40px;margin-bottom:28px;display:flex;justify-content:space-between;align-items:center">
-    <h2 style="font-size:18px;font-weight:700;font-family:'Space Grotesk',sans-serif;color:var(--text1)">How It Works</h2>
-    <a href="#mainHeader" style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--text3);text-decoration:none">↑ Back to top</a>
-  </div>
-
-  <div style="display:grid;gap:12px">
-
-    <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:22px">
-      <div style="font-size:12px;font-weight:600;color:var(--accent);font-family:'JetBrains Mono',monospace;margin-bottom:10px;text-transform:uppercase;letter-spacing:.06em">What It Does</div>
-      <ul style="list-style:none;padding:0">
-        <li style="font-size:14px;color:var(--text2);line-height:1.8;padding-left:16px;position:relative"><span style="position:absolute;left:0;color:var(--accent)">›</span>Invests a <strong style="color:var(--text1)">monthly amount</strong> (optionally growing each year) across your chosen asset mix</li>
-        <li style="font-size:14px;color:var(--text2);line-height:1.8;padding-left:16px;position:relative"><span style="position:absolute;left:0;color:var(--accent)">›</span>Uses <strong style="color:var(--text1)">actual historical prices</strong> from Yahoo Finance — not projections or averages</li>
-        <li style="font-size:14px;color:var(--text2);line-height:1.8;padding-left:16px;position:relative"><span style="position:absolute;left:0;color:var(--accent)">›</span>Buys <strong style="color:var(--text1)">whole shares only</strong> at the monthly high price (conservative, worst-case entry)</li>
-        <li style="font-size:14px;color:var(--text2);line-height:1.8;padding-left:16px;position:relative"><span style="position:absolute;left:0;color:var(--accent)">›</span>Unspent cash <strong style="color:var(--text1)">accumulates per-ticker</strong> until enough to buy the next share</li>
-        <li style="font-size:14px;color:var(--text2);line-height:1.8;padding-left:16px;position:relative"><span style="position:absolute;left:0;color:var(--accent)">›</span>Dividends are <strong style="color:var(--text1)">tracked as cash</strong> and earn money market interest at the FRED federal funds rate</li>
-      </ul>
-    </div>
-
-    <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:22px">
-      <div style="font-size:12px;font-weight:600;color:var(--accent);font-family:'JetBrains Mono',monospace;margin-bottom:10px;text-transform:uppercase;letter-spacing:.06em">Steps to Run</div>
-      <ol style="counter-reset:item;list-style:none;padding:0">
-        <li style="counter-increment:item;font-size:14px;color:var(--text2);line-height:1.8;padding-left:24px;position:relative;margin-bottom:4px"><span style="position:absolute;left:0;color:var(--accent);font-weight:700;font-family:'JetBrains Mono',monospace">1.</span><strong style="color:var(--text1)">Set monthly amount</strong>, optional annual deposit growth, and investment period</li>
-        <li style="counter-increment:item;font-size:14px;color:var(--text2);line-height:1.8;padding-left:24px;position:relative;margin-bottom:4px"><span style="position:absolute;left:0;color:var(--accent);font-weight:700;font-family:'JetBrains Mono',monospace">2.</span><strong style="color:var(--text1)">Pick tickers</strong> from the dropdown — search by symbol or name</li>
-        <li style="counter-increment:item;font-size:14px;color:var(--text2);line-height:1.8;padding-left:24px;position:relative;margin-bottom:4px"><span style="position:absolute;left:0;color:var(--accent);font-weight:700;font-family:'JetBrains Mono',monospace">3.</span><strong style="color:var(--text1)">Set allocation %</strong> using sliders — total must equal 100%</li>
-        <li style="counter-increment:item;font-size:14px;color:var(--text2);line-height:1.8;padding-left:24px;position:relative"><span style="position:absolute;left:0;color:var(--accent);font-weight:700;font-family:'JetBrains Mono',monospace">4.</span>Click <strong style="color:var(--text1)">▶ Run Simulation</strong></li>
-      </ol>
-    </div>
-
-    <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:22px">
-      <div style="font-size:12px;font-weight:600;color:var(--accent);font-family:'JetBrains Mono',monospace;margin-bottom:10px;text-transform:uppercase;letter-spacing:.06em">What You'll See</div>
-      <ul style="list-style:none;padding:0">
-        <li style="font-size:14px;color:var(--text2);line-height:1.8;padding-left:16px;position:relative"><span style="position:absolute;left:0;color:var(--accent)">›</span><strong style="color:var(--text1)">6 summary tiles</strong> — Total Invested, Equity Value, Dividends, Cash Accrual, Portfolio Balance, MMF Benchmark</li>
-        <li style="font-size:14px;color:var(--text2);line-height:1.8;padding-left:16px;position:relative"><span style="position:absolute;left:0;color:var(--accent)">›</span><strong style="color:var(--text1)">Interactive charts</strong> — hover for month-by-month growth and dividend details</li>
-        <li style="font-size:14px;color:var(--text2);line-height:1.8;padding-left:16px;position:relative"><span style="position:absolute;left:0;color:var(--accent)">›</span><strong style="color:var(--text1)">Monthly table</strong> — click any highlighted cell for per-ticker detail</li>
-        <li style="font-size:14px;color:var(--text2);line-height:1.8;padding-left:16px;position:relative"><span style="position:absolute;left:0;color:var(--accent)">›</span><strong style="color:var(--text1)">Tax impact</strong> — adjust rate to see yearly liability on dividends and interest</li>
-        <li style="font-size:14px;color:var(--text2);line-height:1.8;padding-left:16px;position:relative"><span style="position:absolute;left:0;color:var(--accent)">›</span><strong style="color:var(--text1)">Annual returns</strong> — pre-tax performance per calendar year with clickable detail modals</li>
-      </ul>
-    </div>
-
-    <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:22px">
-      <div style="font-size:12px;font-weight:600;color:var(--accent);font-family:'JetBrains Mono',monospace;margin-bottom:10px;text-transform:uppercase;letter-spacing:.06em">Share Accumulation — Example</div>
-      <div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:16px;font-size:13px;color:var(--text2);line-height:1.9;font-family:'JetBrains Mono',monospace">
-        <strong style="color:var(--text1)">Setup:</strong> $1,000/month — 60% Holding A ($250/share), 40% Holding B ($800/share)<br><br>
-        <strong style="color:var(--text1)">Month 1:</strong> $600 → A bucket → buy 2 shares ($500), carry $100 &nbsp;|&nbsp; $400 → B bucket, not enough yet<br>
-        <strong style="color:var(--text1)">Month 2:</strong> $700 for A → buy 2 shares, carry $200 &nbsp;|&nbsp; $800 for B → buy 1 share, carry $0<br><br>
-        <strong style="color:var(--text1)">Unavailable ticker:</strong> its budget shifts to the others that month, resumes next month.
-      </div>
-    </div>
-
-  </div>
-</div>
-
-<script>
-// Show guide section only when #guide is in the URL
-function handleGuideHash() {
-  const guide = document.getElementById('guide');
-  if (window.location.hash === '#guide') {
-    guide.style.display = 'block';
-    guide.scrollIntoView({behavior: 'smooth'});
-  } else {
-    guide.style.display = 'none';
-  }
-}
-handleGuideHash();
-window.addEventListener('hashchange', handleGuideHash);
-</script>
-
 </body>
 </html>

@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulator Guide — Asset Allocation Simulator</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0e17;--card:#111827;--border:#1e293b;--accent:#10b981;--accent-dim:rgba(16,185,129,0.15);--text1:#f1f5f9;--text2:#94a3b8;--text3:#64748b}
+*{box-sizing:border-box;margin:0;padding:0}
+body{min-height:100vh;background:var(--bg);color:var(--text1);font-family:'DM Sans',sans-serif}
+.header{border-bottom:1px solid var(--border);padding:20px 32px;display:flex;justify-content:space-between;align-items:center}
+.header h1{font-size:22px;font-weight:700;font-family:'Space Grotesk',sans-serif}
+.nav-links{display:flex;gap:20px;align-items:center;font-family:'JetBrains Mono',monospace;font-size:13px;flex-wrap:wrap}
+.nav-links a{color:var(--text2);text-decoration:none;transition:color .2s}
+.nav-links a:hover{color:var(--accent)}
+.container{max-width:860px;margin:0 auto;padding:40px 24px 60px}
+.guide-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:12px}
+.guide-card h4{font-size:12px;font-weight:600;color:var(--accent);font-family:'JetBrains Mono',monospace;margin-bottom:12px;text-transform:uppercase;letter-spacing:.06em}
+.guide-list{list-style:none;padding:0}
+.guide-list li{font-size:14px;color:var(--text2);line-height:1.8;padding-left:16px;position:relative}
+.guide-list li::before{content:"›";position:absolute;left:0;color:var(--accent)}
+.guide-list li strong{color:var(--text1)}
+.guide-list-num{list-style:none;padding:0}
+.guide-list-num li{font-size:14px;color:var(--text2);line-height:1.8;padding-left:24px;position:relative;margin-bottom:4px}
+.guide-list-num li .num{position:absolute;left:0;color:var(--accent);font-weight:700;font-family:'JetBrains Mono',monospace}
+.guide-list-num li strong{color:var(--text1)}
+.example-box{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:16px;font-size:13px;color:var(--text2);line-height:1.9;font-family:'JetBrains Mono',monospace}
+.example-box strong{color:var(--text1)}
+.launch-bar{margin-top:36px;text-align:center}
+.launch-btn{display:inline-block;background:var(--accent);color:#0a0e17;font-size:15px;font-weight:700;font-family:'Space Grotesk',sans-serif;padding:14px 40px;border-radius:12px;text-decoration:none;transition:opacity .15s}
+.launch-btn:hover{opacity:.88}
+.page-title{font-size:24px;font-weight:700;font-family:'Space Grotesk',sans-serif;margin-bottom:6px}
+.page-sub{font-size:14px;color:var(--text2);margin-bottom:32px}
+@media(max-width:600px){.header{flex-direction:column;gap:16px;align-items:flex-start}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1><span style="color:var(--accent)">◆</span> Simulator Guide</h1>
+  <nav class="nav-links">
+    <a href="/help.html">Home</a>
+    <a href="/portfolio-simulator.html">Launch Simulator</a>
+    <a href="/sector-performance.html">Sector Performance</a>
+  </nav>
+</div>
+
+<div class="container">
+
+  <div class="page-title">Asset Allocation Simulator</div>
+  <div class="page-sub">How it works — read this before your first run, or jump straight in.</div>
+
+  <div class="guide-card">
+    <h4>What It Does</h4>
+    <ul class="guide-list">
+      <li>Invests a <strong>monthly amount</strong> (optionally growing each year) across your chosen asset mix</li>
+      <li>Uses <strong>actual historical prices</strong> from Yahoo Finance — not projections or averages</li>
+      <li>Buys <strong>whole shares only</strong> at the monthly high price (conservative, worst-case entry)</li>
+      <li>Unspent cash <strong>accumulates per-ticker</strong> in its own bucket until enough to buy the next whole share</li>
+      <li>Dividends are <strong>tracked as cash received</strong> — not reinvested back into equities</li>
+      <li>Cash dividends earn <strong>money market interest</strong> at the historical FRED federal funds rate</li>
+    </ul>
+  </div>
+
+  <div class="guide-card">
+    <h4>Steps to Run</h4>
+    <ol class="guide-list-num">
+      <li><span class="num">1.</span><strong>Set monthly amount</strong>, optional annual deposit growth, and investment period (1–20 years)</li>
+      <li><span class="num">2.</span><strong>Pick tickers</strong> from the dropdown — search by symbol or name, or browse the list</li>
+      <li><span class="num">3.</span><strong>Set allocation %</strong> using sliders — total must equal 100%</li>
+      <li><span class="num">4.</span>Click <strong>▶ Run Simulation</strong> to see results</li>
+    </ol>
+  </div>
+
+  <div class="guide-card">
+    <h4>What You'll See</h4>
+    <ul class="guide-list">
+      <li><strong>6 summary tiles</strong> — Total Invested, Equity Value, Dividends Received, Cash Accrual, Portfolio Balance, MMF Benchmark — all clickable for drill-down</li>
+      <li><strong>Interactive charts</strong> — hover for month-by-month growth and dividend details</li>
+      <li><strong>Monthly breakdown table</strong> — click any highlighted cell for per-ticker detail</li>
+      <li><strong>Tax impact section</strong> — adjust your tax rate to see yearly liability on dividends and interest</li>
+      <li><strong>Annual returns</strong> — pre-tax performance per calendar year with clickable detail modals</li>
+    </ul>
+  </div>
+
+  <div class="guide-card">
+    <h4>Key Things to Know</h4>
+    <ul class="guide-list">
+      <li>If an asset wasn't tradeable in a given month, its budget share <strong>automatically flows to the other assets</strong> that month</li>
+      <li>The <strong>MMF column</strong> shows what the same total invested would have earned in a money market fund — a risk-free benchmark</li>
+      <li>The <strong>Annual Deposit Growth</strong> field adds a flat dollar amount each year: Year 1 = base, Year 2 = base + growth, Year 3 = base + 2× growth, etc.</li>
+    </ul>
+  </div>
+
+  <div class="guide-card">
+    <h4>Share Accumulation — Example</h4>
+    <div class="example-box">
+      <strong>Setup:</strong> $1,000/month — 60% Holding A ($250/share), 40% Holding B ($800/share)<br><br>
+      <strong>Month 1:</strong> $600 → A bucket → buy 2 shares ($500), carry $100 &nbsp;|&nbsp; $400 → B bucket, not enough yet<br>
+      <strong>Month 2:</strong> $700 for A → buy 2 shares, carry $200 &nbsp;|&nbsp; $800 for B → buy 1 share, carry $0<br><br>
+      <strong>Unavailable ticker:</strong> its budget shifts to the others that month, resumes next month.
+    </div>
+  </div>
+
+  <div class="launch-bar">
+    <a href="/portfolio-simulator.html" class="launch-btn">▶ Launch Simulator</a>
+  </div>
+
+</div>
+
+</body>
+</html>
