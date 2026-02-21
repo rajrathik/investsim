@@ -7,7 +7,7 @@
 ```
 ┌──────────────────────────────────┐     HTTP/JSON      ┌──────────────────┐
 │         Browser Frontend          │ ◄───────────────► │   FastAPI Server  │
-│  help.html / simulator / analytics│   localhost:8000   │    (api.py)       │
+│ index.html / simulator / analytics│   localhost:8000   │    (api.py)       │
 │  admin.html (Auth0 protected)      │                    └────────┬─────────┘
 └──────────────────────────────────┘                              │ SQLAlchemy ORM
                                                                   ▼
@@ -30,16 +30,17 @@
 ## Page Architecture & Navigation
 
 ```
-http://localhost:8000/   →   help.html  (landing page — no auth)
+http://localhost:8000/   →   index.html  (landing page — tool cards, no auth)
                                 │
                 ┌───────────────┼───────────────────────────────┐
                 ▼               ▼                               ▼
     portfolio-simulator.html  sector-performance.html    [all analytics pages]
-         (no auth)              (no auth)               correlation, drawdown,
-                │                    │                  rotation, div-growth,
-                └────────────────────┘                  growth-chart, risk-return
+    simulator-guide.html        (no auth)               correlation, drawdown,
+         (no auth)                  │                   rotation, div-growth,
+                │                   │                   growth-chart, risk-return
+                └───────────────────┘
                   all link to each other
-                  via shared navLinks()
+                  via hardcoded nav in each HTML
 
 http://localhost:8000/admin.html  →  Auth0 lock screen
                                           │ login + user_admin check
@@ -49,10 +50,10 @@ http://localhost:8000/admin.html  →  Auth0 lock screen
 ```
 
 **Navigation rules:**
-- All public pages share a consistent nav bar (Help, Simulator, Sector Returns, Correlation, Drawdowns, Rotation, Div Growth, $10K Growth, Risk vs Return)
-- `shared-analytics.js` `navLinks()` generates nav HTML for analytics pages; `sector-performance.html` has it hardcoded
+- All public pages share a consistent nav bar (Home, Simulator, Sector Returns, Correlation, Drawdowns, Rotation, Div Growth, $10K Growth, Risk vs Return) hardcoded in each HTML file
 - Admin has no nav links — `admin.html` contains only a Logout button once authenticated
-- Root `/` serves `help.html`
+- Root `/` serves `index.html`
+- Every page loads `theme-toggle.js` in `<head>` for dark/light theme switching with localStorage persistence
 
 ---
 
@@ -61,7 +62,9 @@ http://localhost:8000/admin.html  →  Auth0 lock screen
 ### Public Pages
 ```
 User opens http://localhost:8000/
-  → help.html served (landing/guide page)
+  → index.html served (landing page with tool cards)
+  → theme-toggle.js IIFE runs in <head> — reads localStorage('theme'), sets data-theme on <html> (no flash)
+  → DOMContentLoaded: toggle button injected at bottom-right
   → User clicks any tool card or nav link
   → Page loads, fetches data from API (no auth required)
   → Simulator: loadTickers() on DOMContentLoaded → populate dropdown → ready
@@ -128,8 +131,9 @@ Each ticker has: symbol, name, active flag, created/updated timestamps.
 | **tools/** | |
 | `generate_test_spreadsheet.py` | Reads `spreadsheet_config.txt`, queries DB for prices/dividends/MM rates, generates 5-sheet Excel workbook with formulas mirroring the JS simulation logic |
 | **frontend/** | |
-| `help.html` | Landing page: tool overview cards, simulator how-to guide, nav to all public pages. Served at `/` |
-| `portfolio-simulator.html/css/js` | Asset Allocation Simulator — no auth required, loads tickers on DOMContentLoaded |
+| `index.html` | Landing page: tool overview cards, nav to all public pages. Served at `/` |
+| `simulator-guide.html` | How It Works guide for the simulator (standalone page linked from simulator header) |
+| `portfolio-simulator.html/css/js` | Asset Allocation Simulator — stepper allocation controls (5% increments), loads tickers on DOMContentLoaded |
 | `sector-performance.html/css/js` | Annual sector returns & dividends quilt, summary stats |
 | `correlation.html/js` | Sector correlation matrix (Pearson) |
 | `drawdown.html/js` | Peak-to-trough drawdown analysis |
@@ -137,7 +141,9 @@ Each ticker has: symbol, name, active flag, created/updated timestamps.
 | `dividend-growth.html/js` | Year-over-year dividend growth by sector |
 | `growth-chart.html/js` | $10K cumulative growth chart (interactive canvas) |
 | `risk-return.html/js` | Risk vs return scatter plot |
-| `shared-analytics.css/js` | Shared dark theme styles, API utilities (authFetch, getSectorPerformance, getMonthlyPrices), nav link generator, chart tooltip helpers |
+| `shared-analytics.css` | Single source of truth for CSS: `:root` variables, reset, fonts, header/nav, dark+light theme overrides, toggle button styles. All page-specific CSS files contain only overrides |
+| `shared-analytics.js` | Shared API utilities (authFetch, getSectorPerformance, getMonthlyPrices), chart tooltip helpers, sector constants |
+| `theme-toggle.js` | Dark/light theme: synchronous IIFE sets `data-theme` before render (no FOUC), injects toggle button, exposes `window.THEME` getters for Canvas, dispatches `themechange` event, persists via localStorage |
 | `admin.html` | Admin dashboard — Auth0 protected, isolated, no cross-links to public pages |
 
 ---
@@ -293,15 +299,17 @@ Individual page logic:
 - **Dividends earn MM interest**: Accumulated dividends modeled as parked in a money market fund at the FRED rate (monthly compounding).
 - **MM-only benchmark**: Parallel calculation showing the same contributions in money market only — answers "was equity risk worth it?"
 - **Public pages, isolated admin**: All analytics and simulation pages are freely accessible. Admin is Auth0-protected with zero navigation overlap — you cannot reach admin from any public page, and admin has no links out.
-- **Help as landing page**: Root URL serves `help.html` — a guide with tool cards and full simulator how-to. Simulator loads directly to the simulation UI (welcome overlay removed).
+- **Landing page with tool cards**: Root URL serves `index.html` with clickable cards for each tool. Separate `simulator-guide.html` for the How It Works walkthrough. Simulator loads directly to the simulation UI.
 - **Auth0 admin only**: `auth.py` provides full JWT/JWKS + opaque token `/userinfo` verification. `get_current_user` dependency used only on admin-relevant routes. All data/analytics endpoints are public.
 - **Two-layer admin security**: (1) Auth0 login, (2) email checked against `user_admin` DB table. Write operations additionally gated by `ENABLE_WRITE_API` config flag.
 - **Opaque token support**: With no Auth0 audience configured, Auth0 issues opaque tokens. Backend validates via `/userinfo` endpoint — simpler setup, no Custom API registration needed.
 - **Smart batch loading**: Three modes — full-new (only new tickers), incremental (configurable months, default 2), full (all tickers, rare). Background threads keep the API responsive during long loads.
 - **Read-only API by default**: `ENABLE_WRITE_API=False` in config. Write endpoints return 403 until explicitly enabled in `.env`.
 - **No build tools**: Vanilla HTML/CSS/JS. No Node.js, no webpack, no framework. All static files served by FastAPI's `StaticFiles` mount.
-- **Shared analytics layer**: `shared-analytics.js` and `shared-analytics.css` provide a single source of truth for API calls (with caching), math utilities, nav links, and dark theme styles across all analytics pages.
-- **Interactive canvas charts**: Custom canvas rendering with crosshair and hover tooltip. No chart library dependency.
+- **CSS consolidation**: `shared-analytics.css` is the single source of truth for `:root` variables, reset, fonts, header/nav, and shared component styles. `sector-performance.css` and `portfolio-simulator.css` contain only page-specific overrides — no duplicate `:root`, reset, or body rules.
+- **Dark/light theme toggle**: `theme-toggle.js` loaded synchronously in `<head>` on all 10 public pages. IIFE reads localStorage and sets `data-theme` attribute on `<html>` before body renders (prevents flash). DOMContentLoaded injects floating toggle button. Dispatches `themechange` CustomEvent for Canvas re-rendering. Exposes `window.THEME` getter object so Canvas-drawing JS can read computed CSS variable values.
+- **5% stepper allocation controls**: Replaced range sliders with −/+ button pairs that increment/decrement by 5%. Equal Split rounds to nearest 5%. Tickers at 0% are silently excluded from the simulation (filtered at `active` array before any API calls).
+- **Interactive canvas charts**: Custom canvas rendering with crosshair and hover tooltip. No chart library dependency. Canvas structural colors use `THEME.*` getters that re-read CSS variables on theme change.
 - **Excel verification tool**: Python script generates a 5-sheet Excel workbook from real DB data using formulas that mirror the JS simulation. Users can trace every calculation step. Reads from a plain-text config file.
 - **API request logging**: Every API call (path starting with `/api`) logged to `api_request_logs` table. Static file requests skipped to avoid noise.
 - **Structured error responses**: Global exception handlers catch all errors — never leaks stack traces. Returns consistent `{error, detail, request_id}` JSON. Request IDs in headers for correlation.

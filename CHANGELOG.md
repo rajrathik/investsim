@@ -102,6 +102,18 @@
 | `e275c55` | Admin dashboard (`admin.html`): browser-based ticker management and data loading (Yahoo Finance + FRED) with Auth0 login + `user_admin` table whitelist. `UserAdmin` model maps `user_admin` table (email PK, name). `GET /api/admin/verify` endpoint checks logged-in user against admin whitelist. FRED batch API endpoints (`POST /api/batch/fred-full`, `POST /api/batch/fred-incremental`). `ENABLE_WRITE_API` now configurable via `.env`. `fetcher.py` accepts custom `months` parameter for incremental loads. Fix `.env` load order (load before config imports). Updated `.gitignore` to exclude `.env` files. Updated docs |
 | `4ac9f0c` | Smart batch loading: `POST /api/batch/full-new` loads full history only for tickers with no price data. Admin UI now has 3 clear options — Load New Tickers (primary), Refresh Recent Data, Reload All Tickers (with confirmation). `get_tickers_without_data()` helper in loader.py. Branch: `feature/smart-batch-loading` |
 
+### Phase 11 — Sector Analytics, UI Restructure, Theme Toggle & Stepper Controls (Feb 18-21)
+
+| Commit | Description |
+|--------|-------------|
+| `871833f..b5abad2` | Full frontend overhaul on `feature/no-auth` branch (multiple commits merged to main). Key changes: |
+| | **Sector analytics suite** — 8 new pages: sector-performance, correlation, drawdown, sector-rotation, dividend-growth, growth-chart, risk-return, plus shared-analytics.css/js. Each page fetches from new `/api/sector-performance` and `/api/sector-monthly` endpoints |
+| | **UI restructure** — `help.html` renamed to `index.html` (tool card grid). Simulator guide extracted to standalone `simulator-guide.html`. NYT-style centered header layout across all pages. Auth removed from all public endpoints |
+| | **CSS consolidation** — `shared-analytics.css` is now single source of truth for `:root` variables, reset, fonts, header/nav. Duplicate rules stripped from `sector-performance.css` and `portfolio-simulator.css` |
+| | **Dark/light theme toggle** — New `theme-toggle.js` loaded in `<head>` on all 10 public pages. IIFE prevents FOUC via `data-theme` attribute on `<html>`. Floating 🌙/☀️ button persists theme via localStorage. Light-mode CSS variable overrides in shared-analytics.css, sector-performance.css, portfolio-simulator.css. Canvas hex colors replaced with `THEME.*` getters; `themechange` event triggers chart re-render |
+| | **Stepper allocation controls** — Replaced range input sliders with −/+ button pair (5% increments). `eqSplit()` rounds to nearest 5%. Tickers at 0% silently excluded from simulation |
+| | **Inline hex → CSS var()** — Replaced hardcoded hex colors (`#10b981`, `#ef4444`, `#f59e0b`) with `var(--accent)`, `var(--red)`, `var(--gold)` across 7 JS files for theme adaptability |
+
 ---
 
 ## Branch History
@@ -112,6 +124,7 @@ main
       └── feature/accumulate-then-buy  (Phase 9)
  └── feature/annual-deposit-growth  (Phase 10)
  └── feature/smart-batch-loading  (Phase 10 — smart batch UI)
+ └── feature/no-auth  (Phase 11 — analytics, UI restructure, theme, stepper)
 ```
 
 ---
@@ -137,10 +150,25 @@ main
 | `backend/tests/test_fetcher.py` | Yahoo fetcher tests |
 | `backend/tests/test_loader.py` | Loader logic tests |
 | `backend/tests/test_mm_rates.py` | FRED/money market tests |
-| `frontend/portfolio-simulator.html` | HTML structure + auth + welcome guide |
-| `frontend/portfolio-simulator.css` | All styles |
-| `frontend/portfolio-simulator.js` | Simulation engine + UI rendering |
-| `frontend/admin.html` | Admin dashboard (manage tickers + data loads, Auth0 login + user_admin whitelist) |
+| `frontend/index.html` | Landing page: tool overview cards. Served at `/` |
+| `frontend/simulator-guide.html` | How It Works guide for the simulator |
+| `frontend/portfolio-simulator.html` | Asset Allocation Simulator |
+| `frontend/portfolio-simulator.css` | Simulator-specific styles (stepper controls, modals, cards, light-mode overrides) |
+| `frontend/portfolio-simulator.js` | Simulation engine + UI rendering (Canvas uses THEME.* getters) |
+| `frontend/sector-performance.html` | Annual sector returns & dividends quilt |
+| `frontend/sector-performance.css` | Quilt table, return/dividend color scales, light-mode overrides |
+| `frontend/sector-performance.js` | Sector performance logic |
+| `frontend/correlation.html/js` | Sector correlation matrix (Pearson) |
+| `frontend/drawdown.html/js` | Peak-to-trough drawdown analysis |
+| `frontend/sector-rotation.html/js` | Year-by-year sector performance rankings |
+| `frontend/dividend-growth.html/js` | Year-over-year dividend growth by sector |
+| `frontend/growth-chart.html/js` | $10K cumulative growth chart (Canvas, THEME.* getters) |
+| `frontend/risk-return.html/js` | Risk vs return scatter plot (Canvas, THEME.* getters) |
+| `frontend/shared-analytics.css` | Single source of truth: CSS variables, reset, fonts, header/nav, dark+light theme overrides, toggle button styles |
+| `frontend/shared-analytics.js` | Shared API layer, utilities, sector constants |
+| `frontend/theme-toggle.js` | Dark/light theme toggle (IIFE + localStorage + THEME palette + themechange event) |
+| `frontend/admin.html` | Admin dashboard (Auth0 login + user_admin whitelist, isolated) |
+| `frontend/CD-simulator.html` | CD portfolio advisor (AI-powered) |
 | `tools/generate_test_spreadsheet.py` | Excel workbook generator |
 | `tools/spreadsheet_config.txt` | Spreadsheet config (tickers, amount, years, tax, annual growth) |
 | `tools/Spreadsheet_Guide.md` | Spreadsheet user guide |
@@ -149,3 +177,5 @@ main
 | `docs/Welcome_Guide_Plan.md` | Welcome guide implementation plan |
 | `README.md` | Project documentation |
 | `Architecture.md` | Architecture & logic flow |
+| `CHANGELOG.md` | Change history |
+| `QUICKSTART.md` | Quick start guide |

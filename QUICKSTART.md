@@ -20,11 +20,13 @@ Leave this terminal open.
 
 ## 3. Open the website
 
-Go to: **http://localhost:8000/portfolio-simulator.html**
+Go to: **http://localhost:8000/**
 
-- Log in with Auth0 when prompted
+- Landing page with tool cards — click any card to launch
+- Simulator: **http://localhost:8000/portfolio-simulator.html** (no login required)
 - Admin dashboard: **http://localhost:8000/admin.html** (requires Auth0 login + email in `user_admin` table)
 - Swagger API docs at: **http://localhost:8000/docs**
+- Theme toggle: click the 🌙/☀️ button (bottom-right) on any page — persists across navigation
 
 ## 4. View any Markdown file in the browser
 

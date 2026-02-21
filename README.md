@@ -34,12 +34,13 @@ C:\Raj\python\portfolio-simulator\
 │   └── pytest.ini                  ← Pytest config
 │
 ├── frontend\                       ← Browser-based UI (all pages — no build tools)
-│   ├── help.html                   ← Landing page: tool overview, guide, nav to all pages
+│   ├── index.html                  ← Landing page: tool overview cards, nav to all pages
+│   ├── simulator-guide.html        ← How It Works guide for the simulator
 │   ├── portfolio-simulator.html    ← Asset Allocation Simulator
-│   ├── portfolio-simulator.css     ← Simulator styles (dark theme)
+│   ├── portfolio-simulator.css     ← Simulator-specific styles (stepper controls, modals, cards)
 │   ├── portfolio-simulator.js      ← Simulation engine & UI
 │   ├── sector-performance.html     ← Annual sector returns & dividends quilt
-│   ├── sector-performance.css      ← Sector performance styles
+│   ├── sector-performance.css      ← Sector performance styles (quilt, return/dividend colors)
 │   ├── sector-performance.js       ← Sector performance logic
 │   ├── correlation.html            ← Sector correlation matrix
 │   ├── correlation.js
@@ -53,8 +54,9 @@ C:\Raj\python\portfolio-simulator\
 │   ├── growth-chart.js
 │   ├── risk-return.html            ← Risk vs return scatter plot
 │   ├── risk-return.js
-│   ├── shared-analytics.css        ← Shared styles for all analytics pages
+│   ├── shared-analytics.css        ← Single source of truth: CSS variables, reset, fonts, header/nav, dark+light theme overrides, toggle button styles
 │   ├── shared-analytics.js         ← Shared API layer, utilities, nav links
+│   ├── theme-toggle.js             ← Dark/light theme toggle (IIFE + localStorage persistence)
 │   ├── admin.html                  ← Admin dashboard (Auth0 protected, isolated)
 │   ├── CD-simulator.html           ← CD portfolio advisor (AI-powered)
 │   ├── cdapp.js
@@ -116,8 +118,8 @@ All public pages are open (no login required). Admin is completely separate.
 
 | URL | Page | Auth |
 |-----|------|------|
-| `http://localhost:8000/` | Help & landing page | Public |
-| `http://localhost:8000/help.html` | Help & landing page | Public |
+| `http://localhost:8000/` | Landing page (tool cards) | Public |
+| `http://localhost:8000/simulator-guide.html` | Simulator guide (How It Works) | Public |
 | `http://localhost:8000/portfolio-simulator.html` | Asset Allocation Simulator | Public |
 | `http://localhost:8000/sector-performance.html` | Sector annual returns & dividends | Public |
 | `http://localhost:8000/correlation.html` | Sector correlation matrix | Public |
@@ -129,9 +131,9 @@ All public pages are open (no login required). Admin is completely separate.
 | `http://localhost:8000/admin.html` | Admin dashboard | **Auth0 login required** |
 
 **Navigation rules:**
-- All public pages link to each other (Help, Simulator, and all analytics pages)
+- All public pages link to each other (Home, Simulator, and all analytics pages) via hardcoded nav in each HTML file
 - Admin has no links to or from public pages — it is fully isolated
-- Root `/` serves `help.html` as the landing page
+- Root `/` serves `index.html` as the landing page
 
 ---
 
@@ -253,6 +255,8 @@ Opens at `http://localhost:6419`. Press Ctrl+C to stop.
 - **Tax impact analysis** — adjustable tax rate (0–60%) with yearly breakdown of taxes on dividends and MM interest
 - **Annual return table** — pre-tax returns per calendar year with clickable calculation modals
 - **Proportional redistribution** — when a ticker has no data for a month, its allocation flows to available tickers
+- **5% stepper allocation controls** — −/+ buttons in 5% increments replace sliders; tickers at 0% are silently excluded from simulation
+- **Equal Split rounds to 5%** — distributes allocations in clean 5% multiples
 
 ### Sector Analytics Tools
 - **Sector Performance** — annual total returns and dividends for all 11 S&P 500 sector ETFs plus VTI; color-coded quilt table; summary stats (CAGR, best/worst year, positive years, total/avg dividends)
@@ -264,8 +268,10 @@ Opens at `http://localhost:6419`. Press Ctrl+C to stop.
 - **Risk vs Return** — scatter plot of annual volatility (X) vs total return (Y); return/risk ratio
 
 ### Infrastructure
+- **Dark/light theme toggle** — 🌙/☀️ button on every page; persists via localStorage; no FOUC (synchronous IIFE in `<head>`); Canvas charts re-render on toggle
+- **CSS consolidation** — `shared-analytics.css` is the single source of truth for `:root` variables, reset, fonts, header/nav; page-specific CSS files contain only overrides
 - **Public pages, isolated admin** — all public pages are open (no login); admin is Auth0-protected and completely separate with no cross-links
-- **Help landing page** — root URL serves a guide page with tool cards, simulator how-to, and nav to all tools
+- **Landing page with tool cards** — root URL serves `index.html` with clickable cards for each tool; separate `simulator-guide.html` for the How It Works walkthrough
 - **Admin dashboard** — Auth0 login + `user_admin` table whitelist; two-layer security; no links to/from public pages
 - **Smart batch loading** — Load New Tickers (full history for new tickers only), Refresh Recent Data (incremental, configurable months), or Reload All Tickers
 - **API request logging** — every API call logged to DB with user, method, path, status code, response time, and IP
