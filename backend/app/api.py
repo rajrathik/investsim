@@ -45,8 +45,9 @@ Endpoints:
     GET    /api/batch/status                - Status of last batch run
 
   Pages (served via static files):
-    GET    /                                - Help & navigation landing page
-    GET    /help.html                       - Help & navigation landing page
+    GET    /                                - Home / landing page (index.html)
+    GET    /index.html                      - Home / landing page
+    GET    /help.html                       - Redirects to / (legacy alias)
     GET    /admin.html                      - Admin dashboard (Auth0 protected)
     GET    /portfolio-simulator.html        - Asset Allocation Simulator
     GET    /sector-performance.html         - Sector annual returns & dividends
@@ -1225,13 +1226,19 @@ _frontend_dir = pathlib.Path(__file__).resolve().parent.parent.parent / "fronten
 if _frontend_dir.exists():
     @app.get("/")
     def serve_index():
-        """Serve the help/landing page at root."""
-        return FileResponse(str(_frontend_dir / "help.html"))
+        """Serve the home/landing page at root."""
+        return FileResponse(str(_frontend_dir / "index.html"))
+
+    @app.get("/index.html")
+    def serve_index_html():
+        """Serve the home/landing page."""
+        return FileResponse(str(_frontend_dir / "index.html"))
 
     @app.get("/help.html")
     def serve_help():
-        """Serve the help and navigation landing page."""
-        return FileResponse(str(_frontend_dir / "help.html"))
+        """Legacy alias — redirects to home page."""
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(url="/")
 
     @app.get("/simulator-guide.html")
     def serve_simulator_guide():

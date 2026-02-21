@@ -111,7 +111,7 @@ function hideTooltip() {
 /* Nav links HTML snippet */
 function navLinks() {
   return `
-    <a href="/help.html">Help</a>
+    <a href="/">Home</a>
     <a href="/portfolio-simulator.html">Simulator</a>
     <a href="/sector-performance.html">Sector Returns</a>
     <a href="/correlation.html">Correlation</a>
