@@ -45,10 +45,10 @@
 <div id="modalOverlay" class="modal-overlay" onclick="if(event.target===this)closeModal()">
   <div class="modal"><h3 class="space"><span id="modalTitle">Portfolio Breakdown</span><button class="close-btn" onclick="closeModal()">✕</button></h3><div id="modalSub" class="modal-sub"></div><div id="modalBody"></div></div>
 </div>
-<script src="portfolio-simulator.js?v=12"></script>
+<script src="portfolio-simulator.js?v=13"></script>
 
 <!-- ===== HOW IT WORKS GUIDE ===== -->
-<div id="guide" style="max-width:860px;margin:0 auto;padding:0 24px 60px">
+<div id="guide" style="max-width:860px;margin:0 auto;padding:0 24px 60px;display:none">
   <div style="border-top:1px solid var(--border);padding-top:40px;margin-bottom:28px;display:flex;justify-content:space-between;align-items:center">
     <h2 style="font-size:18px;font-weight:700;font-family:'Space Grotesk',sans-serif;color:var(--text1)">How It Works</h2>
     <a href="#mainHeader" style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--text3);text-decoration:none">↑ Back to top</a>
@@ -100,6 +100,21 @@
 
   </div>
 </div>
+
+<script>
+// Show guide section only when #guide is in the URL
+function handleGuideHash() {
+  const guide = document.getElementById('guide');
+  if (window.location.hash === '#guide') {
+    guide.style.display = 'block';
+    guide.scrollIntoView({behavior: 'smooth'});
+  } else {
+    guide.style.display = 'none';
+  }
+}
+handleGuideHash();
+window.addEventListener('hashchange', handleGuideHash);
+</script>
 
 </body>
 </html>
