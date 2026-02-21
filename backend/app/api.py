@@ -18,23 +18,23 @@ Endpoints:
     DELETE /api/tickers/{symbol}            - Delete ticker and all data (requires auth + write)
 
   Prices:
-    GET    /api/prices/{symbol}             - Get monthly prices for a ticker (requires auth)
-    GET    /api/prices/{symbol}/latest      - Get latest month's price (requires auth)
+    GET    /api/prices/{symbol}             - Get monthly prices for a ticker (public)
+    GET    /api/prices/{symbol}/latest      - Get latest month's price (public)
 
   Dividends:
-    GET    /api/dividends/{symbol}          - Get dividends for a ticker (requires auth)
+    GET    /api/dividends/{symbol}          - Get dividends for a ticker (public)
 
   Simulation Data:
-    GET    /api/simulation-data/{symbol}    - Combined prices + dividends for simulation (requires auth)
+    GET    /api/simulation-data/{symbol}    - Combined prices + dividends for simulation (public)
 
   Money Market Rates:
-    GET    /api/mm-rates/monthly            - Monthly FRED federal funds rates (requires auth)
-    GET    /api/mm-rates/annual             - Annual average FRED rates (requires auth)
-    GET    /api/mm-rates/annual/{year}      - Rate for a specific year (requires auth)
+    GET    /api/mm-rates/monthly            - Monthly FRED federal funds rates (public)
+    GET    /api/mm-rates/annual             - Annual average FRED rates (public)
+    GET    /api/mm-rates/annual/{year}      - Rate for a specific year (public)
 
   Sector Analytics:
-    GET    /api/sector-performance          - Annual returns + dividends for sector ETFs (requires auth)
-    GET    /api/sector-monthly              - Monthly close prices for sector ETFs (requires auth)
+    GET    /api/sector-performance          - Annual returns + dividends for sector ETFs (public)
+    GET    /api/sector-monthly              - Monthly close prices for sector ETFs (public)
 
   Batch (requires write API enabled):
     POST   /api/batch/full                  - Full history load for ALL tickers (async)
@@ -631,7 +631,6 @@ def get_prices(
     start_month: Optional[int] = Query(None, description="Filter from month (1-12)"),
     end_year: Optional[int] = Query(None, description="Filter to year"),
     end_month: Optional[int] = Query(None, description="Filter to month (1-12)"),
-    user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Get monthly prices for a ticker, optionally filtered by date range."""
@@ -666,7 +665,7 @@ def get_prices(
 
 
 @app.get("/api/prices/{symbol}/latest", response_model=PriceResponse)
-def get_latest_price(symbol: str, user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+def get_latest_price(symbol: str, db: Session = Depends(get_db)):
     """Get the most recent month's price for a ticker."""
     ticker = get_ticker_or_404(db, symbol)
 
@@ -692,7 +691,6 @@ def get_dividends(
     symbol: str,
     start_year: Optional[int] = Query(None),
     end_year: Optional[int] = Query(None),
-    user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Get dividends for a ticker, optionally filtered by year range."""
@@ -727,7 +725,6 @@ def get_simulation_data(
     start_month: Optional[int] = Query(1),
     end_year: Optional[int] = Query(None),
     end_month: Optional[int] = Query(12),
-    user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Get combined price + dividend data for portfolio simulation.
@@ -810,7 +807,6 @@ class AnnualRateResponse(BaseModel):
 def get_monthly_mm_rates(
     start_year: Optional[int] = Query(None),
     end_year: Optional[int] = Query(None),
-    user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Get monthly average money market rates."""
@@ -832,7 +828,6 @@ def get_monthly_mm_rates(
 def get_annual_mm_rates(
     start_year: Optional[int] = Query(None),
     end_year: Optional[int] = Query(None),
-    user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Get annual average money market rates."""
@@ -851,7 +846,7 @@ def get_annual_mm_rates(
 
 
 @app.get("/api/mm-rates/annual/{year}", response_model=AnnualRateResponse)
-def get_annual_mm_rate_by_year(year: int, user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+def get_annual_mm_rate_by_year(year: int, db: Session = Depends(get_db)):
     """Get money market rate for a specific year."""
     from app.mm_rates import AnnualMoneyMarketRate
 
@@ -1094,7 +1089,6 @@ def get_batch_status():
 
 @app.get("/api/sector-performance")
 def get_sector_performance(
-    user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Compute 20-year annual return & dividend data for all sector ETFs.
@@ -1164,7 +1158,6 @@ def get_sector_performance(
 
 @app.get("/api/sector-monthly")
 def get_sector_monthly(
-    user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Return all monthly close prices for sector ETFs.
