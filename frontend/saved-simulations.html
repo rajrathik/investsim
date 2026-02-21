@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Saved Simulations</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared-analytics.css">
+<script src="theme-toggle.js"></script>
+<script src="https://cdn.auth0.com/js/auth0-spa-js/2.1/auth0-spa-js.production.js"></script>
+<style>
+.container{max-width:900px;margin:0 auto;padding:32px 24px}
+.page-title{font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:700;margin-bottom:8px}
+.page-sub{font-size:14px;color:var(--text2);margin-bottom:32px}
+
+/* Auth gate */
+.auth-gate{text-align:center;padding:60px 24px}
+.auth-gate p{color:var(--text3);font-size:15px;margin-bottom:20px}
+.auth-gate-btn{display:inline-block;padding:12px 32px;border:none;border-radius:12px;font-size:14px;font-weight:700;font-family:'Space Grotesk',sans-serif;cursor:pointer;background:var(--accent);color:var(--bg);text-decoration:none;transition:opacity .15s}
+.auth-gate-btn:hover{opacity:.85}
+
+/* Simulation cards */
+.sim-grid{display:flex;flex-direction:column;gap:16px}
+.sim-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;transition:border-color .2s}
+.sim-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.sim-num{font-size:18px;font-weight:700;font-family:'Space Grotesk',sans-serif;color:var(--text1)}
+.sim-delete{padding:6px 14px;border:1px solid rgba(239,68,68,.25);border-radius:8px;background:var(--red-dim);color:var(--red);font-size:12px;font-weight:600;font-family:'JetBrains Mono',monospace;cursor:pointer;transition:all .2s}
+.sim-delete:hover{border-color:var(--red);background:rgba(239,68,68,.25)}
+.sim-tickers{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.sim-ticker-tag{padding:5px 10px;background:var(--accent-dim);border:1px solid rgba(16,185,129,.2);border-radius:8px;font-size:12px;font-weight:600;color:var(--accent);font-family:'JetBrains Mono',monospace}
+.sim-meta{font-size:12px;color:var(--text3);font-family:'JetBrains Mono',monospace;margin-bottom:14px}
+.sim-values{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px}
+@media(max-width:600px){.sim-values{grid-template-columns:1fr 1fr}}
+.sim-val-item{padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:10px}
+.sim-val-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;margin-bottom:2px}
+.sim-val-num{font-size:14px;font-weight:700;font-family:'JetBrains Mono',monospace}
+.sim-return{font-size:16px;font-weight:700;font-family:'JetBrains Mono',monospace}
+
+/* Empty state */
+.empty-state{text-align:center;padding:48px 24px;background:var(--card);border:1px solid var(--border);border-radius:16px}
+.empty-state .em-icon{font-size:48px;margin-bottom:12px}
+.empty-state p{color:var(--text3);font-size:14px;line-height:1.7}
+.empty-state a{color:var(--accent);text-decoration:none;font-weight:600}
+.empty-state a:hover{text-decoration:underline}
+
+.loading{text-align:center;padding:60px;color:var(--text3)}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1 class="space"><span style="color:var(--accent)">◆</span> Saved Simulations</h1>
+  <nav class="nav-links">
+    <a href="/">Home</a>
+    <a href="/portfolio-simulator.html">Simulator</a>
+    <a href="/sector-performance.html">Sector Returns</a>
+    <a href="/correlation.html">Correlation</a>
+    <a href="/drawdown.html">Drawdowns</a>
+    <a href="/sector-rotation.html">Rotation</a>
+    <a href="/dividend-growth.html">Div Growth</a>
+    <a href="/growth-chart.html">$10K Growth</a>
+    <a href="/risk-return.html">Risk vs Return</a>
+  </nav>
+</div>
+
+<div class="container">
+  <!-- Auth gate — shown when not signed in -->
+  <div id="authGate" class="auth-gate" style="display:none">
+    <div style="font-size:48px;margin-bottom:16px">🔒</div>
+    <p>Sign in to view your saved portfolio simulations</p>
+    <button class="auth-gate-btn" onclick="window._pubSignOut?location.href='/':void(0)">Sign In from Home</button>
+  </div>
+
+  <!-- Main content — shown when signed in -->
+  <div id="mainContent" style="display:none">
+    <div class="page-title">Your Saved Portfolios</div>
+    <div class="page-sub">You can save up to 3 portfolio simulations. Run a simulation and click "Save" to add one here.</div>
+    <div id="simList" class="sim-grid">
+      <div class="loading">Loading your simulations...</div>
+    </div>
+  </div>
+</div>
+
+<script src="shared-auth.js"></script>
+<script>
+function fmt(n){return (n||0).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0})}
+
+function renderSims(sims){
+  var el=document.getElementById('simList');
+  if(!sims.length){
+    el.innerHTML='<div class="empty-state"><div class="em-icon">📋</div><p>No saved simulations yet.<br>Go to the <a href="/portfolio-simulator.html">Asset Allocation Simulator</a>, run a simulation, and click <strong>Save</strong>.</p></div>';
+    return;
+  }
+  var h='';
+  sims.forEach(function(s,i){
+    var tickers=JSON.parse(s.tickers_json);
+    var retColor=s.total_return_pct>=0?'var(--accent)':'var(--red)';
+    var retSign=s.total_return_pct>=0?'+':'';
+
+    h+='<div class="sim-card">';
+    h+='<div class="sim-header"><span class="sim-num">Portfolio #'+(i+1)+'</span>';
+    h+='<button class="sim-delete" onclick="deleteSim('+s.id+')">🗑️ Delete</button></div>';
+
+    /* Ticker tags */
+    h+='<div class="sim-tickers">';
+    Object.keys(tickers).forEach(function(sym){
+      h+='<span class="sim-ticker-tag">'+sym+' '+tickers[sym]+'%</span>';
+    });
+    h+='</div>';
+
+    /* Meta */
+    h+='<div class="sim-meta">'+s.start_year+'–'+s.end_year+' &nbsp;|&nbsp; $'+fmt(s.monthly_amount)+'/mo';
+    if(s.annual_growth>0) h+=' +$'+fmt(s.annual_growth)+'/yr';
+    h+='</div>';
+
+    /* Values grid */
+    h+='<div class="sim-values">';
+    h+='<div class="sim-val-item"><div class="sim-val-label">Total Invested</div><div class="sim-val-num" style="color:var(--text1)">$'+fmt(s.total_invested)+'</div></div>';
+    h+='<div class="sim-val-item"><div class="sim-val-label">Equity Value</div><div class="sim-val-num" style="color:var(--accent)">$'+fmt(s.equity_value)+'</div></div>';
+    h+='<div class="sim-val-item"><div class="sim-val-label">Dividends Earned</div><div class="sim-val-num" style="color:var(--gold)">$'+fmt(s.dividends_earned)+'</div></div>';
+    h+='<div class="sim-val-item"><div class="sim-val-label">Cash Accrual</div><div class="sim-val-num" style="color:var(--gold)">$'+fmt(s.cash_accrual)+'</div></div>';
+    h+='<div class="sim-val-item"><div class="sim-val-label">MM Earned</div><div class="sim-val-num" style="color:var(--text2)">$'+fmt(s.mm_earned)+'</div></div>';
+    h+='<div class="sim-val-item"><div class="sim-val-label">Portfolio Balance</div><div class="sim-val-num" style="color:var(--blue)">$'+fmt(s.portfolio_balance)+'</div></div>';
+    h+='</div>';
+
+    /* Return + MMF */
+    h+='<div style="display:flex;justify-content:space-between;align-items:center">';
+    h+='<span class="sim-return" style="color:'+retColor+'">Return: '+retSign+s.total_return_pct.toFixed(1)+'%</span>';
+    h+='<span style="font-size:12px;color:var(--text3);font-family:JetBrains Mono,monospace">MMF: $'+fmt(s.mmf_value)+'</span>';
+    h+='</div>';
+
+    h+='</div>';
+  });
+  el.innerHTML=h;
+}
+
+async function loadSims(){
+  if(!window._pubAuthFetch){
+    document.getElementById('simList').innerHTML='<div class="loading">Waiting for auth...</div>';
+    return;
+  }
+  try{
+    var resp=await window._pubAuthFetch('/api/simulations');
+    if(!resp.ok){
+      document.getElementById('simList').innerHTML='<div style="color:var(--red);text-align:center;padding:40px">Failed to load simulations</div>';
+      return;
+    }
+    var sims=await resp.json();
+    renderSims(sims);
+  }catch(e){
+    document.getElementById('simList').innerHTML='<div style="color:var(--red);text-align:center;padding:40px">Error: '+e.message+'</div>';
+  }
+}
+
+async function deleteSim(simId){
+  if(!confirm('Delete this saved simulation?'))return;
+  try{
+    var resp=await window._pubAuthFetch('/api/simulations/'+simId,{method:'DELETE'});
+    if(resp.ok){
+      loadSims();
+    }else{
+      var d=await resp.json().catch(function(){return{}});
+      alert('Delete failed: '+(d.detail||'Unknown error'));
+    }
+  }catch(e){
+    alert('Delete failed: '+e.message);
+  }
+}
+
+/* Wait for shared-auth to finish, then decide what to show */
+function checkAuth(){
+  if(window._pubIsSignedIn&&window._pubIsSignedIn()){
+    document.getElementById('authGate').style.display='none';
+    document.getElementById('mainContent').style.display='';
+    loadSims();
+  }else{
+    document.getElementById('authGate').style.display='';
+    document.getElementById('mainContent').style.display='none';
+  }
+}
+
+/* Listen for auth events */
+window.addEventListener('pubauth',function(){checkAuth()});
+/* Also check on load (cached user) */
+setTimeout(checkAuth,500);
+</script>
+</body>
+</html>

@@ -153,3 +153,42 @@ class ApiRequestLog(Base):
             f"<ApiRequestLog({self.method} {self.path} "
             f"-> {self.status_code}, user={self.user_email})>"
         )
+
+
+class SavedSimulation(Base):
+    """A user's saved portfolio simulation result.
+
+    Each user can save up to 3 simulations.  The id is auto-increment
+    and may have gaps after deletions (e.g. 1, 2, 4).  Display numbering
+    is handled by the frontend (sort by created_at, display index + 1).
+    """
+    __tablename__ = "saved_simulations"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    auth0_user_id = Column(String(255), nullable=False, index=True)
+    email = Column(String(255), nullable=False)
+
+    # Simulation inputs
+    tickers_json = Column(String(2000), nullable=False)   # JSON: {"XLK":60,"XLF":40}
+    start_year = Column(Integer, nullable=False)
+    end_year = Column(Integer, nullable=False)
+    monthly_amount = Column(Float, nullable=False)
+    annual_growth = Column(Float, nullable=False, default=0)
+
+    # Simulation results (the 6+ tile values)
+    total_invested = Column(Float, nullable=False)
+    equity_value = Column(Float, nullable=False)
+    dividends_earned = Column(Float, nullable=False)
+    cash_accrual = Column(Float, nullable=False)       # divBal (dividends + MM interest)
+    mm_earned = Column(Float, nullable=False)           # divBal - tDiv
+    portfolio_balance = Column(Float, nullable=False)   # pv + divBal
+    total_return_pct = Column(Float, nullable=False)    # ((pv+divBal-tInv)/tInv)*100
+    mmf_value = Column(Float, nullable=False)           # mmOnlyBal
+
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+
+    def __repr__(self):
+        return (
+            f"<SavedSimulation(id={self.id}, user={self.email}, "
+            f"balance=${self.portfolio_balance:.0f})>"
+        )

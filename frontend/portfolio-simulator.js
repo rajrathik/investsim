@@ -420,6 +420,8 @@ function showResults(r){
     {l:'MMF Value',v:'$'+fmtW(r.mmOnlyBal),s:'+'+mmOnlyRetP+'% return',c:'var(--text2)',i:'⊞',ck:' clickable-val" onclick="showMMOnlySummary()" title="Click for details'},
   ];
   let h='<div class="grid-6">';cards.forEach((c,i)=>h+='<div class="card sc fade-up" style="animation-delay:'+i*.1+'s"><div class="icon">'+c.i+'</div><div class="sl">'+c.l+'</div><div class="sv'+c.ck+'" style="color:'+c.c+'">'+c.v+'</div><div class="ss">'+c.s+'</div></div>');h+='</div>';
+  /* Save simulation button — only when signed in */
+  if(window._pubIsSignedIn&&window._pubIsSignedIn()){h+='<div class="fade-up" style="animation-delay:.15s;text-align:right;margin-bottom:12px"><button id="saveSimBtn" class="btn-sm" style="background:var(--accent-dim);color:var(--accent);padding:10px 24px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid rgba(16,185,129,.25);font-family:JetBrains Mono,monospace" onclick="saveSimulation()">💾 Save Simulation</button><span id="saveSimMsg" style="margin-left:12px;font-size:13px;color:var(--text3)"></span></div>';}
   h+='<div class="card fade-up" style="animation-delay:.2s;padding:24px;margin-bottom:24px"><h3 class="space" style="font-size:16px;font-weight:600;margin-bottom:16px">Your Allocation</h3><div class="tags">';r.active.forEach(([s,p])=>h+='<div class="tag">'+s+' '+p+'%</div>');h+='</div></div>';
   /* Chart 1: Growth Over Time — interactive with click tooltip */
   h+='<div class="card fade-up" style="animation-delay:.3s;padding:24px;margin-bottom:24px"><h3 class="space" style="font-size:18px;font-weight:600;margin-bottom:16px">Growth Over Time</h3><div class="chart-wrap" id="chartWrap1"><canvas id="chart" style="width:100%;height:300px;cursor:crosshair"></canvas><div class="chart-crosshair" id="chartCross1"></div><div class="chart-tooltip" id="chartTip1"></div></div></div>';
@@ -698,6 +700,51 @@ function showReturnCalc(year,field){
 
   $('modalBody').innerHTML=h;
   $('modalOverlay').classList.add('show');
+}
+
+/* ========== SAVE SIMULATION ========== */
+async function saveSimulation(){
+  if(!window._lastResults||!window._pubAuthFetch)return;
+  const r=window._lastResults;
+  const btn=$('saveSimBtn'),msg=$('saveSimMsg');
+  if(!btn)return;
+  btn.disabled=true;btn.textContent='⏳ Saving...';msg.textContent='';
+
+  const now=new Date(),ey=now.getFullYear()-1,sy=ey-selYr+1;
+  const activeAlloc={};r.active.forEach(([s,p])=>{activeAlloc[s]=p});
+
+  const payload={
+    tickers_json:JSON.stringify(activeAlloc),
+    start_year:sy,end_year:ey,
+    monthly_amount:selAmt,annual_growth:selGrowth,
+    total_invested:r.tInv,equity_value:r.pv,
+    dividends_earned:r.tDiv,cash_accrual:r.divBal,
+    mm_earned:r.divBal-r.tDiv,
+    portfolio_balance:r.pv+r.divBal,
+    total_return_pct:((r.pv+r.divBal-r.tInv)/r.tInv*100),
+    mmf_value:r.mmOnlyBal
+  };
+
+  try{
+    const resp=await window._pubAuthFetch(API+'/simulations',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(payload)
+    });
+    const d=await resp.json();
+    if(resp.ok){
+      msg.style.color='var(--accent)';msg.textContent='✓ Saved successfully';
+      btn.textContent='✓ Saved';
+    }else if(resp.status===409){
+      msg.style.color='var(--gold)';msg.textContent=d.detail||'Max 3 saved. Delete one first.';
+      btn.textContent='💾 Save Simulation';btn.disabled=false;
+    }else{
+      msg.style.color='var(--red)';msg.textContent=d.detail||'Save failed';
+      btn.textContent='💾 Save Simulation';btn.disabled=false;
+    }
+  }catch(e){
+    msg.style.color='var(--red)';msg.textContent='Save failed: '+e.message;
+    btn.textContent='💾 Save Simulation';btn.disabled=false;
+  }
 }
 
 renderAmts();renderYrs();updBudget();renderAlloc();

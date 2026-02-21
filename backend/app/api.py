@@ -92,7 +92,7 @@ if os.path.exists(env_path):
                 os.environ.setdefault(key.strip(), value.strip())
 
 from app.database import SessionLocal, init_db, engine
-from app.models import Ticker, MonthlyPrice, Dividend, UserLogin, UserAdmin, ApiRequestLog
+from app.models import Ticker, MonthlyPrice, Dividend, UserLogin, UserAdmin, ApiRequestLog, SavedSimulation
 from app.config import MAX_TICKERS, ENABLE_WRITE_API
 from app.auth import get_current_user
 
@@ -542,9 +542,29 @@ def get_auth_config():
     }
 
 
+class LoginEventBody(BaseModel):
+    auth0_user_id: str
+    email: Optional[str] = None
+    name: Optional[str] = None
+
+
 @app.post("/api/auth/login-event")
-def log_login_event(request: Request):
-    """Log a login event (no-op if no DB table exists)."""
+def log_login_event(body: LoginEventBody, request: Request, db: Session = Depends(get_db)):
+    """Log a public user login event into user_logins table."""
+    try:
+        row = UserLogin(
+            auth0_user_id=body.auth0_user_id,
+            email=body.email,
+            name=body.name,
+            ip_address=request.client.host if request.client else None,
+            user_agent=(request.headers.get("user-agent") or "")[:500],
+        )
+        db.add(row)
+        db.commit()
+    except Exception:
+        db.rollback()
+        # Non-critical — don't fail the login flow
+        pass
     return {"status": "ok"}
 
 
@@ -1218,6 +1238,179 @@ def get_sector_monthly(
 
 
 # ===========================================
+# SAVED SIMULATIONS
+# ===========================================
+
+MAX_SAVED_SIMULATIONS = 3
+
+
+class SaveSimulationRequest(BaseModel):
+    tickers_json: str
+    start_year: int
+    end_year: int
+    monthly_amount: float
+    annual_growth: float = 0
+    total_invested: float
+    equity_value: float
+    dividends_earned: float
+    cash_accrual: float
+    mm_earned: float
+    portfolio_balance: float
+    total_return_pct: float
+    mmf_value: float
+
+    @field_validator("tickers_json")
+    @classmethod
+    def validate_tickers_json(cls, v):
+        import json
+        try:
+            parsed = json.loads(v)
+        except (json.JSONDecodeError, TypeError):
+            raise ValueError("tickers_json must be valid JSON")
+        if not isinstance(parsed, dict) or not parsed:
+            raise ValueError("tickers_json must be a non-empty object")
+        return v
+
+    @field_validator("start_year", "end_year")
+    @classmethod
+    def validate_years(cls, v):
+        if v < 1900 or v > 2100:
+            raise ValueError("Year must be between 1900 and 2100")
+        return v
+
+    @field_validator("monthly_amount")
+    @classmethod
+    def validate_monthly_amount(cls, v):
+        if v <= 0:
+            raise ValueError("Monthly amount must be positive")
+        return v
+
+
+class SavedSimulationResponse(BaseModel):
+    id: int
+    tickers_json: str
+    start_year: int
+    end_year: int
+    monthly_amount: float
+    annual_growth: float
+    total_invested: float
+    equity_value: float
+    dividends_earned: float
+    cash_accrual: float
+    mm_earned: float
+    portfolio_balance: float
+    total_return_pct: float
+    mmf_value: float
+    created_at: str
+
+    class Config:
+        from_attributes = True
+
+
+def _sim_to_response(sim: SavedSimulation) -> SavedSimulationResponse:
+    """Convert a SavedSimulation ORM object to a response dict."""
+    return SavedSimulationResponse(
+        id=sim.id,
+        tickers_json=sim.tickers_json,
+        start_year=sim.start_year,
+        end_year=sim.end_year,
+        monthly_amount=sim.monthly_amount,
+        annual_growth=sim.annual_growth,
+        total_invested=sim.total_invested,
+        equity_value=sim.equity_value,
+        dividends_earned=sim.dividends_earned,
+        cash_accrual=sim.cash_accrual,
+        mm_earned=sim.mm_earned,
+        portfolio_balance=sim.portfolio_balance,
+        total_return_pct=sim.total_return_pct,
+        mmf_value=sim.mmf_value,
+        created_at=sim.created_at.isoformat() if sim.created_at else "",
+    )
+
+
+@app.post("/api/simulations", response_model=SavedSimulationResponse, status_code=201)
+def save_simulation(
+    data: SaveSimulationRequest,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Save a portfolio simulation result. Max 3 per user."""
+    auth0_user_id = user.get("sub", "")
+    email = (user.get("email") or "").lower().strip()
+    if not auth0_user_id:
+        raise HTTPException(status_code=400, detail="User identity not available")
+
+    count = db.query(SavedSimulation).filter(
+        SavedSimulation.auth0_user_id == auth0_user_id
+    ).count()
+    if count >= MAX_SAVED_SIMULATIONS:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Maximum {MAX_SAVED_SIMULATIONS} saved simulations. Delete one before saving another.",
+        )
+
+    sim = SavedSimulation(
+        auth0_user_id=auth0_user_id,
+        email=email,
+        tickers_json=data.tickers_json,
+        start_year=data.start_year,
+        end_year=data.end_year,
+        monthly_amount=data.monthly_amount,
+        annual_growth=data.annual_growth,
+        total_invested=data.total_invested,
+        equity_value=data.equity_value,
+        dividends_earned=data.dividends_earned,
+        cash_accrual=data.cash_accrual,
+        mm_earned=data.mm_earned,
+        portfolio_balance=data.portfolio_balance,
+        total_return_pct=data.total_return_pct,
+        mmf_value=data.mmf_value,
+    )
+    db.add(sim)
+    db.commit()
+    db.refresh(sim)
+    logger.info(f"Saved simulation {sim.id} for {email}")
+    return _sim_to_response(sim)
+
+
+@app.get("/api/simulations", response_model=list[SavedSimulationResponse])
+def list_simulations(
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """List all saved simulations for the current user, ordered by created_at."""
+    auth0_user_id = user.get("sub", "")
+    sims = (
+        db.query(SavedSimulation)
+        .filter(SavedSimulation.auth0_user_id == auth0_user_id)
+        .order_by(SavedSimulation.created_at)
+        .all()
+    )
+    return [_sim_to_response(s) for s in sims]
+
+
+@app.delete("/api/simulations/{sim_id}", status_code=200)
+def delete_simulation(
+    sim_id: int,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Delete a saved simulation by its DB id. User can only delete their own."""
+    auth0_user_id = user.get("sub", "")
+    sim = db.query(SavedSimulation).filter(
+        SavedSimulation.id == sim_id,
+        SavedSimulation.auth0_user_id == auth0_user_id,
+    ).first()
+    if not sim:
+        raise HTTPException(status_code=404, detail="Simulation not found")
+
+    db.delete(sim)
+    db.commit()
+    logger.info(f"Deleted simulation {sim_id} for {user.get('email', 'unknown')}")
+    return {"message": f"Simulation {sim_id} deleted"}
+
+
+# ===========================================
 # SERVE FRONTEND (must be LAST — catch-all)
 # ===========================================
 
@@ -1278,5 +1471,9 @@ if _frontend_dir.exists():
     @app.get("/risk-return.html")
     def serve_risk_return():
         return FileResponse(str(_frontend_dir / "risk-return.html"))
+
+    @app.get("/saved-simulations.html")
+    def serve_saved_simulations():
+        return FileResponse(str(_frontend_dir / "saved-simulations.html"))
 
     app.mount("/", StaticFiles(directory=str(_frontend_dir)), name="frontend")

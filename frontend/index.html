@@ -7,13 +7,14 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="shared-analytics.css">
 <script src="theme-toggle.js"></script>
+<script src="https://cdn.auth0.com/js/auth0-spa-js/2.1/auth0-spa-js.production.js"></script>
 <style>
 /* index.html — page-specific styles only */
 /* Shared base: :root, reset, body, fonts all come from shared-analytics.css */
 
 .container{max-width:880px;margin:0 auto;padding:40px 24px}
 
-.hero{text-align:center;margin-bottom:52px}
+.hero{text-align:center;margin-bottom:52px;position:relative}
 .hero-icon{font-size:52px;margin-bottom:16px}
 .hero h2{font-size:28px;font-weight:700;font-family:'Space Grotesk',sans-serif;margin-bottom:10px}
 .hero p{color:var(--text2);font-size:15px;max-width:560px;margin:0 auto;line-height:1.7}
@@ -32,6 +33,15 @@
 .btn-card:hover{opacity:.85}
 .btn-launch{background:var(--accent-dim);color:var(--accent);border:1px solid rgba(16,185,129,.25)}
 .btn-guide{background:var(--accent-dim);color:var(--accent);border:1px solid rgba(16,185,129,.25)}
+
+/* Member section — visible only after sign-in */
+.member-section{display:none;margin-bottom:48px}
+.member-section.show{display:block}
+.member-title{font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;margin-bottom:16px;color:var(--text1)}
+.member-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;color:inherit}
+.member-card .tool-icon{opacity:.5}
+.member-card .tool-name{color:var(--text3)}
+.member-card .tool-desc{color:var(--text3);font-style:italic}
 
 @media(max-width:600px){
   .tools-grid{grid-template-columns:1fr}
@@ -97,7 +107,44 @@
     </a>
   </div>
 
+  <!-- Member-only section — shown after sign-in -->
+  <div id="memberSection" class="member-section">
+    <div class="member-title">Member Content</div>
+    <div class="tools-grid">
+      <div class="member-card">
+        <div class="tool-icon">📬</div>
+        <div class="tool-name">Newsletters & Alerts</div>
+        <div class="tool-desc">Personalized market insights and sector alerts delivered to your inbox. Coming soon.</div>
+      </div>
+      <a href="/saved-simulations.html" class="tool-card">
+        <div class="tool-icon">💼</div>
+        <div class="tool-name">Simulated Portfolio Results</div>
+        <div class="tool-desc">View, compare, and manage your saved portfolio simulations.</div>
+      </a>
+      <div class="member-card">
+        <div class="tool-icon">📊</div>
+        <div class="tool-name">Custom Watchlists</div>
+        <div class="tool-desc">Build and track your own sector watchlists. Under construction.</div>
+      </div>
+    </div>
+  </div>
+
 </div>
 
+<script src="shared-auth.js"></script>
+<script>
+/* Show member section when user is signed in */
+(function() {
+  function showMember() {
+    try {
+      var u = JSON.parse(localStorage.getItem('pub_auth_user'));
+      if (u && u.email) document.getElementById('memberSection').classList.add('show');
+      else document.getElementById('memberSection').classList.remove('show');
+    } catch(e) {}
+  }
+  showMember();
+  window.addEventListener('pubauth', showMember);
+})();
+</script>
 </body>
 </html>
