@@ -138,16 +138,16 @@ function showTooltip(e, cell) {
   const tooltip = $('tooltip');
   const totalRet = d.prev_close > 0 ? ((d.close - d.prev_close + d.dividend) / d.prev_close) * 100 : d.return;
   const totalSign = totalRet >= 0 ? '+' : '';
-  const totalColor = totalRet >= 0 ? '#10b981' : '#ef4444';
+  const totalColor = totalRet >= 0 ? 'var(--accent)' : 'var(--red)';
   const priceSign = d.return >= 0 ? '+' : '';
-  const priceColor = d.return >= 0 ? '#10b981' : '#ef4444';
+  const priceColor = d.return >= 0 ? 'var(--accent)' : 'var(--red)';
   tooltip.innerHTML = `
     <div><span class="tt-sym">${sym}</span><span class="tt-year">${info.name}</span></div>
     <div style="margin-top:6px">
       <div class="tt-row"><span class="tt-label">Year</span><span class="tt-val">${year}</span></div>
       <div class="tt-row"><span class="tt-label">Total Return</span><span class="tt-val" style="color:${totalColor}">${totalSign}${totalRet.toFixed(2)}%</span></div>
       <div class="tt-row"><span class="tt-label">Price Return</span><span class="tt-val" style="color:${priceColor}">${priceSign}${d.return.toFixed(2)}%</span></div>
-      <div class="tt-row"><span class="tt-label">Dividend (cash)</span><span class="tt-val" style="color:#f59e0b">$${d.dividend.toFixed(2)}</span></div>
+      <div class="tt-row"><span class="tt-label">Dividend (cash)</span><span class="tt-val" style="color:var(--gold)">$${d.dividend.toFixed(2)}</span></div>
       <div class="tt-row"><span class="tt-label">Year Begin</span><span class="tt-val">$${d.prev_close.toFixed(2)}</span></div>
       <div class="tt-row"><span class="tt-label">Year End</span><span class="tt-val">$${d.close.toFixed(2)}</span></div>
     </div>

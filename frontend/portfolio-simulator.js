@@ -96,11 +96,12 @@ function updBudget(){
 }
 function renderAlloc(){
   if(!selected.length){$('allocList').innerHTML='<div class="empty-state"><div class="em-icon">🎯</div>Click the search box above to browse<br>all available tickers and select them</div>';return}
-  $('allocList').innerHTML=selected.map(s=>{const t=getTk(s),p=alloc[s]||0;return'<div class="ar"><div style="min-width:90px"><div class="sym">'+s+'</div><div class="nm">'+(t?.name||'')+'</div></div><div style="flex:1"><input type="range" min="0" max="100" step="1" value="'+p+'" oninput="setA(\''+s+'\',+this.value)"></div><div class="pct">'+p+'%</div></div>'}).join('');
+  $('allocList').innerHTML=selected.map(s=>{const t=getTk(s),p=alloc[s]||0;return'<div class="ar"><div style="min-width:90px"><div class="sym">'+s+'</div><div class="nm">'+(t?.name||'')+'</div></div><div class="stepper"><button class="step-btn step-minus'+(p<=0?' disabled':'')+'" onclick="stepA(\''+s+'\',-5)"'+(p<=0?' disabled':'')+'>−</button><span class="step-val">'+p+'%</span><button class="step-btn step-plus'+(p>=100?' disabled':'')+'" onclick="stepA(\''+s+'\',5)"'+(p>=100?' disabled':'')+'>+</button></div></div>'}).join('');
 }
+function stepA(s,delta){const cur=alloc[s]||0;const nv=Math.max(0,Math.min(100,cur+delta));alloc[s]=nv;renderAlloc();updBudget()}
 function setA(s,v){alloc[s]=v;renderAlloc();updBudget()}
 function resetA(){selected=[];alloc={};si.value='';dd.classList.remove('show');snapshots=null;breakdownData=null;renderChips();renderAlloc();updBudget();$('results').innerHTML=''}
-function eqSplit(){if(!selected.length)return;const n=selected.length,base=Math.floor(100/n),rem=100-base*n;selected.forEach((s,i)=>alloc[s]=base+(i<rem?1:0));renderAlloc();updBudget()}
+function eqSplit(){if(!selected.length)return;const n=selected.length,base=Math.floor(100/n/5)*5,rem=100-base*n;let carry=rem;selected.forEach((s,i)=>{let extra=0;if(carry>=5){extra=5;carry-=5}alloc[s]=base+extra});renderAlloc();updBudget()}
 
 function openModal(idx,context){$('modalOverlay').classList.add('show');if(idx===undefined)renderPortfolioModal();else if(context)renderContextModal(idx,context);else renderMonthModal(idx)}
 function closeModal(){$('modalOverlay').classList.remove('show')}
@@ -432,6 +433,8 @@ function showResults(r){
   setTimeout(()=>{drawChart(r.bk);drawDivChart(r.bk);setupChartInteraction(r.bk);renderTaxImpact()},100);
   el.scrollIntoView({behavior:'smooth',block:'start'});
 }
+/* Re-render charts when theme toggles so Canvas picks up new colors */
+window.addEventListener('themechange',function(){if(window._bk){drawChart(window._bk);drawDivChart(window._bk)}});
 function fillTbl(rows,startIdx){
   if(startIdx<0)startIdx=0;
   /* Build display list with original indices, then apply sort */
@@ -454,16 +457,16 @@ function drawChart(bk){
   /* Store geometry for interactive tooltip */
   window._chart1={p,cw,ch,mx,bk,w,h};
   ctx.clearRect(0,0,w,h);
-  for(let i=0;i<=4;i++){const y=p.t+ch-(ch*i)/4;ctx.strokeStyle='#1e293b';ctx.lineWidth=.5;ctx.beginPath();ctx.moveTo(p.l,y);ctx.lineTo(p.l+cw,y);ctx.stroke();ctx.fillStyle='#64748b';ctx.font='11px JetBrains Mono,monospace';ctx.textAlign='right';ctx.fillText(fmtS((mx*i)/4),p.l-8,y+4)}
-  const step=Math.max(1,Math.floor(bk.length/8));ctx.textAlign='center';ctx.font='10px JetBrains Mono,monospace';ctx.fillStyle='#64748b';
+  for(let i=0;i<=4;i++){const y=p.t+ch-(ch*i)/4;ctx.strokeStyle=THEME.grid;ctx.lineWidth=.5;ctx.beginPath();ctx.moveTo(p.l,y);ctx.lineTo(p.l+cw,y);ctx.stroke();ctx.fillStyle=THEME.axis;ctx.font='11px JetBrains Mono,monospace';ctx.textAlign='right';ctx.fillText(fmtS((mx*i)/4),p.l-8,y+4)}
+  const step=Math.max(1,Math.floor(bk.length/8));ctx.textAlign='center';ctx.font='10px JetBrains Mono,monospace';ctx.fillStyle=THEME.axis;
   for(let i=0;i<bk.length;i+=step){const x=p.l+(cw*i)/(bk.length-1);ctx.fillText(MO[bk[i].month-1]+' '+String(bk[i].year).slice(2),x,h-10)}
   function line(data,color,fill,dash){ctx.beginPath();if(dash)ctx.setLineDash(dash);else ctx.setLineDash([]);data.forEach((v,i)=>{const x=p.l+(cw*i)/(data.length-1),y=p.t+ch-(ch*v)/mx;i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.strokeStyle=color;ctx.lineWidth=2.5;ctx.stroke();ctx.setLineDash([]);if(fill){ctx.lineTo(p.l+cw,p.t+ch);ctx.lineTo(p.l,p.t+ch);ctx.closePath();const g=ctx.createLinearGradient(0,p.t,0,p.t+ch);g.addColorStop(0,fill);g.addColorStop(1,'transparent');ctx.fillStyle=g;ctx.fill()}}
-  line(inv,'#64748b88',false);line(mmOnly,'#94a3b8',false,[6,4]);line(vals,'#10b981','rgba(16,185,129,.12)');
+  line(inv,THEME.axis+'88',false);line(mmOnly,THEME.text2,false,[6,4]);line(vals,'#10b981','rgba(16,185,129,.12)');
   /* Legend */
   ctx.font='bold 11px JetBrains Mono,monospace';ctx.textAlign='left';
   ctx.fillStyle='#10b981';ctx.fillRect(p.l,14,12,3);ctx.fillText('Portfolio Value',p.l+18,18);
-  ctx.fillStyle='#64748b';ctx.fillRect(p.l+150,14,12,3);ctx.fillText('Total Invested',p.l+168,18);
-  ctx.fillStyle='#94a3b8';ctx.setLineDash([4,3]);ctx.beginPath();ctx.moveTo(p.l+300,15.5);ctx.lineTo(p.l+312,15.5);ctx.stroke();ctx.setLineDash([]);ctx.fillText('Money Market Return',p.l+318,18);
+  ctx.fillStyle=THEME.axis;ctx.fillRect(p.l+150,14,12,3);ctx.fillText('Total Invested',p.l+168,18);
+  ctx.fillStyle=THEME.text2;ctx.setLineDash([4,3]);ctx.beginPath();ctx.moveTo(p.l+300,15.5);ctx.lineTo(p.l+312,15.5);ctx.stroke();ctx.setLineDash([]);ctx.fillText('Money Market Return',p.l+318,18);
 }
 
 function drawDivChart(bk){
@@ -474,14 +477,14 @@ function drawDivChart(bk){
   /* Store geometry for interactive tooltip */
   window._chart2={p,cw,ch,mx,bk,w,h};
   ctx.clearRect(0,0,w,h);
-  for(let i=0;i<=4;i++){const y=p.t+ch-(ch*i)/4;ctx.strokeStyle='#1e293b';ctx.lineWidth=.5;ctx.beginPath();ctx.moveTo(p.l,y);ctx.lineTo(p.l+cw,y);ctx.stroke();ctx.fillStyle='#64748b';ctx.font='11px JetBrains Mono,monospace';ctx.textAlign='right';ctx.fillText(fmtS((mx*i)/4),p.l-8,y+4)}
-  const step=Math.max(1,Math.floor(bk.length/8));ctx.textAlign='center';ctx.font='10px JetBrains Mono,monospace';ctx.fillStyle='#64748b';
+  for(let i=0;i<=4;i++){const y=p.t+ch-(ch*i)/4;ctx.strokeStyle=THEME.grid;ctx.lineWidth=.5;ctx.beginPath();ctx.moveTo(p.l,y);ctx.lineTo(p.l+cw,y);ctx.stroke();ctx.fillStyle=THEME.axis;ctx.font='11px JetBrains Mono,monospace';ctx.textAlign='right';ctx.fillText(fmtS((mx*i)/4),p.l-8,y+4)}
+  const step=Math.max(1,Math.floor(bk.length/8));ctx.textAlign='center';ctx.font='10px JetBrains Mono,monospace';ctx.fillStyle=THEME.axis;
   for(let i=0;i<bk.length;i+=step){const x=p.l+(cw*i)/(bk.length-1);ctx.fillText(MO[bk[i].month-1]+' '+String(bk[i].year).slice(2),x,h-10)}
   function line(data,color,fill){ctx.beginPath();data.forEach((v,i)=>{const x=p.l+(cw*i)/(data.length-1),y=p.t+ch-(ch*v)/mx;i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.strokeStyle=color;ctx.lineWidth=2.5;ctx.stroke();if(fill){ctx.lineTo(p.l+cw,p.t+ch);ctx.lineTo(p.l,p.t+ch);ctx.closePath();const g=ctx.createLinearGradient(0,p.t,0,p.t+ch);g.addColorStop(0,fill);g.addColorStop(1,'transparent');ctx.fillStyle=g;ctx.fill()}}
-  line(rawDivs,'#64748b88',false);line(divBals,'#f59e0b','rgba(245,158,11,.12)');
+  line(rawDivs,THEME.axis+'88',false);line(divBals,'#f59e0b','rgba(245,158,11,.12)');
   ctx.font='bold 11px JetBrains Mono,monospace';ctx.textAlign='left';
   ctx.fillStyle='#f59e0b';ctx.fillRect(p.l,14,12,3);ctx.fillText('Dividend Invested in Money Market',p.l+18,18);
-  ctx.fillStyle='#64748b';ctx.fillRect(p.l+300,14,12,3);ctx.fillText('Dividend Accumulated',p.l+318,18);
+  ctx.fillStyle=THEME.axis;ctx.fillRect(p.l+300,14,12,3);ctx.fillText('Dividend Accumulated',p.l+318,18);
 }
 
 function setupChartInteraction(bk){
@@ -513,18 +516,18 @@ function setupChartInteraction(bk){
   /* Chart 1: Growth Over Time */
   attachChart('chart','chartCross1','chartTip1','_chart1',function(r){
     return '<div class="ct-label">'+MO[r.month-1]+' '+r.year+'</div>'+
-      '<div class="ct-row"><span><span class="ct-dot" style="background:#10b981"></span>Portfolio</span><span style="color:#10b981;font-weight:700;font-family:JetBrains Mono,monospace">$'+fmt(r.pv)+'</span></div>'+
-      '<div class="ct-row"><span><span class="ct-dot" style="background:#64748b"></span>Invested</span><span style="color:var(--text2);font-family:JetBrains Mono,monospace">$'+fmt(r.tInv)+'</span></div>'+
-      '<div class="ct-row"><span><span class="ct-dot" style="background:#94a3b8"></span>MM Return</span><span style="color:var(--text2);font-family:JetBrains Mono,monospace">$'+fmt(r.mmOnlyBal)+'</span></div>'+
-      '<div class="ct-row" style="margin-top:4px;padding-top:4px;border-top:1px solid var(--border)"><span style="color:var(--text3)">Return</span><span style="color:'+(r.pv>=r.tInv?'#10b981':'#ef4444')+';font-weight:600;font-family:JetBrains Mono,monospace">'+((r.pv-r.tInv)/r.tInv*100).toFixed(1)+'%</span></div>';
+      '<div class="ct-row"><span><span class="ct-dot" style="background:var(--accent)"></span>Portfolio</span><span style="color:var(--accent);font-weight:700;font-family:JetBrains Mono,monospace">$'+fmt(r.pv)+'</span></div>'+
+      '<div class="ct-row"><span><span class="ct-dot" style="background:var(--text3)"></span>Invested</span><span style="color:var(--text2);font-family:JetBrains Mono,monospace">$'+fmt(r.tInv)+'</span></div>'+
+      '<div class="ct-row"><span><span class="ct-dot" style="background:var(--text2)"></span>MM Return</span><span style="color:var(--text2);font-family:JetBrains Mono,monospace">$'+fmt(r.mmOnlyBal)+'</span></div>'+
+      '<div class="ct-row" style="margin-top:4px;padding-top:4px;border-top:1px solid var(--border)"><span style="color:var(--text3)">Return</span><span style="color:'+(r.pv>=r.tInv?'var(--accent)':'var(--red)')+';font-weight:600;font-family:JetBrains Mono,monospace">'+((r.pv-r.tInv)/r.tInv*100).toFixed(1)+'%</span></div>';
   });
   /* Chart 2: Dividend Balance */
   attachChart('chart2','chartCross2','chartTip2','_chart2',function(r){
     const mmInt=r.divBal-r.tDiv;
     return '<div class="ct-label">'+MO[r.month-1]+' '+r.year+'</div>'+
-      '<div class="ct-row"><span><span class="ct-dot" style="background:#f59e0b"></span>Div + MM</span><span style="color:#f59e0b;font-weight:700;font-family:JetBrains Mono,monospace">$'+fmt(r.divBal)+'</span></div>'+
-      '<div class="ct-row"><span><span class="ct-dot" style="background:#64748b"></span>Div Accumulated</span><span style="color:var(--text2);font-family:JetBrains Mono,monospace">$'+fmt(r.tDiv)+'</span></div>'+
-      '<div class="ct-row" style="margin-top:4px;padding-top:4px;border-top:1px solid var(--border)"><span style="color:var(--text3)">MM Interest</span><span style="color:#10b981;font-weight:600;font-family:JetBrains Mono,monospace">$'+fmt(mmInt)+'</span></div>'+
+      '<div class="ct-row"><span><span class="ct-dot" style="background:var(--gold)"></span>Div + MM</span><span style="color:var(--gold);font-weight:700;font-family:JetBrains Mono,monospace">$'+fmt(r.divBal)+'</span></div>'+
+      '<div class="ct-row"><span><span class="ct-dot" style="background:var(--text3)"></span>Div Accumulated</span><span style="color:var(--text2);font-family:JetBrains Mono,monospace">$'+fmt(r.tDiv)+'</span></div>'+
+      '<div class="ct-row" style="margin-top:4px;padding-top:4px;border-top:1px solid var(--border)"><span style="color:var(--text3)">MM Interest</span><span style="color:var(--accent);font-weight:600;font-family:JetBrains Mono,monospace">$'+fmt(mmInt)+'</span></div>'+
       '<div class="ct-row"><span style="color:var(--text3)">Rate</span><span style="color:var(--text2);font-family:JetBrains Mono,monospace">'+(r.mmRate*100).toFixed(2)+'% APR</span></div>';
   });
 }

@@ -125,12 +125,12 @@ function render() {
       <div class="card fade-up">
         <div style="font-size:15px;font-weight:700;color:var(--accent);font-family:'Space Grotesk',sans-serif">${r.sym}</div>
         <div style="font-size:10px;color:var(--text3);margin-bottom:10px">${r.name}</div>
-        <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px"><span style="color:var(--text3)">Max Drawdown</span><span style="font-weight:600;color:#ef4444;font-family:'JetBrains Mono',monospace">${r.maxDD.toFixed(1)}%</span></div>
+        <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px"><span style="color:var(--text3)">Max Drawdown</span><span style="font-weight:600;color:var(--red);font-family:'JetBrains Mono',monospace">${r.maxDD.toFixed(1)}%</span></div>
         <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px"><span style="color:var(--text3)">Peak</span><span style="font-weight:600;font-family:'JetBrains Mono',monospace;color:var(--text1)">${r.maxPeakDate || '-'}</span></div>
         <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px"><span style="color:var(--text3)">Trough</span><span style="font-weight:600;font-family:'JetBrains Mono',monospace;color:var(--text1)">${r.maxTroughDate || '-'}</span></div>
         <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px"><span style="color:var(--text3)">Decline Duration</span><span style="font-weight:600;font-family:'JetBrains Mono',monospace;color:var(--text1)">${monthsToTrough}</span></div>
-        <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px"><span style="color:var(--text3)">Recovery</span><span style="font-weight:600;font-family:'JetBrains Mono',monospace;color:${r.recoveryDate ? '#10b981' : '#ef4444'}">${recovery}</span></div>
-        ${monthsToRecovery ? `<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px"><span style="color:var(--text3)">Recovery Time</span><span style="font-weight:600;font-family:'JetBrains Mono',monospace;color:#10b981">${monthsToRecovery}</span></div>` : ''}
+        <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px"><span style="color:var(--text3)">Recovery</span><span style="font-weight:600;font-family:'JetBrains Mono',monospace;color:${r.recoveryDate ? 'var(--accent)' : 'var(--red)'}">${recovery}</span></div>
+        ${monthsToRecovery ? `<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px"><span style="color:var(--text3)">Recovery Time</span><span style="font-weight:600;font-family:'JetBrains Mono',monospace;color:var(--accent)">${monthsToRecovery}</span></div>` : ''}
       </div>
     `;
   }

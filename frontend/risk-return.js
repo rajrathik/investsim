@@ -112,10 +112,10 @@ function render() {
   const yScale = v => pad.top + (1 - (v - minY) / (maxY - minY)) * plotH;
 
   // Grid
-  ctx.strokeStyle = '#1e293b';
+  ctx.strokeStyle = THEME.grid;
   ctx.lineWidth = 0.5;
   ctx.font = '10px "JetBrains Mono", monospace';
-  ctx.fillStyle = '#64748b';
+  ctx.fillStyle = THEME.axis;
 
   // Y-axis grid + labels
   const yTicks = 8;
@@ -141,14 +141,14 @@ function render() {
   if (minY < 0 && maxY > 0) {
     const zy = yScale(0);
     ctx.setLineDash([4, 4]);
-    ctx.strokeStyle = '#475569';
+    ctx.strokeStyle = THEME.text2;
     ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(pad.left, zy); ctx.lineTo(pad.left + plotW, zy); ctx.stroke();
     ctx.setLineDash([]);
   }
 
   // Axis labels
-  ctx.fillStyle = '#94a3b8';
+  ctx.fillStyle = THEME.text2;
   ctx.font = '11px "Space Grotesk", sans-serif';
   ctx.textAlign = 'center';
   ctx.fillText('VOLATILITY (Std Dev of Annual Total Returns)', pad.left + plotW / 2, H - 5);
@@ -162,14 +162,14 @@ function render() {
   for (const p of points) {
     const px = xScale(p.vol);
     const py = yScale(p.cagr);
-    const color = SECTOR_COLORS[p.sym] || '#94a3b8';
+    const color = SECTOR_COLORS[p.sym] || THEME.text2;
 
     // Dot
     ctx.beginPath();
     ctx.arc(px, py, 8, 0, Math.PI * 2);
     ctx.fillStyle = color;
     ctx.fill();
-    ctx.strokeStyle = '#0a0e17';
+    ctx.strokeStyle = THEME.bg;
     ctx.lineWidth = 2;
     ctx.stroke();
 
@@ -196,7 +196,7 @@ function render() {
       showTooltipAt(e, `
         <div><span class="tt-sym">${found.sym}</span><span class="tt-year">${found.name}</span></div>
         <div style="margin-top:6px">
-          <div class="tt-row"><span class="tt-label">Total CAGR</span><span class="tt-val" style="color:${found.cagr >= 0 ? '#10b981' : '#ef4444'}">${formatPct(found.cagr, 2)}</span></div>
+          <div class="tt-row"><span class="tt-label">Total CAGR</span><span class="tt-val" style="color:${found.cagr >= 0 ? 'var(--accent)' : 'var(--red)'}">${formatPct(found.cagr, 2)}</span></div>
           <div class="tt-row"><span class="tt-label">Volatility</span><span class="tt-val">${found.vol.toFixed(1)}%</span></div>
           <div class="tt-row"><span class="tt-label">Return/Risk</span><span class="tt-val">${found.sharpe.toFixed(2)}</span></div>
           <div class="tt-row"><span class="tt-label">Data Years</span><span class="tt-val">${found.years}</span></div>
@@ -222,7 +222,7 @@ function renderSummary(points) {
       <div class="card fade-up">
         <div style="font-size:15px;font-weight:700;color:${SECTOR_COLORS[p.sym]};font-family:'Space Grotesk',sans-serif">${p.sym}</div>
         <div style="font-size:10px;color:var(--text3);margin-bottom:10px">${p.name}</div>
-        <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px"><span style="color:var(--text3)">Total CAGR</span><span style="font-weight:600;color:${p.cagr >= 0 ? '#10b981' : '#ef4444'};font-family:'JetBrains Mono',monospace">${formatPct(p.cagr, 2)}</span></div>
+        <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px"><span style="color:var(--text3)">Total CAGR</span><span style="font-weight:600;color:${p.cagr >= 0 ? 'var(--accent)' : 'var(--red)'};font-family:'JetBrains Mono',monospace">${formatPct(p.cagr, 2)}</span></div>
         <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px"><span style="color:var(--text3)">Volatility</span><span style="font-weight:600;color:var(--text1);font-family:'JetBrains Mono',monospace">${p.vol.toFixed(1)}%</span></div>
         <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px"><span style="color:var(--text3)">Return/Risk</span><span style="font-weight:600;color:var(--accent);font-family:'JetBrains Mono',monospace">${p.sharpe.toFixed(2)}</span></div>
         <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px"><span style="color:var(--text3)">Data Years</span><span style="font-weight:600;color:var(--text1);font-family:'JetBrains Mono',monospace">${p.years}</span></div>
@@ -233,3 +233,4 @@ function renderSummary(points) {
 }
 
 document.addEventListener('DOMContentLoaded', loadData);
+window.addEventListener('themechange', function() { if (typeof render === 'function') render(); });

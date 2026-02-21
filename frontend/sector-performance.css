@@ -1,12 +1,9 @@
-:root{--bg:#0a0e17;--card:#111827;--border:#1e293b;--accent:#10b981;--accent-dim:rgba(16,185,129,0.15);--accent-glow:rgba(16,185,129,0.4);--red:#ef4444;--red-dim:rgba(239,68,68,0.15);--gold:#f59e0b;--gold-dim:rgba(245,158,11,0.15);--blue:#3b82f6;--blue-dim:rgba(59,130,246,0.15);--text1:#f1f5f9;--text2:#94a3b8;--text3:#64748b}
-*{box-sizing:border-box;margin:0;padding:0}
-body{min-height:100vh;background:var(--bg);color:var(--text1);font-family:'DM Sans',sans-serif}
-@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
-.fade-up{animation:fadeUp .5s both}
-.mono{font-family:'JetBrains Mono',monospace}
-.space{font-family:'Space Grotesk',sans-serif}
+/* ==========================================
+   SECTOR PERFORMANCE — page-specific styles
+   Shared base: shared-analytics.css
+   ========================================== */
 
-/* Auth overlay */
+/* Leftover overlay styles — not currently used but kept for safety */
 .auth-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(10,14,23,0.95);backdrop-filter:blur(8px);z-index:1000;display:flex;align-items:center;justify-content:center;transition:opacity 0.3s}
 .auth-overlay.hidden{opacity:0;pointer-events:none}
 .auth-card{text-align:center;padding:48px;background:var(--card);border:1px solid var(--border);border-radius:20px;max-width:400px}
@@ -14,23 +11,6 @@ body{min-height:100vh;background:var(--bg);color:var(--text1);font-family:'DM Sa
 .run{display:inline-block;padding:12px 32px;border:none;border-radius:14px;font-size:15px;font-weight:700;font-family:'Space Grotesk',sans-serif;background:var(--accent);color:var(--bg);cursor:pointer;transition:all .3s}
 .run:hover{box-shadow:0 0 20px var(--accent-glow)}
 .btn-sm{padding:6px 12px;border:none;border-radius:8px;cursor:pointer;font-size:11px;font-weight:600;font-family:'JetBrains Mono',monospace}
-
-/* Header — NYT-style: brand centered, nav bar centered below */
-.header{border-bottom:1px solid var(--border);padding:20px 32px 0;display:flex;flex-direction:column;align-items:center;text-align:center}
-.header h1{font-size:24px;font-weight:700;padding-bottom:14px}
-.nav-links{display:flex;gap:0;align-items:center;justify-content:center;border-top:1px solid var(--border);flex-wrap:wrap;width:100%}
-.nav-links a{color:var(--text2);text-decoration:none;font-size:12px;font-family:'JetBrains Mono',monospace;transition:color .2s;padding:10px 14px;border-right:1px solid var(--border)}
-.nav-links a:first-child{border-left:1px solid var(--border)}
-.nav-links a:hover{color:var(--accent);background:var(--accent-dim)}
-
-/* Container */
-.container{max-width:1400px;margin:0 auto;padding:32px 24px}
-
-/* Toggle tabs */
-.view-toggle{display:flex;gap:4px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:4px;margin-bottom:28px;width:fit-content}
-.view-toggle button{padding:10px 24px;border:none;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;font-family:'Space Grotesk',sans-serif;background:transparent;color:var(--text3);transition:all .2s}
-.view-toggle button.active{background:var(--accent);color:var(--bg)}
-.view-toggle button:hover:not(.active){color:var(--text1)}
 
 /* Quilt / Heatmap table */
 .quilt-wrap{overflow-x:auto;margin-bottom:32px;border-radius:16px;border:1px solid var(--border);background:var(--card)}
@@ -64,11 +44,6 @@ body{min-height:100vh;background:var(--bg);color:var(--text1);font-family:'DM Sa
 .div-low{background:rgba(16,185,129,0.10);color:#6ee7b7}
 .div-zero{background:rgba(100,116,139,0.08);color:var(--text3)}
 
-/* Glossary */
-.glossary{display:flex;flex-wrap:wrap;gap:6px 20px;margin-bottom:20px;padding:12px 16px;background:var(--card);border:1px solid var(--border);border-radius:10px}
-.glossary span{font-size:11px;color:var(--text3);line-height:1.6}
-.glossary strong{color:var(--text2);font-weight:600}
-
 /* Summary stats section */
 .stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;margin-bottom:32px}
 .stat-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px 20px;animation:fadeUp .5s both}
@@ -82,15 +57,6 @@ body{min-height:100vh;background:var(--bg);color:var(--text1);font-family:'DM Sa
 .s-val.neg{color:#ef4444}
 .s-val.gold{color:#f59e0b}
 
-/* Tooltip */
-.cell-tooltip{position:fixed;pointer-events:none;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px;font-size:12px;line-height:1.7;color:var(--text1);box-shadow:0 8px 32px rgba(0,0,0,.6);z-index:1000;white-space:nowrap;opacity:0;transition:opacity .12s}
-.cell-tooltip.show{opacity:1}
-.cell-tooltip .tt-sym{font-weight:700;color:var(--accent);font-size:14px;font-family:'Space Grotesk',sans-serif}
-.cell-tooltip .tt-year{color:var(--text3);font-size:11px;margin-left:6px}
-.cell-tooltip .tt-row{display:flex;justify-content:space-between;gap:20px}
-.cell-tooltip .tt-label{color:var(--text3)}
-.cell-tooltip .tt-val{font-weight:600;font-family:'JetBrains Mono',monospace}
-
 /* Legend */
 .legend{display:flex;gap:24px;align-items:center;flex-wrap:wrap;margin-bottom:24px;padding:14px 20px;background:var(--card);border:1px solid var(--border);border-radius:12px}
 .legend-title{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace}
@@ -98,13 +64,7 @@ body{min-height:100vh;background:var(--bg);color:var(--text1);font-family:'DM Sa
 .legend-swatch{width:20px;height:14px;border-radius:3px;display:inline-block}
 .legend-label{font-size:10px;color:var(--text3);font-family:'JetBrains Mono',monospace;margin:0 4px}
 
-/* Year range selector */
-.controls{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-bottom:24px}
-.controls label{font-size:12px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace}
-.controls select{padding:8px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text1);font-size:13px;font-family:'JetBrains Mono',monospace;outline:none;cursor:pointer}
-.controls select:focus{border-color:var(--accent)}
-
-/* Responsive */
+/* Responsive — sector-specific overrides */
 @media(max-width:900px){
   .stats-grid{grid-template-columns:repeat(2,1fr)}
   .quilt{font-size:11px}
@@ -112,5 +72,38 @@ body{min-height:100vh;background:var(--bg);color:var(--text1);font-family:'DM Sa
 }
 @media(max-width:600px){
   .stats-grid{grid-template-columns:1fr}
-  .header{flex-direction:column;gap:12px;text-align:center}
 }
+
+/* ========== LIGHT THEME OVERRIDES ========== */
+
+/* Quilt table — light mode */
+html[data-theme="light"] .quilt th{color:#1e293b;background:#f1f5f9}
+html[data-theme="light"] .quilt th:first-child{background:#f1f5f9}
+html[data-theme="light"] .quilt td:first-child{background:#ffffff}
+html[data-theme="light"] .quilt td:hover{box-shadow:0 4px 16px rgba(0,0,0,.1)}
+
+/* Return color scale — light mode */
+html[data-theme="light"] .ret-50plus{background:#065f46;color:#ffffff}
+html[data-theme="light"] .ret-40{background:#047857;color:#ffffff}
+html[data-theme="light"] .ret-30{background:#059669;color:#ffffff}
+html[data-theme="light"] .ret-20{background:#10b981;color:#ffffff}
+html[data-theme="light"] .ret-10{background:rgba(16,185,129,0.3);color:#065f46}
+html[data-theme="light"] .ret-0{background:rgba(16,185,129,0.12);color:#065f46}
+html[data-theme="light"] .ret-neg0{background:rgba(239,68,68,0.06);color:#991b1b}
+html[data-theme="light"] .ret-neg10{background:rgba(239,68,68,0.10);color:#991b1b}
+html[data-theme="light"] .ret-neg20{background:rgba(239,68,68,0.18);color:#991b1b}
+html[data-theme="light"] .ret-neg30{background:rgba(239,68,68,0.25);color:#7f1d1d}
+html[data-theme="light"] .ret-neg40{background:rgba(239,68,68,0.32);color:#7f1d1d}
+html[data-theme="light"] .ret-neg50{background:rgba(239,68,68,0.40);color:#ffffff}
+
+/* Dividend scale — light mode */
+html[data-theme="light"] .div-high{background:rgba(5,150,105,0.35);color:#064e3b}
+html[data-theme="light"] .div-med-high{background:rgba(5,150,105,0.22);color:#065f46}
+html[data-theme="light"] .div-med{background:rgba(5,150,105,0.12);color:#065f46}
+html[data-theme="light"] .div-low{background:rgba(5,150,105,0.06);color:#065f46}
+html[data-theme="light"] .div-zero{background:rgba(148,163,184,0.08);color:#64748b}
+
+/* Stat values — light mode */
+html[data-theme="light"] .s-val.pos{color:#059669}
+html[data-theme="light"] .s-val.neg{color:#dc2626}
+html[data-theme="light"] .s-val.gold{color:#d97706}

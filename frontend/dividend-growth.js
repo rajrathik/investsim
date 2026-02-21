@@ -83,7 +83,7 @@ function render() {
       for (const dy of decreaseYears) {
         decDetailHtml += `<div style="display:flex;justify-content:space-between;padding:2px 0;font-size:11px">
           <span style="color:var(--text3)">${dy.year}</span>
-          <span style="font-family:'JetBrains Mono',monospace;color:#ef4444">$${dy.from.toFixed(2)} → $${dy.to.toFixed(2)} (${dy.change.toFixed(1)}%)</span>
+          <span style="font-family:'JetBrains Mono',monospace;color:var(--red)">$${dy.from.toFixed(2)} → $${dy.to.toFixed(2)} (${dy.change.toFixed(1)}%)</span>
         </div>`;
       }
       decDetailHtml += '</div>';
@@ -91,17 +91,17 @@ function render() {
 
     // Make decreases clickable only if there are any
     const decClickable = decreases > 0
-      ? `<span style="font-weight:600;color:#ef4444;font-family:'JetBrains Mono',monospace;cursor:pointer;text-decoration:underline;text-decoration-style:dotted" onclick="toggleDecDetail('${sym}')">${decreases}</span>`
-      : `<span style="font-weight:600;color:#ef4444;font-family:'JetBrains Mono',monospace">${decreases}</span>`;
+      ? `<span style="font-weight:600;color:var(--red);font-family:'JetBrains Mono',monospace;cursor:pointer;text-decoration:underline;text-decoration-style:dotted" onclick="toggleDecDetail('${sym}')">${decreases}</span>`
+      : `<span style="font-weight:600;color:var(--red);font-family:'JetBrains Mono',monospace">${decreases}</span>`;
 
     html += `
       <div class="card fade-up">
         <div style="font-size:15px;font-weight:700;color:var(--accent);font-family:'Space Grotesk',sans-serif">${sym}</div>
         <div style="font-size:10px;color:var(--text3);margin-bottom:10px">${info.name}</div>
-        <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px"><span style="color:var(--text3)">Total Dividends</span><span style="font-weight:600;color:#f59e0b;font-family:'JetBrains Mono',monospace">$${totalDividends.toFixed(2)}</span></div>
-        ${avgGrowth !== null ? `<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px"><span style="color:var(--text3)">Avg Growth/Yr</span><span style="font-weight:600;color:${avgGrowth >= 0 ? '#10b981' : '#ef4444'};font-family:'JetBrains Mono',monospace">${avgGrowth >= 0 ? '+' : ''}${avgGrowth.toFixed(1)}%</span></div>` : ''}
-        ${divCagr !== null ? `<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px"><span style="color:var(--text3)">Dividend CAGR</span><span style="font-weight:600;color:${divCagr >= 0 ? '#10b981' : '#ef4444'};font-family:'JetBrains Mono',monospace">${divCagr >= 0 ? '+' : ''}${divCagr.toFixed(1)}%</span></div>` : ''}
-        <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px"><span style="color:var(--text3)">Increases</span><span style="font-weight:600;color:#10b981;font-family:'JetBrains Mono',monospace">${increases}</span></div>
+        <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px"><span style="color:var(--text3)">Total Dividends</span><span style="font-weight:600;color:var(--gold);font-family:'JetBrains Mono',monospace">$${totalDividends.toFixed(2)}</span></div>
+        ${avgGrowth !== null ? `<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px"><span style="color:var(--text3)">Avg Growth/Yr</span><span style="font-weight:600;color:${avgGrowth >= 0 ? 'var(--accent)' : 'var(--red)'};font-family:'JetBrains Mono',monospace">${avgGrowth >= 0 ? '+' : ''}${avgGrowth.toFixed(1)}%</span></div>` : ''}
+        ${divCagr !== null ? `<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px"><span style="color:var(--text3)">Dividend CAGR</span><span style="font-weight:600;color:${divCagr >= 0 ? 'var(--accent)' : 'var(--red)'};font-family:'JetBrains Mono',monospace">${divCagr >= 0 ? '+' : ''}${divCagr.toFixed(1)}%</span></div>` : ''}
+        <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px"><span style="color:var(--text3)">Increases</span><span style="font-weight:600;color:var(--accent);font-family:'JetBrains Mono',monospace">${increases}</span></div>
         <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px"><span style="color:var(--text3)">Decreases</span>${decClickable}</div>
         ${decDetailHtml}
         <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px"><span style="color:var(--text3)">Consistency</span><span style="font-weight:600;color:var(--text1);font-family:'JetBrains Mono',monospace">${consistency}%</span></div>

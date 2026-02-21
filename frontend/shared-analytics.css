@@ -123,3 +123,57 @@ body{min-height:100vh;background:var(--bg);color:var(--text1);font-family:'DM Sa
   .cards-grid{grid-template-columns:1fr}
   .header{flex-direction:column;gap:12px;text-align:center}
 }
+
+/* ==========================================
+   LIGHT THEME OVERRIDES
+   Activated via html[data-theme="light"]
+   ========================================== */
+
+html[data-theme="light"]{--bg:#f8fafc;--card:#ffffff;--border:#e2e8f0;--accent:#059669;--accent-dim:rgba(5,150,105,0.1);--accent-glow:rgba(5,150,105,0.3);--red:#dc2626;--red-dim:rgba(220,38,38,0.1);--gold:#d97706;--gold-dim:rgba(217,119,6,0.1);--blue:#2563eb;--blue-dim:rgba(37,99,235,0.1);--text1:#0f172a;--text2:#475569;--text3:#94a3b8}
+
+/* Table headers — light mode */
+html[data-theme="light"] .data-table th{color:#1e293b;background:#f1f5f9}
+html[data-theme="light"] .data-table th:first-child{background:#f1f5f9}
+html[data-theme="light"] .data-table td:first-child{background:#ffffff}
+html[data-theme="light"] .data-table td:hover{box-shadow:0 4px 16px rgba(0,0,0,.1)}
+
+/* Rank cells — light mode */
+html[data-theme="light"] .rank-1{background:#065f46;color:#ffffff}
+html[data-theme="light"] .rank-2{background:#047857;color:#ffffff}
+html[data-theme="light"] .rank-3{background:#059669;color:#ffffff}
+html[data-theme="light"] .rank-4{background:#10b981;color:#ffffff}
+html[data-theme="light"] .rank-5{background:rgba(16,185,129,0.3);color:#065f46}
+html[data-theme="light"] .rank-6{background:rgba(16,185,129,0.15);color:#065f46}
+html[data-theme="light"] .rank-7{background:rgba(239,68,68,0.08);color:#991b1b}
+html[data-theme="light"] .rank-8{background:rgba(239,68,68,0.12);color:#991b1b}
+html[data-theme="light"] .rank-9{background:rgba(239,68,68,0.18);color:#991b1b}
+html[data-theme="light"] .rank-10{background:rgba(239,68,68,0.25);color:#991b1b}
+html[data-theme="light"] .rank-11{background:rgba(239,68,68,0.32);color:#7f1d1d}
+html[data-theme="light"] .rank-12{background:rgba(239,68,68,0.40);color:#ffffff}
+
+/* Correlation cells — light mode */
+html[data-theme="light"] .corr-high{background:rgba(5,150,105,0.35);color:#064e3b}
+html[data-theme="light"] .corr-med-high{background:rgba(5,150,105,0.22);color:#065f46}
+html[data-theme="light"] .corr-med{background:rgba(5,150,105,0.12);color:#065f46}
+html[data-theme="light"] .corr-low{background:rgba(217,119,6,0.15);color:#92400e}
+html[data-theme="light"] .corr-neg{background:rgba(220,38,38,0.15);color:#991b1b}
+html[data-theme="light"] .corr-self{background:var(--accent);color:#ffffff}
+
+/* Growth colors — light mode */
+html[data-theme="light"] .growth-pos{color:#059669}
+html[data-theme="light"] .growth-neg{color:#dc2626}
+html[data-theme="light"] .growth-gold{color:#d97706}
+
+/* Tooltip — light mode */
+html[data-theme="light"] .cell-tooltip{box-shadow:0 8px 32px rgba(0,0,0,.15)}
+
+/* Scatter — light mode */
+html[data-theme="light"] .scatter-dot{border-color:#ffffff}
+html[data-theme="light"] .scatter-dot:hover{box-shadow:0 0 12px rgba(5,150,105,0.4)}
+
+/* ==========================================
+   THEME TOGGLE BUTTON
+   ========================================== */
+.theme-toggle-btn{position:fixed;bottom:24px;right:24px;width:48px;height:48px;border-radius:50%;border:1px solid var(--border);background:var(--card);color:var(--text1);font-size:22px;cursor:pointer;z-index:900;box-shadow:0 4px 16px rgba(0,0,0,.3);transition:background .2s,border-color .2s,box-shadow .2s;display:flex;align-items:center;justify-content:center;padding:0;line-height:1}
+.theme-toggle-btn:hover{border-color:var(--accent);box-shadow:0 4px 20px var(--accent-glow)}
+html[data-theme="light"] .theme-toggle-btn{box-shadow:0 4px 16px rgba(0,0,0,.1)}

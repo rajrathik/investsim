@@ -104,7 +104,7 @@ function render() {
         <div style="margin-top:6px">
           <div class="tt-row"><span class="tt-label">Year</span><span class="tt-val">${cell.dataset.year}</span></div>
           <div class="tt-row"><span class="tt-label">Rank</span><span class="tt-val">#${cell.dataset.rank}</span></div>
-          <div class="tt-row"><span class="tt-label">Total Return</span><span class="tt-val" style="color:${+cell.dataset.ret >= 0 ? '#10b981' : '#ef4444'}">${+cell.dataset.ret >= 0 ? '+' : ''}${cell.dataset.ret}%</span></div>
+          <div class="tt-row"><span class="tt-label">Total Return</span><span class="tt-val" style="color:${+cell.dataset.ret >= 0 ? 'var(--accent)' : 'var(--red)'}">${+cell.dataset.ret >= 0 ? '+' : ''}${cell.dataset.ret}%</span></div>
         </div>
       `);
     });
@@ -141,9 +141,9 @@ function renderLeaderCards(rankings, years, syms) {
       <div class="card fade-up">
         <div style="font-size:15px;font-weight:700;color:var(--accent);font-family:'Space Grotesk',sans-serif">${sym}</div>
         <div style="font-size:10px;color:var(--text3);margin-bottom:10px">${data[sym].name}</div>
-        <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px"><span style="color:var(--text3)">#1 Finishes</span><span style="font-weight:600;color:#10b981;font-family:'JetBrains Mono',monospace">${c.first}</span></div>
+        <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px"><span style="color:var(--text3)">#1 Finishes</span><span style="font-weight:600;color:var(--accent);font-family:'JetBrains Mono',monospace">${c.first}</span></div>
         <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px"><span style="color:var(--text3)">Top 3 Finishes</span><span style="font-weight:600;color:var(--accent);font-family:'JetBrains Mono',monospace">${c.top3}</span></div>
-        <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px"><span style="color:var(--text3)">Bottom 3 Finishes</span><span style="font-weight:600;color:#ef4444;font-family:'JetBrains Mono',monospace">${c.bottom3}</span></div>
+        <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px"><span style="color:var(--text3)">Bottom 3 Finishes</span><span style="font-weight:600;color:var(--red);font-family:'JetBrains Mono',monospace">${c.bottom3}</span></div>
         <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px"><span style="color:var(--text3)">Years Ranked</span><span style="font-weight:600;color:var(--text1);font-family:'JetBrains Mono',monospace">${c.total}</span></div>
       </div>
     `;

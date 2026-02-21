@@ -132,14 +132,14 @@ function render() {
   chartMeta = { pad, plotW, plotH, W, H, years, xScale, yScale, globalMin, globalMax };
 
   // Grid lines
-  ctx.strokeStyle = '#1e293b';
+  ctx.strokeStyle = THEME.grid;
   ctx.lineWidth = 0.5;
   const yTicks = 6;
   for (let i = 0; i <= yTicks; i++) {
     const val = globalMin + (globalMax - globalMin) * (i / yTicks);
     const py = yScale(val);
     ctx.beginPath(); ctx.moveTo(pad.left, py); ctx.lineTo(pad.left + plotW, py); ctx.stroke();
-    ctx.fillStyle = '#64748b';
+    ctx.fillStyle = THEME.axis;
     ctx.font = '10px "JetBrains Mono", monospace';
     ctx.textAlign = 'right';
     ctx.fillText('$' + Math.round(val).toLocaleString(), pad.left - 8, py + 4);
@@ -150,7 +150,7 @@ function render() {
   for (const y of years) {
     if (y % 2 === 0 || years.length <= 12) {
       const px = xScale(y);
-      ctx.fillStyle = '#64748b';
+      ctx.fillStyle = THEME.axis;
       ctx.fillText(String(y), px, H - pad.bottom + 20);
       ctx.beginPath(); ctx.moveTo(px, pad.top); ctx.lineTo(px, pad.top + plotH); ctx.stroke();
     }
@@ -159,11 +159,11 @@ function render() {
   // $10K baseline
   const baseY = yScale(10000);
   ctx.setLineDash([4, 4]);
-  ctx.strokeStyle = '#475569';
+  ctx.strokeStyle = THEME.text2;
   ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(pad.left, baseY); ctx.lineTo(pad.left + plotW, baseY); ctx.stroke();
   ctx.setLineDash([]);
-  ctx.fillStyle = '#475569';
+  ctx.fillStyle = THEME.text2;
   ctx.textAlign = 'left';
   ctx.fillText('$10,000', pad.left + plotW + 4, baseY + 4);
 
@@ -249,12 +249,12 @@ function handleCrosshair(e) {
     ctx.arc(cx, py, 5, 0, Math.PI * 2);
     ctx.fillStyle = color;
     ctx.fill();
-    ctx.strokeStyle = '#0a0e17';
+    ctx.strokeStyle = THEME.bg;
     ctx.lineWidth = 2;
     ctx.stroke();
 
     const gain = ((pt.value / 10000 - 1) * 100).toFixed(1);
-    const gainColor = pt.value >= 10000 ? '#10b981' : '#ef4444';
+    const gainColor = pt.value >= 10000 ? 'var(--accent)' : 'var(--red)';
     infoHtml += `<div class="ch-row">
       <span class="ch-sym" style="color:${color}">${sym}</span>
       <span class="ch-val" style="color:${gainColor}">$${Math.round(pt.value).toLocaleString()} (${+gain >= 0 ? '+' : ''}${gain}%)</span>
@@ -283,7 +283,7 @@ function renderFinalValues() {
   let html = '';
   for (const e of entries) {
     if (!e.active) continue;
-    const color = e.value >= 10000 ? '#10b981' : '#ef4444';
+    const color = e.value >= 10000 ? 'var(--accent)' : 'var(--red)';
     const gain = ((e.value / 10000 - 1) * 100).toFixed(1);
     html += `
       <div class="fv-item">
@@ -302,3 +302,4 @@ function renderFinalValues() {
 }
 
 document.addEventListener('DOMContentLoaded', loadData);
+window.addEventListener('themechange', function() { if (chartMeta) render(); });

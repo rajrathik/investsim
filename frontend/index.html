@@ -5,16 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Investment Tools — Help & Guide</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared-analytics.css">
+<script src="theme-toggle.js"></script>
 <style>
-:root{--bg:#0a0e17;--card:#111827;--border:#1e293b;--accent:#10b981;--accent-dim:rgba(16,185,129,0.15);--accent-glow:rgba(16,185,129,0.4);--red:#ef4444;--red-dim:rgba(239,68,68,0.15);--gold:#f59e0b;--gold-dim:rgba(245,158,11,0.15);--blue:#3b82f6;--blue-dim:rgba(59,130,246,0.15);--text1:#f1f5f9;--text2:#94a3b8;--text3:#64748b}
-*{box-sizing:border-box;margin:0;padding:0}
-body{min-height:100vh;background:var(--bg);color:var(--text1);font-family:'DM Sans',sans-serif}
-
-.header{border-bottom:1px solid var(--border);padding:20px 32px;display:flex;justify-content:space-between;align-items:center}
-.header h1{font-size:22px;font-weight:700;font-family:'Space Grotesk',sans-serif}
-.nav-links{display:flex;gap:20px;align-items:center;font-family:'JetBrains Mono',monospace;font-size:13px;flex-wrap:wrap}
-.nav-links a{color:var(--text2);text-decoration:none;transition:color .2s}
-.nav-links a:hover{color:var(--accent)}
+/* index.html — page-specific styles only */
+/* Shared base: :root, reset, body, fonts all come from shared-analytics.css */
 
 .container{max-width:880px;margin:0 auto;padding:40px 24px}
 
@@ -39,7 +34,6 @@ body{min-height:100vh;background:var(--bg);color:var(--text1);font-family:'DM Sa
 .btn-guide{background:var(--accent-dim);color:var(--accent);border:1px solid rgba(16,185,129,.25)}
 
 @media(max-width:600px){
-  .header{flex-direction:column;gap:16px;align-items:flex-start}
   .tools-grid{grid-template-columns:1fr}
   .hero h2{font-size:22px}
 }
