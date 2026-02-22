@@ -150,7 +150,7 @@ Each ticker has: symbol, name, active flag, created/updated timestamps.
 | `fred_fetcher.py` | Pulls federal funds rate from FRED public CSV endpoint. No API key needed. Computes annual averages |
 | `loader.py` | Takes fetcher output DataFrames and upserts into SQL Server. `get_tickers_without_data()` identifies new tickers needing initial load |
 | `auth.py` | Auth0 token verification. Two modes: JWT via JWKS (when audience is set) or opaque token via `/userinfo` endpoint. `get_current_user` FastAPI dependency. Auth failure logging with IP and path. |
-| `api.py` | FastAPI app: all REST endpoints, Auth0 protection on admin routes, public access on all data/analytics endpoints, static file serving, CORS, request ID middleware, API request logging to DB |
+| `api.py` | FastAPI app: all REST endpoints, Auth0 protection on write/admin routes, rate limiting (slowapi), public access on read endpoints, static file serving, CORS, request ID middleware, API request logging to DB, pageview tracking, serves robots.txt and sitemap.xml |
 | `run_batch.py` | CLI entry point: `python run_batch.py full` or `incremental` — orchestrates fetcher → loader for Yahoo data |
 | `run_fred_batch.py` | CLI entry point: same pattern for FRED data |
 | `test_connection.py` | Quick script to verify DB connectivity and create tables |
@@ -169,7 +169,7 @@ Each ticker has: symbol, name, active flag, created/updated timestamps.
 | `risk-return.html/js` | Risk vs return scatter plot |
 | `saved-simulations.html` | View & delete saved simulations — auth-gated (shows sign-in prompt if not logged in), fetches via `_pubAuthFetch()`, renders cards with ticker tags, value tiles with ? tooltips, delete buttons |
 | `shared-analytics.css` | Single source of truth for CSS: `:root` variables, reset, fonts, header/nav, welcome bar styles, dark+light theme overrides, toggle button styles. All page-specific CSS files contain only overrides |
-| `shared-analytics.js` | Shared API utilities (authFetch, getSectorPerformance, getMonthlyPrices), chart tooltip helpers, sector constants |
+| `shared-analytics.js` | Shared API utilities (authFetch, getSectorPerformance, getMonthlyPrices) with error handling (try/catch, resp.ok checks), pageview tracking beacon, chart tooltip helpers, sector constants |
 | `shared-auth.js` | Public Auth0 sign-in IIFE: inits Auth0 SPA client, handles login/logout, injects welcome bar + sign-in link, caches user in localStorage, exposes `window._pubAuthFetch()` (authenticated fetch) and `window._pubIsSignedIn()`, dispatches `pubauth` CustomEvent. Skips admin.html. All pages redirect to `/` for Auth0 callback |
 | `theme-toggle.js` | Dark/light theme: synchronous IIFE sets `data-theme` before render (no FOUC), injects toggle button, exposes `window.THEME` getters for Canvas, dispatches `themechange` event, persists via localStorage |
 | `admin.html` | Admin dashboard — Auth0 protected, isolated, no cross-links to public pages |
@@ -218,13 +218,25 @@ All endpoints live in `api.py`. Request flow:
 ```
 HTTP Request
   → CORS middleware (allow all origins for development)
+  → Rate limiter (slowapi — per-IP limits, returns 429 when exceeded)
   → Request ID middleware (generates UUID, logs method/path, adds X-Request-ID header)
   → Route handler:
       Public endpoints  → no auth check → SQLAlchemy query → JSON response
+      Write endpoints   → get_current_user dependency → Auth0 JWT + ENABLE_WRITE_API check → handler
       Admin endpoints   → get_current_user dependency → Auth0 token verification → handler
   → API request logged to DB (api_request_logs table)
   → Global error handlers catch exceptions → structured error JSON (never leaks stack traces)
 ```
+
+### Rate Limits (per IP)
+
+| Category | Limit | Endpoints |
+|----------|-------|-----------|
+| Default | 60/min | All endpoints not listed below |
+| Heavy reads | 30/min | `/api/sector-performance`, `/api/sector-monthly` |
+| Writes | 10/min | Ticker CRUD, simulation saves, login events |
+| Batch | 5/min | All `/api/batch/*` POST endpoints |
+| Tracking | 30/min | `/api/track/pageview` |
 
 ### Public endpoints (no auth required)
 
@@ -243,6 +255,7 @@ HTTP Request
 | `GET /api/sector-monthly` | Monthly close prices + dividends for sector analytics |
 | `GET /api/batch/status` | Status of last batch job |
 | `POST /api/auth/login-event` | Logs public user login event to `user_logins` table |
+| `POST /api/track/pageview` | Records page view (fire-and-forget, self-hosted analytics) |
 
 ### Authenticated endpoints (Auth0 Bearer token required — public sign-in)
 
@@ -252,21 +265,21 @@ HTTP Request
 | `GET /api/simulations` | List saved simulations for the current user (sorted by created_at) |
 | `DELETE /api/simulations/{sim_id}` | Delete a saved simulation (user can only delete their own) |
 
-### Admin endpoints (Auth0 Bearer token required — admin whitelist)
+### Admin endpoints (Auth0 Bearer token + ENABLE_WRITE_API required)
 
 | Endpoint | Usage |
 |----------|-------|
 | `GET /api/admin/verify` | Checks token + `user_admin` table — grants or denies admin access |
-| `POST /api/tickers` | Add new ticker (also requires ENABLE_WRITE_API=True) |
-| `PUT /api/tickers/{symbol}` | Update ticker name/active |
-| `DELETE /api/tickers/{symbol}` | Delete ticker + all data |
-| `POST /api/batch/full` | Full Yahoo data load for all tickers (async, background thread) |
-| `POST /api/batch/full-new` | Full load for new tickers only (skips those with data) |
-| `POST /api/batch/incremental` | Incremental load — configurable months param (default 2) |
-| `POST /api/batch/fred-full` | Full FRED rate history load (async) |
-| `POST /api/batch/fred-incremental` | Incremental FRED load — last 3 months (async) |
+| `POST /api/tickers` | Add new ticker (requires Auth0 token + ENABLE_WRITE_API) |
+| `PUT /api/tickers/{symbol}` | Update ticker name/active (requires Auth0 token + ENABLE_WRITE_API) |
+| `DELETE /api/tickers/{symbol}` | Delete ticker + all data (requires Auth0 token + ENABLE_WRITE_API) |
+| `POST /api/batch/full` | Full Yahoo data load for all tickers (requires Auth0 token + ENABLE_WRITE_API) |
+| `POST /api/batch/full-new` | Full load for new tickers only (requires Auth0 token + ENABLE_WRITE_API) |
+| `POST /api/batch/incremental` | Incremental load — configurable months (requires Auth0 token + ENABLE_WRITE_API) |
+| `POST /api/batch/fred-full` | Full FRED rate history load (requires Auth0 token + ENABLE_WRITE_API) |
+| `POST /api/batch/fred-incremental` | Incremental FRED load — last 3 months (requires Auth0 token + ENABLE_WRITE_API) |
 
-Write endpoints additionally gated by `ENABLE_WRITE_API=True` in `.env`.
+All write endpoints are **double-gated**: Auth0 JWT token + `ENABLE_WRITE_API=True` in `.env`. Rate limited to 10/min (ticker CRUD) or 5/min (batch loads).
 
 ---
 
@@ -353,4 +366,9 @@ Individual page logic:
 - **Interactive canvas charts**: Custom canvas rendering with crosshair and hover tooltip. No chart library dependency. Canvas structural colors use `THEME.*` getters that re-read CSS variables on theme change.
 - **Excel verification tool**: Python script generates a 5-sheet Excel workbook from real DB data using formulas that mirror the JS simulation. Users can trace every calculation step. Reads from a plain-text config file.
 - **API request logging**: Every API call (path starting with `/api`) logged to `api_request_logs` table. Static file requests skipped to avoid noise.
+- **Self-hosted pageview tracking**: `navigator.sendBeacon()` on all 12 pages fires `POST /api/track/pageview` writing to existing `api_request_logs` table with `method=PAGEVIEW`. Zero cost, no third-party analytics.
+- **Error handling**: All analytics pages wrap `loadData()` in try/catch with user-facing error div. Shared API layer checks `resp.ok` and throws on HTTP errors. No silent failures.
+- **Rate limiting**: slowapi library with per-IP limits. Default 60/min for all endpoints. Tighter limits on expensive reads (30/min), writes (10/min), and batch operations (5/min). Returns HTTP 429 Too Many Requests.
+- **Write endpoint double-gating**: All POST/PUT/DELETE endpoints require both a valid Auth0 JWT token AND `ENABLE_WRITE_API=True` config flag. Neither alone is sufficient.
+- **SEO foundations**: All 11 public HTML pages have `<meta name="description">`, canonical links, Open Graph tags, and Twitter Card tags. `robots.txt` allows crawlers but blocks `/admin.html` and `/api/`. `sitemap.xml` lists all public pages with priorities. JSON-LD structured data on key pages (WebSite, WebApplication, BreadcrumbList). All URLs use `YOUR-DOMAIN.com` placeholder — global find-and-replace at deploy time.
 - **Structured error responses**: Global exception handlers catch all errors — never leaks stack traces. Returns consistent `{error, detail, request_id}` JSON. Request IDs in headers for correlation.

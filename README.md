@@ -55,10 +55,12 @@ C:\Raj\python\portfolio-simulator\
 │   ├── risk-return.html            ← Risk vs return scatter plot
 │   ├── risk-return.js
 │   ├── shared-analytics.css        ← Single source of truth: CSS variables, reset, fonts, header/nav, dark+light theme overrides, welcome bar styles, toggle button styles
-│   ├── shared-analytics.js         ← Shared API layer, utilities, nav links
+│   ├── shared-analytics.js         ← Shared API layer, utilities, nav links, error handling, pageview tracking
 │   ├── shared-auth.js              ← Auth0 public sign-in (IIFE): optional login/logout, welcome bar, _pubAuthFetch(), _pubIsSignedIn()
 │   ├── theme-toggle.js             ← Dark/light theme toggle (IIFE + localStorage persistence)
 │   ├── saved-simulations.html      ← View & delete saved portfolio simulations (auth-gated)
+│   ├── robots.txt                  ← Search engine crawl directives
+│   ├── sitemap.xml                 ← XML sitemap for Google Search Console
 │   ├── admin.html                  ← Admin dashboard (Auth0 protected, isolated)
 │   ├── CD-simulator.html           ← CD portfolio advisor (AI-powered)
 │   ├── cdapp.js
@@ -289,6 +291,11 @@ Opens at `http://localhost:6419`. Press Ctrl+C to stop.
 - **Admin dashboard** — Auth0 login + `user_admin` table whitelist; two-layer security; no links to/from public pages
 - **Smart batch loading** — Load New Tickers (full history for new tickers only), Refresh Recent Data (incremental, configurable months), or Reload All Tickers
 - **API request logging** — every API call logged to DB with user, method, path, status code, response time, and IP
+- **Self-hosted pageview tracking** — `navigator.sendBeacon()` on all 12 pages fires `POST /api/track/pageview` (zero cost, no third-party analytics)
+- **Error handling** — try/catch with user-facing error messages on all analytics page `loadData()` functions; `resp.ok` checks in shared API layer
+- **Rate limiting** — slowapi (60/min default, 30/min for heavy reads, 10/min for writes, 5/min for batch loads); returns HTTP 429 when exceeded
+- **Write endpoint auth** — all POST/PUT/DELETE endpoints require Auth0 JWT token + `ENABLE_WRITE_API=True` config flag (double-gated)
+- **SEO foundations** — meta descriptions on all 11 pages, Open Graph + Twitter Card tags, canonical links, robots.txt, sitemap.xml, JSON-LD structured data (WebSite, WebApplication, BreadcrumbList)
 - **Excel verification tool** — generate a 5-sheet workbook with real data and Excel formulas to verify every calculation step
 
 ---
@@ -300,6 +307,8 @@ Opens at `http://localhost:6419`. Press Ctrl+C to stop.
 | Database | SQL Server (local), SQLAlchemy ORM |
 | Backend | Python 3.12, FastAPI, Uvicorn |
 | Auth | Auth0 SPA SDK (admin + optional public sign-in), python-jose for JWT verification |
+| Rate Limiting | slowapi (per-IP, tiered limits by endpoint category) |
 | Data Sources | Yahoo Finance (prices/dividends), FRED (federal funds rate) |
 | Frontend | HTML + CSS + JS (vanilla, no build tools), Canvas charts |
+| SEO | Meta descriptions, Open Graph, Twitter Cards, canonical links, robots.txt, sitemap.xml, JSON-LD structured data |
 | Tests | Pytest (read-only integration tests against real DB) |

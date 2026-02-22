@@ -100,3 +100,17 @@ Or convert any single file:
 ```bash
 venv\Scripts\mdpdf -o <output>.pdf <input>.md
 ```
+
+## 9. Before deploying (one-time)
+
+Replace the domain placeholder in all SEO tags (sitemap, canonical links, Open Graph URLs):
+
+```bash
+# In your editor or via command line — find and replace across all files:
+Find:    YOUR-DOMAIN.com
+Replace: your-actual-domain.com
+```
+
+Files containing the placeholder: `frontend/sitemap.xml`, `frontend/robots.txt`, and all 11 HTML files (canonical + OG tags).
+
+Also lock down CORS origins in `backend/app/api.py` — change `allow_origins=["*"]` to your actual domain.

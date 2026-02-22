@@ -122,6 +122,18 @@
 | `cbc10e4` | **Saved portfolio simulations** — `SavedSimulation` model (9th DB table). `POST /api/simulations` (save, max 3 per user, 409 if full), `GET /api/simulations` (list by user), `DELETE /api/simulations/{id}` (delete own). Save button on simulator results (signed-in only). New `saved-simulations.html` page: auth-gated, displays simulation cards with ticker tags, 6 value tiles, total return %, MMF comparison, delete buttons. Sequential display numbering via array index (DB IDs may have gaps) |
 | `25c0927` | **Tile info tooltips** — Each of the 6 summary result tiles (Total Invested, Equity Value, Dividends Earned, Cash Accrual, Portfolio Balance, MMF Value) now shows a `?` icon with hover tooltip explaining the metric. Applied to both simulator results and saved simulations page. CSS-only hover with z-index elevation on parent card so tooltips overlay adjacent tiles |
 
+### Phase 13 — Error Handling, Pageview Tracking, SEO & API Security (Feb 22)
+
+| Commit | Description |
+|--------|-------------|
+| `bfe98ea` | **Growth chart light theme fix** — Tooltip background changed from hardcoded `rgba(10,14,23,0.9)` to `var(--card)` so year heading is visible in light theme. Crosshair line changed from hardcoded white to `THEME.text2` |
+| `5a59688` | **Error handling** — All 6 analytics JS files wrap `loadData()` in try/catch with user-facing error message div. `shared-analytics.js` API functions check `resp.ok` and throw on HTTP errors. No more silent failures |
+| `5a59688` | **Self-hosted pageview tracking** — `POST /api/track/pageview` endpoint writes to `api_request_logs` with `method=PAGEVIEW`. `navigator.sendBeacon()` on all 12 public pages (6 via `shared-analytics.js`, 5 via inline script, 1 via both). Zero cost, no third-party analytics |
+| `5a59688` | **SEO foundations** — `<meta name="description">` on all 11 public HTML pages. `robots.txt` (allows crawlers, blocks admin + API). `sitemap.xml` with all 11 public URLs and priorities. FastAPI routes for `/robots.txt` and `/sitemap.xml` |
+| `17443bc` | **Full Google SEO** — Canonical `<link>` tags on all 11 pages. Open Graph (`og:title`, `og:description`, `og:url`, `og:type`) on all 11 pages. Twitter Card (`twitter:card`, `twitter:title`, `twitter:description`) on all 11 pages. `sitemap.xml` fixed to use absolute URLs (Google requires this). JSON-LD structured data: `WebSite` on index, `WebApplication` on simulator, `BreadcrumbList` on guide. All URLs use `YOUR-DOMAIN.com` placeholder for find-and-replace at deploy time |
+| `a488dbf` | **Rate limiting** — `slowapi` library: 60/min default per IP, 30/min for expensive sector queries, 10/min for ticker CRUD + simulation saves + login events, 5/min for batch load endpoints, 30/min for pageview tracking. Returns HTTP 429 when exceeded |
+| `a488dbf` | **Write endpoint auth** — `POST /api/tickers` and all 5 batch POST endpoints now require Auth0 JWT token (were previously config-flag only). All write endpoints are double-gated: Auth0 token + `ENABLE_WRITE_API=True`. Frontend `adminFetch()` already sent auth — no frontend changes needed |
+
 ---
 
 ## Branch History
@@ -149,7 +161,7 @@ main
 | `backend/app/fred_fetcher.py` | FRED federal funds rate fetcher |
 | `backend/app/loader.py` | Batch data loader (Yahoo to DB) |
 | `backend/app/auth.py` | Auth0 token verification |
-| `backend/app/api.py` | FastAPI endpoints + static file serving |
+| `backend/app/api.py` | FastAPI endpoints + rate limiting (slowapi) + auth on all writes + pageview tracking + robots/sitemap routes + static file serving |
 | `backend/run_batch.py` | CLI: load Yahoo Finance data |
 | `backend/run_fred_batch.py` | CLI: load FRED rate data |
 | `backend/test_connection.py` | Verify DB connection & create tables |
@@ -173,10 +185,12 @@ main
 | `frontend/growth-chart.html/js` | $10K cumulative growth chart (Canvas, THEME.* getters) |
 | `frontend/risk-return.html/js` | Risk vs return scatter plot (Canvas, THEME.* getters) |
 | `frontend/shared-analytics.css` | Single source of truth: CSS variables, reset, fonts, header/nav, welcome bar styles, dark+light theme overrides, toggle button styles |
-| `frontend/shared-analytics.js` | Shared API layer, utilities, sector constants |
+| `frontend/shared-analytics.js` | Shared API layer (with error handling + resp.ok checks), pageview tracking beacon, utilities, sector constants |
 | `frontend/shared-auth.js` | Public Auth0 sign-in IIFE: optional login/logout, welcome bar, _pubAuthFetch(), _pubIsSignedIn(), pubauth event |
 | `frontend/theme-toggle.js` | Dark/light theme toggle (IIFE + localStorage + THEME palette + themechange event) |
 | `frontend/saved-simulations.html` | View & delete saved simulations (auth-gated, tile info tooltips) |
+| `frontend/robots.txt` | Search engine crawl directives (allows crawlers, blocks admin + API) |
+| `frontend/sitemap.xml` | XML sitemap for Google — all 11 public URLs with priorities |
 | `frontend/admin.html` | Admin dashboard (Auth0 login + user_admin whitelist, isolated) |
 | `frontend/CD-simulator.html` | CD portfolio advisor (AI-powered) |
 | `tools/generate_test_spreadsheet.py` | Excel workbook generator |
