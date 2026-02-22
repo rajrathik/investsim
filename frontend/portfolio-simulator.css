@@ -114,6 +114,14 @@ td.clickable-cell{cursor:pointer;transition:background .15s;border-radius:4px}td
 .col-tooltip::before{content:'';position:absolute;top:-5px;right:12px;width:8px;height:8px;background:var(--card);border-left:1px solid var(--border);border-top:1px solid var(--border);transform:rotate(45deg)}
 .col-info:hover .col-tooltip{display:block}
 
+/* Tile info icon (? on summary cards) */
+.tile-info{cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;font-style:normal;color:var(--text3);margin-left:5px;width:16px;height:16px;border:1px solid var(--border);border-radius:50%;vertical-align:middle;transition:all .2s;position:relative;font-family:'JetBrains Mono',monospace;line-height:1}
+.tile-info:hover{color:var(--accent);border-color:var(--accent);background:var(--accent-dim)}
+.tile-tooltip{display:none;position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);width:220px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:11px;font-weight:400;color:var(--text2);text-transform:none;letter-spacing:0;line-height:1.5;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,.5);text-align:left;white-space:normal}
+.tile-tooltip::after{content:'';position:absolute;bottom:-5px;left:50%;transform:translateX(-50%);width:8px;height:8px;background:var(--card);border-right:1px solid var(--border);border-bottom:1px solid var(--border);transform:translateX(-50%) rotate(45deg)}
+.tile-info:hover .tile-tooltip{display:block}
+html[data-theme="light"] .tile-tooltip{box-shadow:0 8px 24px rgba(0,0,0,.1)}
+
 /* Error & empty */
 .err{color:var(--red);font-size:13px;margin-top:12px;text-align:center;font-family:'JetBrains Mono',monospace}
 .empty-state{text-align:center;padding:40px 20px;color:var(--text3);font-size:14px;line-height:1.6}.empty-state .em-icon{font-size:36px;margin-bottom:12px;opacity:.5}

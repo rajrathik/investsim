@@ -22,6 +22,16 @@ async function loadTickers(){
 }
 
 /* Column info tooltips — shown on hover of the * icon in table headers */
+/* Tooltip descriptions for the 6 summary result tiles */
+const TILE_INFO={
+  totalinvested:'Total dollar amount deposited over the simulation period. Includes base monthly amount plus any annual growth increases.',
+  equity:'Current market value of all shares held, calculated as total shares × latest closing price for each ticker.',
+  dividends:'Total cash dividends received from all holdings over the entire period. Dividends are not reinvested — they accrue in a cash account.',
+  cashaccrual:'Accumulated dividends plus money-market interest earned on that cash. This is your total cash pile from dividends + interest.',
+  portfolio:'Combined value of equity holdings + cash accrual. This is your total portfolio worth: shares value + all accumulated cash.',
+  mmf:'Hypothetical value if you had invested the same monthly amount entirely into a money-market fund at the federal funds rate instead of equities.'
+};
+
 const COL_INFO={
   deposit:'New money deposited this month (base amount + annual growth). This is the fresh deposit before any carryover from prior months.',
   invested:'Actual $ spent this month (integer shares × high price). Unspent remainder stays in each ticker\'s bucket until enough to buy a share.',
@@ -412,14 +422,14 @@ function showResults(r){
   const divGain=r.divBal-r.tDiv;
   const mmOnlyRetP=((r.mmOnlyBal-r.tInv)/r.tInv*100).toFixed(1);
   const cards=[
-    {l:'Total Invested',v:'$'+fmtW(r.tInv),s:r.n+' months'+(selGrowth>0?' (base $'+fmtW(selAmt)+' + $'+fmtW(selGrowth)+'/yr)':' × $'+fmtW(selAmt)),c:'var(--text1)',i:'$',ck:''},
-    {l:'Equity Value',v:'$'+fmtW(r.pv),s:(r.retP>=0?'+':'')+r.retP.toFixed(1)+'% return',c:r.pv>=r.tInv?'var(--accent)':'var(--red)',i:'◆',ck:' clickable-val" onclick="openModal()" title="Click for per-ticker breakdown'},
-    {l:'Dividends Earned',v:'$'+fmtW(r.tDiv),s:'Cash accumulated',c:'var(--gold)',i:'★',ck:' clickable-val" onclick="showDivSummary()" title="Click for per-ticker dividends'},
-    {l:'Cash Accrual',v:'$'+fmtW(r.divBal),s:'MM earned: $'+fmtW(divGain),c:'var(--gold)',i:'%',ck:' clickable-val" onclick="showDivValueSummary()" title="Click for details'},
-    {l:'Portfolio Balance',v:'$'+fmtW(r.pv+r.divBal),s:((((r.pv+r.divBal)-r.tInv)/r.tInv)*100).toFixed(1)+'% total return',c:'var(--blue)',i:'∑',ck:' clickable-val" onclick="showTotalSummary()" title="Click for breakdown'},
-    {l:'MMF Value',v:'$'+fmtW(r.mmOnlyBal),s:'+'+mmOnlyRetP+'% return',c:'var(--text2)',i:'⊞',ck:' clickable-val" onclick="showMMOnlySummary()" title="Click for details'},
+    {l:'Total Invested',v:'$'+fmtW(r.tInv),s:r.n+' months'+(selGrowth>0?' (base $'+fmtW(selAmt)+' + $'+fmtW(selGrowth)+'/yr)':' × $'+fmtW(selAmt)),c:'var(--text1)',i:'$',ck:'',t:'totalinvested'},
+    {l:'Equity Value',v:'$'+fmtW(r.pv),s:(r.retP>=0?'+':'')+r.retP.toFixed(1)+'% return',c:r.pv>=r.tInv?'var(--accent)':'var(--red)',i:'◆',ck:' clickable-val" onclick="openModal()" title="Click for per-ticker breakdown',t:'equity'},
+    {l:'Dividends Earned',v:'$'+fmtW(r.tDiv),s:'Cash accumulated',c:'var(--gold)',i:'★',ck:' clickable-val" onclick="showDivSummary()" title="Click for per-ticker dividends',t:'dividends'},
+    {l:'Cash Accrual',v:'$'+fmtW(r.divBal),s:'MM earned: $'+fmtW(divGain),c:'var(--gold)',i:'%',ck:' clickable-val" onclick="showDivValueSummary()" title="Click for details',t:'cashaccrual'},
+    {l:'Portfolio Balance',v:'$'+fmtW(r.pv+r.divBal),s:((((r.pv+r.divBal)-r.tInv)/r.tInv)*100).toFixed(1)+'% total return',c:'var(--blue)',i:'∑',ck:' clickable-val" onclick="showTotalSummary()" title="Click for breakdown',t:'portfolio'},
+    {l:'MMF Value',v:'$'+fmtW(r.mmOnlyBal),s:'+'+mmOnlyRetP+'% return',c:'var(--text2)',i:'⊞',ck:' clickable-val" onclick="showMMOnlySummary()" title="Click for details',t:'mmf'},
   ];
-  let h='<div class="grid-6">';cards.forEach((c,i)=>h+='<div class="card sc fade-up" style="animation-delay:'+i*.1+'s"><div class="icon">'+c.i+'</div><div class="sl">'+c.l+'</div><div class="sv'+c.ck+'" style="color:'+c.c+'">'+c.v+'</div><div class="ss">'+c.s+'</div></div>');h+='</div>';
+  let h='<div class="grid-6">';cards.forEach((c,i)=>h+='<div class="card sc fade-up" style="animation-delay:'+i*.1+'s"><div class="icon">'+c.i+'</div><div class="sl">'+c.l+'<span class="tile-info" onclick="event.stopPropagation()">?<span class="tile-tooltip">'+TILE_INFO[c.t]+'</span></span></div><div class="sv'+c.ck+'" style="color:'+c.c+'">'+c.v+'</div><div class="ss">'+c.s+'</div></div>');h+='</div>';
   /* Save simulation button — only when signed in */
   if(window._pubIsSignedIn&&window._pubIsSignedIn()){h+='<div class="fade-up" style="animation-delay:.15s;text-align:right;margin-bottom:12px"><button id="saveSimBtn" class="btn-sm" style="background:var(--accent-dim);color:var(--accent);padding:10px 24px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid rgba(16,185,129,.25);font-family:JetBrains Mono,monospace" onclick="saveSimulation()">💾 Save Simulation</button><span id="saveSimMsg" style="margin-left:12px;font-size:13px;color:var(--text3)"></span></div>';}
   h+='<div class="card fade-up" style="animation-delay:.2s;padding:24px;margin-bottom:24px"><h3 class="space" style="font-size:16px;font-weight:600;margin-bottom:16px">Your Allocation</h3><div class="tags">';r.active.forEach(([s,p])=>h+='<div class="tag">'+s+' '+p+'%</div>');h+='</div></div>';
