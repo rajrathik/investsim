@@ -1,18 +1,32 @@
 """Application configuration."""
 import os
 
-# SQL Server connection settings
+# ---------------------------------------------------------------------------
+# Database type: "postgres" or "sqlserver"
+# Flip this single value in .env to switch the entire backend.
+# ---------------------------------------------------------------------------
+DB_TYPE = os.getenv("DB_TYPE", "postgres").strip().lower()
+
+# --- SQL Server settings (used when DB_TYPE=sqlserver) --------------------
 DB_SERVER = os.getenv("DB_SERVER", "REDACTED-DB-HOST")
 DB_NAME = os.getenv("DB_NAME", "REDACTED-DB-NAME")
 DB_USER = os.getenv("DB_USER", "REDACTED-DB-USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "")  # Set via .env or environment variable
 DB_DRIVER = os.getenv("DB_DRIVER", "ODBC Driver 17 for SQL Server")
 
-# SQLAlchemy connection URL for SQL Server
-DATABASE_URL = (
+SQLSERVER_URL = (
     f"mssql+pyodbc://{DB_USER}:{DB_PASSWORD}@{DB_SERVER}/{DB_NAME}"
     f"?driver={DB_DRIVER.replace(' ', '+')}"
 )
+
+# --- PostgreSQL settings (used when DB_TYPE=postgres) ---------------------
+POSTGRES_URL = os.getenv("POSTGRES_URL", "")
+
+# --- Active DATABASE_URL based on DB_TYPE ---------------------------------
+if DB_TYPE == "sqlserver":
+    DATABASE_URL = SQLSERVER_URL
+else:
+    DATABASE_URL = POSTGRES_URL
 
 # For unit tests - use SQLite in-memory
 TEST_DATABASE_URL = "sqlite:///:memory:"

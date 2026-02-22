@@ -1,4 +1,7 @@
-"""Test SQL Server connection and create tables."""
+"""Test database connection and create tables.
+
+Supports both SQL Server (DB_TYPE=sqlserver) and PostgreSQL (DB_TYPE=postgres).
+"""
 import sys
 import os
 
@@ -12,24 +15,34 @@ if os.path.exists(env_path):
                 key, value = line.split('=', 1)
                 os.environ[key.strip()] = value.strip()
 
-from app.config import DATABASE_URL, DB_SERVER, DB_NAME, DB_USER
+from app.config import DATABASE_URL, DB_TYPE
 from app.database import engine, init_db, SessionLocal
 from app.models import Ticker, MonthlyPrice, Dividend
 from app.mm_rates import MonthlyMoneyMarketRate, AnnualMoneyMarketRate
 from sqlalchemy import inspect, text
 
-print(f"Server:   {DB_SERVER}")
-print(f"Database: {DB_NAME}")
-print(f"User:     {DB_USER}")
-print(f"URL:      {DATABASE_URL.replace(os.getenv('DB_PASSWORD', ''), '***')}")
+# Mask password in URL for display
+display_url = DATABASE_URL
+if "@" in display_url:
+    pre, post = display_url.split("@", 1)
+    # Mask everything after last : in the pre-@ portion (the password)
+    idx = pre.rfind(":")
+    if idx != -1:
+        display_url = pre[:idx] + ":***@" + post
+
+print(f"DB Type:  {DB_TYPE}")
+print(f"URL:      {display_url}")
 print()
 
-# Test connection
+# Test connection — version query differs per dialect
 try:
     with engine.connect() as conn:
-        result = conn.execute(text("SELECT @@VERSION"))
+        if DB_TYPE == "sqlserver":
+            result = conn.execute(text("SELECT @@VERSION"))
+        else:
+            result = conn.execute(text("SELECT version()"))
         version = result.scalar()
-        print(f"Connected! SQL Server version:\n{version}\n")
+        print(f"Connected! Database version:\n{version}\n")
 except Exception as e:
     print(f"CONNECTION FAILED: {e}")
     sys.exit(1)

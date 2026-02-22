@@ -256,13 +256,21 @@ ALL_TABLES = DATA_TABLES + LOG_TABLES
 # Helpers
 # ---------------------------------------------------------------------------
 
+def _q(engine, name):
+    """Quote an identifier for the engine's dialect.
+    SQL Server uses [brackets], PostgreSQL uses "double quotes"."""
+    if engine.dialect.name == "mssql":
+        return f"[{name}]"
+    return f'"{name}"'
+
+
 def get_row_count(engine, table_name):
     """Get row count for a table. Returns 0 if table doesn't exist."""
     insp = inspect(engine)
     if table_name not in insp.get_table_names():
         return -1  # table doesn't exist
     with engine.connect() as conn:
-        result = conn.execute(text(f"SELECT COUNT(*) FROM {table_name}"))
+        result = conn.execute(text(f"SELECT COUNT(*) FROM {_q(engine, table_name)}"))
         return result.scalar()
 
 
@@ -274,9 +282,10 @@ def get_column_names(engine, table_name):
 
 def read_all_rows(engine, table_name, columns):
     """Read all rows from a table as list of dicts."""
-    cols = ", ".join(columns)
+    # Quote column names to handle reserved words (e.g. "close" in SQL Server)
+    cols = ", ".join(_q(engine, c) for c in columns)
     with engine.connect() as conn:
-        result = conn.execute(text(f"SELECT {cols} FROM {table_name} ORDER BY 1"))
+        result = conn.execute(text(f"SELECT {cols} FROM {_q(engine, table_name)} ORDER BY 1"))
         return [dict(zip(columns, row)) for row in result]
 
 
@@ -319,8 +328,14 @@ def sync_table(table_name, model_class, dry_run=False):
     # --- Read all rows from source ---
     start = time.time()
     src_columns = get_column_names(src_engine, table_name)
+    # Only sync columns that exist in the PostgreSQL model
+    model_columns = {c.name for c in model_class.__table__.columns}
+    sync_columns = [c for c in src_columns if c in model_columns]
+    if set(sync_columns) != set(src_columns):
+        skipped = set(src_columns) - model_columns
+        print(f"  Note: skipping columns not in model: {skipped}")
     print(f"  Reading from SQL Server...", end=" ", flush=True)
-    rows = read_all_rows(src_engine, table_name, src_columns)
+    rows = read_all_rows(src_engine, table_name, sync_columns)
     print(f"got {len(rows):,} rows in {time.time()-start:.1f}s")
 
     if not rows:
@@ -351,7 +366,7 @@ def sync_table(table_name, model_class, dry_run=False):
             conn.execute(table_obj.insert(), batch)
 
         # Reset auto-increment sequence to max(id) + 1
-        if "id" in src_columns:
+        if "id" in sync_columns:
             max_id = max(r.get("id", 0) for r in rows) or 0
             seq_name = f"{table_name}_id_seq"
             try:
