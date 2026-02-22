@@ -1,0 +1,6 @@
+# Portfolio Simulator — crawl directives
+User-agent: *
+Allow: /
+Disallow: /admin.html
+Disallow: /api/
+Sitemap: /sitemap.xml

@@ -4,9 +4,14 @@ let yearStart = null, yearEnd = null;
 
 async function loadData() {
   $('navLinks').innerHTML = navLinks();
-  monthlyData = await getMonthlyPrices();
-  populateYears();
-  render();
+  try {
+    monthlyData = await getMonthlyPrices();
+    populateYears();
+    render();
+  } catch(e) {
+    console.error('Failed to load data:', e);
+    document.querySelector('.container').innerHTML = '<div style="text-align:center;padding:60px;color:var(--text3)">Failed to load data. Make sure the API server is running.</div>';
+  }
 }
 
 function populateYears() {

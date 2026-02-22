@@ -4,9 +4,14 @@ let yearStart = 2005, yearEnd = 2025;
 
 async function loadData() {
   $('navLinks').innerHTML = navLinks();
-  data = await getSectorPerformance();
-  populateYears();
-  render();
+  try {
+    data = await getSectorPerformance();
+    populateYears();
+    render();
+  } catch(e) {
+    console.error('Failed to load data:', e);
+    document.querySelector('.container').innerHTML = '<div style="text-align:center;padding:60px;color:var(--text3)">Failed to load data. Make sure the API server is running.</div>';
+  }
 }
 
 function populateYears() {

@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Saved Simulations</title>
+<meta name="description" content="View, compare, and manage your saved portfolio simulation results. Save up to 3 backtested portfolios.">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="shared-analytics.css">
 <script src="theme-toggle.js"></script>
@@ -202,5 +203,6 @@ window.addEventListener('pubauth',function(){checkAuth()});
 /* Also check on load (cached user) */
 setTimeout(checkAuth,500);
 </script>
+<script>try{navigator.sendBeacon('/api/track/pageview',JSON.stringify({page:location.pathname,referrer:document.referrer}))}catch(e){}</script>
 </body>
 </html>

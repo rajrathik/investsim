@@ -1411,6 +1411,41 @@ def delete_simulation(
 
 
 # ===========================================
+# PAGE VIEW TRACKING (self-hosted, zero cost)
+# ===========================================
+
+class PageViewBody(BaseModel):
+    page: str
+    referrer: Optional[str] = None
+
+
+@app.post("/api/track/pageview", status_code=204)
+def track_pageview(body: PageViewBody, request: Request):
+    """Record a page view. Fire-and-forget, never fails the client."""
+    try:
+        db = SessionLocal()
+        try:
+            log = ApiRequestLog(
+                request_id="pv",
+                user_email=None,
+                method="PAGEVIEW",
+                path=body.page[:500] if body.page else "/",
+                status_code=200,
+                response_time_ms=0,
+                ip_address=request.client.host if request.client else None,
+                user_agent=(request.headers.get("user-agent") or "")[:500],
+                error_detail=body.referrer[:500] if body.referrer else None,
+            )
+            db.add(log)
+            db.commit()
+        finally:
+            db.close()
+    except Exception:
+        pass
+    return
+
+
+# ===========================================
 # SERVE FRONTEND (must be LAST — catch-all)
 # ===========================================
 
@@ -1475,5 +1510,13 @@ if _frontend_dir.exists():
     @app.get("/saved-simulations.html")
     def serve_saved_simulations():
         return FileResponse(str(_frontend_dir / "saved-simulations.html"))
+
+    @app.get("/robots.txt")
+    def serve_robots():
+        return FileResponse(str(_frontend_dir / "robots.txt"), media_type="text/plain")
+
+    @app.get("/sitemap.xml")
+    def serve_sitemap():
+        return FileResponse(str(_frontend_dir / "sitemap.xml"), media_type="application/xml")
 
     app.mount("/", StaticFiles(directory=str(_frontend_dir)), name="frontend")

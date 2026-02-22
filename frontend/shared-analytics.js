@@ -28,17 +28,29 @@ const SECTOR_COLORS = {
 let _sectorCache = null;
 async function getSectorPerformance() {
   if (_sectorCache) return _sectorCache;
-  const resp = await authFetch(API + '/sector-performance');
-  _sectorCache = await resp.json();
-  return _sectorCache;
+  try {
+    const resp = await authFetch(API + '/sector-performance');
+    if (!resp.ok) throw new Error('API returned ' + resp.status);
+    _sectorCache = await resp.json();
+    return _sectorCache;
+  } catch (e) {
+    console.error('getSectorPerformance failed:', e);
+    throw e;
+  }
 }
 
 let _monthlyCache = null;
 async function getMonthlyPrices() {
   if (_monthlyCache) return _monthlyCache;
-  const resp = await authFetch(API + '/sector-monthly');
-  _monthlyCache = await resp.json();
-  return _monthlyCache;
+  try {
+    const resp = await authFetch(API + '/sector-monthly');
+    if (!resp.ok) throw new Error('API returned ' + resp.status);
+    _monthlyCache = await resp.json();
+    return _monthlyCache;
+  } catch (e) {
+    console.error('getMonthlyPrices failed:', e);
+    throw e;
+  }
 }
 
 /* ========== UTILITY FUNCTIONS ========== */
@@ -122,3 +134,12 @@ function navLinks() {
     <a href="/risk-return.html">Risk vs Return</a>
   `;
 }
+
+/* ========== PAGE VIEW TRACKING (self-hosted, zero cost) ========== */
+(function() {
+  try {
+    var pg = location.pathname || '/';
+    var ref = document.referrer || '';
+    navigator.sendBeacon('/api/track/pageview', JSON.stringify({ page: pg, referrer: ref }));
+  } catch(e) { /* fire-and-forget */ }
+})();
