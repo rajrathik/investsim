@@ -15,7 +15,8 @@
   .ticker-chip{padding:8px 14px;border-radius:10px;font-size:12px;font-weight:600;font-family:'JetBrains Mono',monospace;cursor:pointer;transition:all .2s;border:2px solid var(--border);background:var(--bg);color:var(--text3);user-select:none}
   .ticker-chip.active{color:#fff}
   .ticker-chip:hover{border-color:var(--text3)}
-  .crosshair-info{position:absolute;top:8px;right:12px;background:rgba(10,14,23,0.9);border:1px solid var(--border);border-radius:10px;padding:10px 14px;font-size:11px;font-family:'JetBrains Mono',monospace;pointer-events:none;min-width:160px;z-index:10}
+  .crosshair-info{position:absolute;top:8px;right:12px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 14px;font-size:11px;font-family:'JetBrains Mono',monospace;pointer-events:none;min-width:160px;z-index:10;box-shadow:0 4px 16px rgba(0,0,0,.3)}
+  html[data-theme="light"] .crosshair-info{box-shadow:0 4px 16px rgba(0,0,0,.1)}
   .ch-year{font-weight:700;color:var(--text1);font-size:13px;margin-bottom:6px;font-family:'Space Grotesk',sans-serif}
   .ch-row{display:flex;justify-content:space-between;gap:16px;padding:2px 0}
   .ch-sym{font-weight:600}

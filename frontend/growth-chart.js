@@ -230,7 +230,7 @@ function handleCrosshair(e) {
   // Vertical line
   const cx = xScale(closestYear);
   ctx.setLineDash([3, 3]);
-  ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+  ctx.strokeStyle = THEME.text2;
   ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(cx, pad.top); ctx.lineTo(cx, pad.top + plotH); ctx.stroke();
   ctx.setLineDash([]);
