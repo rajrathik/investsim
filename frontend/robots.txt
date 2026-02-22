@@ -3,4 +3,4 @@ User-agent: *
 Allow: /
 Disallow: /admin.html
 Disallow: /api/
-Sitemap: /sitemap.xml
+Sitemap: https://YOUR-DOMAIN.com/sitemap.xml
