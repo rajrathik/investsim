@@ -13,7 +13,7 @@ Endpoints:
   Tickers:
     GET    /api/tickers                     - List all tickers (requires auth)
     GET    /api/tickers/active              - List active tickers only (public)
-    POST   /api/tickers                     - Add a new ticker (requires write API enabled)
+    POST   /api/tickers                     - Add a new ticker (requires auth + write API enabled)
     PUT    /api/tickers/{symbol}            - Update ticker name/active (requires auth + write)
     DELETE /api/tickers/{symbol}            - Delete ticker and all data (requires auth + write)
 
@@ -36,13 +36,20 @@ Endpoints:
     GET    /api/sector-performance          - Annual returns + dividends for sector ETFs (public)
     GET    /api/sector-monthly              - Monthly close prices for sector ETFs (public)
 
-  Batch (requires write API enabled):
+  Batch (requires auth + write API enabled):
     POST   /api/batch/full                  - Full history load for ALL tickers (async)
     POST   /api/batch/full-new              - Full history load for NEW tickers only (async)
     POST   /api/batch/incremental           - Incremental load for recent months (async)
     POST   /api/batch/fred-full             - Full FRED rate history load (async)
     POST   /api/batch/fred-incremental      - Incremental FRED rate load — last 3 months (async)
     GET    /api/batch/status                - Status of last batch run
+
+  Rate Limits (per IP):
+    Default:  60 requests/minute for all endpoints
+    Reads:    30/minute for expensive sector-performance and sector-monthly queries
+    Writes:   10/minute for ticker CRUD and simulation saves
+    Batch:    5/minute for batch data load endpoints
+    Tracking: 30/minute for pageview tracking
 
   Pages (served via static files):
     GET    /                                - Home / landing page (index.html)
@@ -71,6 +78,9 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import and_, text, extract
@@ -120,6 +130,19 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
+
+# ===========================================
+# RATE LIMITING (slowapi)
+# ===========================================
+# Default: 60 requests/minute per IP for all endpoints.
+# Tighter limits on write/auth endpoints to prevent abuse.
+# Override per-route with @limiter.limit("N/minute") decorator.
+
+limiter = Limiter(key_func=get_remote_address, default_limits=["60/minute"])
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 
 # Allow frontend to connect (adjust origins when deploying)
 app.add_middleware(
@@ -549,6 +572,7 @@ class LoginEventBody(BaseModel):
 
 
 @app.post("/api/auth/login-event")
+@limiter.limit("10/minute")
 def log_login_event(body: LoginEventBody, request: Request, db: Session = Depends(get_db)):
     """Log a public user login event into user_logins table."""
     try:
@@ -585,11 +609,9 @@ def list_active_tickers(db: Session = Depends(get_db)):
 
 
 @app.post("/api/tickers", response_model=TickerResponse, status_code=201)
-def create_ticker(data: TickerCreate, db: Session = Depends(get_db)):
-    """Add a new ticker.
-
-    No auth required — gated by ENABLE_WRITE_API instead.
-    """
+@limiter.limit("10/minute")
+def create_ticker(data: TickerCreate, request: Request, user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Add a new ticker. Requires Auth0 token + ENABLE_WRITE_API."""
     require_write_enabled()
     symbol = data.symbol  # Already validated and uppercased by Pydantic
 
@@ -612,8 +634,9 @@ def create_ticker(data: TickerCreate, db: Session = Depends(get_db)):
 
 
 @app.put("/api/tickers/{symbol}", response_model=TickerResponse)
-def update_ticker(symbol: str, data: TickerUpdate, user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
-    """Update ticker name or active status."""
+@limiter.limit("10/minute")
+def update_ticker(symbol: str, data: TickerUpdate, request: Request, user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Update ticker name or active status. Requires Auth0 token + ENABLE_WRITE_API."""
     require_write_enabled()
     ticker = get_ticker_or_404(db, symbol)
 
@@ -629,8 +652,9 @@ def update_ticker(symbol: str, data: TickerUpdate, user: dict = Depends(get_curr
 
 
 @app.delete("/api/tickers/{symbol}", status_code=200)
-def delete_ticker(symbol: str, user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
-    """Delete a ticker and all its price/dividend data."""
+@limiter.limit("10/minute")
+def delete_ticker(symbol: str, request: Request, user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Delete a ticker and all its price/dividend data. Requires Auth0 token + ENABLE_WRITE_API."""
     require_write_enabled()
     ticker = get_ticker_or_404(db, symbol)
     sym = ticker.symbol
@@ -965,10 +989,10 @@ def _run_fred_in_background(mode: str):
 
 
 @app.post("/api/batch/full", response_model=BatchResponse)
-def run_batch_full(data: BatchRequest = BatchRequest(), db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def run_batch_full(request: Request, user: dict = Depends(get_current_user), data: BatchRequest = BatchRequest(), db: Session = Depends(get_db)):
     """Trigger a full history data load (runs in background).
-
-    No auth required — gated by ENABLE_WRITE_API instead.
+    Requires Auth0 token + ENABLE_WRITE_API.
     """
     require_write_enabled()
     # Check if a batch is already running
@@ -996,12 +1020,13 @@ def run_batch_full(data: BatchRequest = BatchRequest(), db: Session = Depends(ge
 
 
 @app.post("/api/batch/full-new", response_model=BatchResponse)
-def run_batch_full_new(db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def run_batch_full_new(request: Request, user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
     """Trigger a full history load ONLY for tickers that have no price data yet.
 
     Skips tickers that already have data — safe and efficient for loading
     newly added tickers without re-fetching everything.
-    No auth required — gated by ENABLE_WRITE_API instead.
+    Requires Auth0 token + ENABLE_WRITE_API.
     """
     require_write_enabled()
     current = _get_batch_status()
@@ -1028,10 +1053,10 @@ def run_batch_full_new(db: Session = Depends(get_db)):
 
 
 @app.post("/api/batch/incremental", response_model=BatchResponse)
-def run_batch_incremental(data: BatchRequest = BatchRequest(), db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def run_batch_incremental(request: Request, user: dict = Depends(get_current_user), data: BatchRequest = BatchRequest(), db: Session = Depends(get_db)):
     """Trigger an incremental data load (runs in background).
-
-    No auth required — gated by ENABLE_WRITE_API instead.
+    Requires Auth0 token + ENABLE_WRITE_API.
     """
     require_write_enabled()
     current = _get_batch_status()
@@ -1059,10 +1084,10 @@ def run_batch_incremental(data: BatchRequest = BatchRequest(), db: Session = Dep
 
 
 @app.post("/api/batch/fred-full", response_model=BatchResponse)
-def run_fred_full():
+@limiter.limit("5/minute")
+def run_fred_full(request: Request, user: dict = Depends(get_current_user)):
     """Trigger a full FRED federal funds rate load (runs in background).
-
-    No auth required — gated by ENABLE_WRITE_API instead.
+    Requires Auth0 token + ENABLE_WRITE_API.
     """
     require_write_enabled()
     current = _get_batch_status()
@@ -1079,10 +1104,10 @@ def run_fred_full():
 
 
 @app.post("/api/batch/fred-incremental", response_model=BatchResponse)
-def run_fred_incremental():
+@limiter.limit("5/minute")
+def run_fred_incremental(request: Request, user: dict = Depends(get_current_user)):
     """Trigger an incremental FRED rate load (last 3 months, runs in background).
-
-    No auth required — gated by ENABLE_WRITE_API instead.
+    Requires Auth0 token + ENABLE_WRITE_API.
     """
     require_write_enabled()
     current = _get_batch_status()
@@ -1109,7 +1134,9 @@ def get_batch_status():
 # ===========================================
 
 @app.get("/api/sector-performance")
+@limiter.limit("30/minute")
 def get_sector_performance(
+    request: Request,
     db: Session = Depends(get_db),
 ):
     """Compute 20-year annual return & dividend data for all sector ETFs.
@@ -1178,7 +1205,9 @@ def get_sector_performance(
 # ===========================================
 
 @app.get("/api/sector-monthly")
+@limiter.limit("30/minute")
 def get_sector_monthly(
+    request: Request,
     db: Session = Depends(get_db),
 ):
     """Return all monthly close prices for sector ETFs.
@@ -1329,7 +1358,9 @@ def _sim_to_response(sim: SavedSimulation) -> SavedSimulationResponse:
 
 
 @app.post("/api/simulations", response_model=SavedSimulationResponse, status_code=201)
+@limiter.limit("10/minute")
 def save_simulation(
+    request: Request,
     data: SaveSimulationRequest,
     user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -1420,6 +1451,7 @@ class PageViewBody(BaseModel):
 
 
 @app.post("/api/track/pageview", status_code=204)
+@limiter.limit("30/minute")
 def track_pageview(body: PageViewBody, request: Request):
     """Record a page view. Fire-and-forget, never fails the client."""
     try:
