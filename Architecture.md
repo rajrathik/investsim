@@ -42,6 +42,8 @@ http://localhost:8000/   →   index.html  (landing page — tool cards, no auth
                   all link to each other
                   via hardcoded nav in each HTML
 
+http://localhost:8000/saved-simulations.html  →  Saved Simulations (sign-in required)
+
 http://localhost:8000/admin.html  →  Auth0 lock screen
                                           │ login + user_admin check
                                           ▼
@@ -54,6 +56,8 @@ http://localhost:8000/admin.html  →  Auth0 lock screen
 - Admin has no nav links — `admin.html` contains only a Logout button once authenticated
 - Root `/` serves `index.html`
 - Every page loads `theme-toggle.js` in `<head>` for dark/light theme switching with localStorage persistence
+- Every public page loads Auth0 SPA SDK + `shared-auth.js` for optional sign-in (welcome bar, sign-in link)
+- Signed-in users see member content on the landing page and can access `saved-simulations.html`
 
 ---
 
@@ -65,10 +69,30 @@ User opens http://localhost:8000/
   → index.html served (landing page with tool cards)
   → theme-toggle.js IIFE runs in <head> — reads localStorage('theme'), sets data-theme on <html> (no flash)
   → DOMContentLoaded: toggle button injected at bottom-right
+  → shared-auth.js IIFE runs:
+      → Checks localStorage('pub_auth_user') for cached user
+      → If cached: injects welcome bar immediately (no flash)
+      → Inits Auth0 SPA client, handles redirect callback if returning from Auth0
+      → If authenticated: shows welcome bar, caches user, dispatches 'pubauth' event
+      → If not authenticated: shows "Sign In" link in header
+      → Exposes window._pubAuthFetch() and window._pubIsSignedIn() globally
+  → index.html listens for 'pubauth' event → shows/hides member content section
   → User clicks any tool card or nav link
   → Page loads, fetches data from API (no auth required)
   → Simulator: loadTickers() on DOMContentLoaded → populate dropdown → ready
   → Analytics pages: load sector data on DOMContentLoaded → render
+```
+
+### Saved Simulations (signed-in users)
+```
+User clicks "Save Simulation" on portfolio-simulator.html results
+  → saveSimulation() builds payload from window._lastResults
+  → Calls POST /api/simulations via window._pubAuthFetch() (Bearer token)
+  → Server validates (max 3 per user), saves to saved_simulations table → 201
+  → User navigates to saved-simulations.html (via member section tile or nav)
+  → Page checks sign-in state → if signed in, calls GET /api/simulations
+  → Renders simulation cards with ticker tags, values grid, ? tooltips, delete buttons
+  → Delete calls DELETE /api/simulations/{id} → refreshes list
 ```
 
 ### Admin Dashboard
@@ -91,7 +115,7 @@ User opens http://localhost:8000/admin.html
 
 ---
 
-## Database Schema (8 Tables)
+## Database Schema (9 Tables)
 
 **tickers** — Master list of asset symbols (XLK, XLV, XLE, etc.)
 Each ticker has: symbol, name, active flag, created/updated timestamps.
@@ -110,6 +134,8 @@ Each ticker has: symbol, name, active flag, created/updated timestamps.
 
 **api_request_logs** — One row per API request. Stores request_id, user_email, method, path, status_code, response_time_ms, ip_address, user_agent, error_detail, created_at.
 
+**saved_simulations** — User's saved portfolio simulation results (max 3 per user). Stores auth0_user_id, email, tickers_json (allocation map), start/end year, monthly_amount, annual_growth, 6 result values (total_invested, equity_value, dividends_earned, cash_accrual, mm_earned, portfolio_balance), total_return_pct, mmf_value, created_at. Auto-increment ID with gap management (display numbering handled by frontend).
+
 ---
 
 ## Module Purpose
@@ -118,7 +144,7 @@ Each ticker has: symbol, name, active flag, created/updated timestamps.
 |--------|-------------|
 | `config.py` | All settings: DB connection string, Auth0 config, max tickers (50), history depth (30 yrs), write API toggle (reads from `.env`) |
 | `database.py` | Creates SQLAlchemy engine and session factory. `init_db()` ensures all tables exist at startup |
-| `models.py` | ORM models for `Ticker`, `MonthlyPrice`, `Dividend`, `UserLogin`, `UserAdmin`, `ApiRequestLog` with constraints and relationships |
+| `models.py` | ORM models for `Ticker`, `MonthlyPrice`, `Dividend`, `UserLogin`, `UserAdmin`, `ApiRequestLog`, `SavedSimulation` with constraints and relationships |
 | `mm_rates.py` | ORM models for `MonthlyMoneyMarketRate`, `AnnualMoneyMarketRate` plus loader functions |
 | `fetcher.py` | Pulls monthly OHLCV prices and dividend history from Yahoo Finance. Handles full (30 yr) and incremental (configurable months, default 2) modes |
 | `fred_fetcher.py` | Pulls federal funds rate from FRED public CSV endpoint. No API key needed. Computes annual averages |
@@ -131,9 +157,9 @@ Each ticker has: symbol, name, active flag, created/updated timestamps.
 | **tools/** | |
 | `generate_test_spreadsheet.py` | Reads `spreadsheet_config.txt`, queries DB for prices/dividends/MM rates, generates 5-sheet Excel workbook with formulas mirroring the JS simulation logic |
 | **frontend/** | |
-| `index.html` | Landing page: tool overview cards, nav to all public pages. Served at `/` |
+| `index.html` | Landing page: tool overview cards, member content section (shown when signed in), nav to all public pages. Served at `/` |
 | `simulator-guide.html` | How It Works guide for the simulator (standalone page linked from simulator header) |
-| `portfolio-simulator.html/css/js` | Asset Allocation Simulator — stepper allocation controls (5% increments), loads tickers on DOMContentLoaded |
+| `portfolio-simulator.html/css/js` | Asset Allocation Simulator — stepper allocation controls (5% increments), save simulation button (signed in), tile info tooltips, loads tickers on DOMContentLoaded |
 | `sector-performance.html/css/js` | Annual sector returns & dividends quilt, summary stats |
 | `correlation.html/js` | Sector correlation matrix (Pearson) |
 | `drawdown.html/js` | Peak-to-trough drawdown analysis |
@@ -141,8 +167,10 @@ Each ticker has: symbol, name, active flag, created/updated timestamps.
 | `dividend-growth.html/js` | Year-over-year dividend growth by sector |
 | `growth-chart.html/js` | $10K cumulative growth chart (interactive canvas) |
 | `risk-return.html/js` | Risk vs return scatter plot |
-| `shared-analytics.css` | Single source of truth for CSS: `:root` variables, reset, fonts, header/nav, dark+light theme overrides, toggle button styles. All page-specific CSS files contain only overrides |
+| `saved-simulations.html` | View & delete saved simulations — auth-gated (shows sign-in prompt if not logged in), fetches via `_pubAuthFetch()`, renders cards with ticker tags, value tiles with ? tooltips, delete buttons |
+| `shared-analytics.css` | Single source of truth for CSS: `:root` variables, reset, fonts, header/nav, welcome bar styles, dark+light theme overrides, toggle button styles. All page-specific CSS files contain only overrides |
 | `shared-analytics.js` | Shared API utilities (authFetch, getSectorPerformance, getMonthlyPrices), chart tooltip helpers, sector constants |
+| `shared-auth.js` | Public Auth0 sign-in IIFE: inits Auth0 SPA client, handles login/logout, injects welcome bar + sign-in link, caches user in localStorage, exposes `window._pubAuthFetch()` (authenticated fetch) and `window._pubIsSignedIn()`, dispatches `pubauth` CustomEvent. Skips admin.html. All pages redirect to `/` for Auth0 callback |
 | `theme-toggle.js` | Dark/light theme: synchronous IIFE sets `data-theme` before render (no FOUC), injects toggle button, exposes `window.THEME` getters for Canvas, dispatches `themechange` event, persists via localStorage |
 | `admin.html` | Admin dashboard — Auth0 protected, isolated, no cross-links to public pages |
 
@@ -214,8 +242,17 @@ HTTP Request
 | `GET /api/sector-performance` | Annual returns + dividends for 12 sector ETFs |
 | `GET /api/sector-monthly` | Monthly close prices + dividends for sector analytics |
 | `GET /api/batch/status` | Status of last batch job |
+| `POST /api/auth/login-event` | Logs public user login event to `user_logins` table |
 
-### Admin endpoints (Auth0 Bearer token required)
+### Authenticated endpoints (Auth0 Bearer token required — public sign-in)
+
+| Endpoint | Usage |
+|----------|-------|
+| `POST /api/simulations` | Save a simulation result (max 3 per user, returns 409 if full) |
+| `GET /api/simulations` | List saved simulations for the current user (sorted by created_at) |
+| `DELETE /api/simulations/{sim_id}` | Delete a saved simulation (user can only delete their own) |
+
+### Admin endpoints (Auth0 Bearer token required — admin whitelist)
 
 | Endpoint | Usage |
 |----------|-------|
@@ -257,7 +294,7 @@ When user clicks "Run Simulation":
 
 **10. Store snapshots** — Per-ticker detail per month stored for drill-down modals (shares bought, $ spent, bucket balance, running totals, dividends, effective allocation, dividend balance, MM balance).
 
-**11. Render results** — 6 summary tiles, two interactive canvas charts, monthly breakdown table (clickable cells → per-ticker modals), tax impact section, annual returns table.
+**11. Render results** — 6 summary tiles (each with ? info tooltip), save simulation button (if signed in), two interactive canvas charts, monthly breakdown table (clickable cells → per-ticker modals), tax impact section, annual returns table.
 
 **12. Tax impact** — User-adjustable tax rate (0–60%) applied per year to dividends and MM interest separately. Shows yearly tax liability breakdown.
 
@@ -305,6 +342,10 @@ Individual page logic:
 - **Opaque token support**: With no Auth0 audience configured, Auth0 issues opaque tokens. Backend validates via `/userinfo` endpoint — simpler setup, no Custom API registration needed.
 - **Smart batch loading**: Three modes — full-new (only new tickers), incremental (configurable months, default 2), full (all tickers, rare). Background threads keep the API responsive during long loads.
 - **Read-only API by default**: `ENABLE_WRITE_API=False` in config. Write endpoints return 403 until explicitly enabled in `.env`.
+- **Optional public sign-in**: `shared-auth.js` IIFE loaded on all 10 public pages. Handles Auth0 init, login/logout, welcome bar injection, and exposes `_pubAuthFetch()` for authenticated API calls. Completely separate from admin auth. Skips `admin.html`. Uses `localStorage` cache (`pub_auth_user`) for instant welcome bar display across pages.
+- **Single callback URL for all public pages**: All public pages use `window.location.origin + '/'` as the Auth0 redirect URI. Only two URLs ever needed in Auth0 Dashboard: `/` (public) and `/admin.html` (admin). Adding new pages never requires Auth0 config changes.
+- **Saved simulations**: Max 3 per user enforced server-side (409 Conflict). Auto-increment DB IDs with gaps after deletions — frontend uses array index + 1 for sequential display numbering (Portfolio #1, #2, #3).
+- **Tile info tooltips**: Each of the 6 summary result tiles has a `?` icon that reveals a description tooltip on hover. Uses CSS-only hover with `.tile-info:hover .tile-tooltip` (no JS). Parent card uses `z-index` elevation on hover so tooltips overlay adjacent cards.
 - **No build tools**: Vanilla HTML/CSS/JS. No Node.js, no webpack, no framework. All static files served by FastAPI's `StaticFiles` mount.
 - **CSS consolidation**: `shared-analytics.css` is the single source of truth for `:root` variables, reset, fonts, header/nav, and shared component styles. `sector-performance.css` and `portfolio-simulator.css` contain only page-specific overrides — no duplicate `:root`, reset, or body rules.
 - **Dark/light theme toggle**: `theme-toggle.js` loaded synchronously in `<head>` on all 10 public pages. IIFE reads localStorage and sets `data-theme` attribute on `<html>` before body renders (prevents flash). DOMContentLoaded injects floating toggle button. Dispatches `themechange` CustomEvent for Canvas re-rendering. Exposes `window.THEME` getter object so Canvas-drawing JS can read computed CSS variable values.

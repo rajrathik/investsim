@@ -15,7 +15,7 @@ C:\Raj\python\portfolio-simulator\
 │   │   ├── auth.py                 ← Auth0 JWT/token verification (admin only)
 │   │   ├── config.py               ← Settings (DB connection, Auth0, constants)
 │   │   ├── database.py             ← SQLAlchemy engine & session
-│   │   ├── models.py               ← DB models (Ticker, MonthlyPrice, Dividend, UserLogin, UserAdmin, ApiRequestLog)
+│   │   ├── models.py               ← DB models (Ticker, MonthlyPrice, Dividend, UserLogin, UserAdmin, ApiRequestLog, SavedSimulation)
 │   │   ├── mm_rates.py             ← Money market rate models & loaders
 │   │   ├── fetcher.py              ← Yahoo Finance data fetcher
 │   │   ├── fred_fetcher.py         ← FRED federal funds rate fetcher
@@ -54,9 +54,11 @@ C:\Raj\python\portfolio-simulator\
 │   ├── growth-chart.js
 │   ├── risk-return.html            ← Risk vs return scatter plot
 │   ├── risk-return.js
-│   ├── shared-analytics.css        ← Single source of truth: CSS variables, reset, fonts, header/nav, dark+light theme overrides, toggle button styles
+│   ├── shared-analytics.css        ← Single source of truth: CSS variables, reset, fonts, header/nav, dark+light theme overrides, welcome bar styles, toggle button styles
 │   ├── shared-analytics.js         ← Shared API layer, utilities, nav links
+│   ├── shared-auth.js              ← Auth0 public sign-in (IIFE): optional login/logout, welcome bar, _pubAuthFetch(), _pubIsSignedIn()
 │   ├── theme-toggle.js             ← Dark/light theme toggle (IIFE + localStorage persistence)
+│   ├── saved-simulations.html      ← View & delete saved portfolio simulations (auth-gated)
 │   ├── admin.html                  ← Admin dashboard (Auth0 protected, isolated)
 │   ├── CD-simulator.html           ← CD portfolio advisor (AI-powered)
 │   ├── cdapp.js
@@ -128,6 +130,7 @@ All public pages are open (no login required). Admin is completely separate.
 | `http://localhost:8000/dividend-growth.html` | Dividend growth by sector | Public |
 | `http://localhost:8000/growth-chart.html` | $10K growth chart | Public |
 | `http://localhost:8000/risk-return.html` | Risk vs return scatter plot | Public |
+| `http://localhost:8000/saved-simulations.html` | View & delete saved simulations | **Sign-in required** |
 | `http://localhost:8000/admin.html` | Admin dashboard | **Auth0 login required** |
 
 **Navigation rules:**
@@ -139,21 +142,29 @@ All public pages are open (no login required). Admin is completely separate.
 
 ## Authentication
 
-**Public pages:** No login required. All analytics and simulation pages are freely accessible.
+**Public pages:** No login required for viewing. All analytics and simulation pages are freely accessible without an account.
 
-**Admin dashboard only** uses Auth0:
+**Optional public sign-in** (via `shared-auth.js`):
+- Users can optionally sign in on any public page via a **"Sign In"** link in the header
+- Signing in shows a **welcome bar** across all pages with the user's email and a Sign Out button
+- Signed-in users unlock **member content** on the landing page (e.g., Saved Simulations tile)
+- Signed-in users can **save up to 3 portfolio simulations** from the simulator and view/delete them on the Saved Simulations page
+- All public pages redirect to `/` after Auth0 login — only one callback URL needed for all public pages
+- Auth state cached in `localStorage` (`pub_auth_user` key) for instant welcome bar across pages
+
+**Admin dashboard** uses separate Auth0 flow:
 1. Navigate to `http://localhost:8000/admin.html`
 2. A **lock screen** blocks access — click **"Log In with Auth0"**
 3. Authenticate via Auth0 (email/password or social login)
 4. Backend checks the `user_admin` database table — only whitelisted emails get in
 5. Header shows your email and a **"Log Out"** button (no links back to other pages)
 
-**Auth0 setup** (for admin access):
+**Auth0 setup:**
 - Configure `AUTH0_DOMAIN` and `AUTH0_CLIENT_ID` in `backend/.env`
-- Auth0 Dashboard must have `http://localhost:8000/admin.html` in:
-  - Allowed Callback URLs
-  - Allowed Logout URLs
-  - Allowed Web Origins
+- Auth0 Dashboard settings:
+  - **Allowed Callback URLs:** `http://localhost:8000/, http://localhost:8000/admin.html`
+  - **Allowed Logout URLs:** `http://localhost:8000/, http://localhost:8000/admin.html`
+  - **Allowed Web Origins:** `http://localhost:8000`
 - Add admin users via SQL: `INSERT INTO user_admin (email, name) VALUES ('you@example.com', 'Your Name')`
 
 ---
@@ -249,7 +260,8 @@ Opens at `http://localhost:6419`. Press Ctrl+C to stop.
 - **Dividend tracking** — cash dividends accumulated separately (not reinvested into equities)
 - **Money market interest** — accumulated dividends earn interest at the FRED federal funds rate (monthly compounding)
 - **MMF benchmark** — side-by-side: what if the same investment went entirely into money market?
-- **6 summary tiles** — Total Invested, Equity Value, Dividends Earned, Cash Accrual, Portfolio Balance, MMF Value (all clickable for drill-down)
+- **6 summary tiles** — Total Invested, Equity Value, Dividends Earned, Cash Accrual, Portfolio Balance, MMF Value (all clickable for drill-down). Each tile has a **?** info icon with hover tooltip explaining the metric
+- **Save simulation results** — signed-in users can save up to 3 simulation results (inputs + all 6 tile values + total return). Saved simulations viewable and deletable on a dedicated page (`saved-simulations.html`)
 - **Interactive charts** — Growth Over Time and Dividend Earned charts with hover crosshair and tooltips
 - **Monthly breakdown table** — clickable cells for per-ticker detail modals
 - **Tax impact analysis** — adjustable tax rate (0–60%) with yearly breakdown of taxes on dividends and MM interest
@@ -270,7 +282,9 @@ Opens at `http://localhost:6419`. Press Ctrl+C to stop.
 ### Infrastructure
 - **Dark/light theme toggle** — 🌙/☀️ button on every page; persists via localStorage; no FOUC (synchronous IIFE in `<head>`); Canvas charts re-render on toggle
 - **CSS consolidation** — `shared-analytics.css` is the single source of truth for `:root` variables, reset, fonts, header/nav; page-specific CSS files contain only overrides
-- **Public pages, isolated admin** — all public pages are open (no login); admin is Auth0-protected and completely separate with no cross-links
+- **Optional public Auth0 sign-in** — `shared-auth.js` loaded on all 10 public pages; provides optional sign-in link, welcome bar, `_pubAuthFetch()` for authenticated API calls, `_pubIsSignedIn()` for checking login state; all pages use single `/` callback URL
+- **Member content section** — landing page shows member-only tiles (Saved Simulations, Newsletters, Watchlists) when signed in
+- **Public pages, isolated admin** — all public pages are open (no login required); admin is Auth0-protected and completely separate with no cross-links
 - **Landing page with tool cards** — root URL serves `index.html` with clickable cards for each tool; separate `simulator-guide.html` for the How It Works walkthrough
 - **Admin dashboard** — Auth0 login + `user_admin` table whitelist; two-layer security; no links to/from public pages
 - **Smart batch loading** — Load New Tickers (full history for new tickers only), Refresh Recent Data (incremental, configurable months), or Reload All Tickers
@@ -285,7 +299,7 @@ Opens at `http://localhost:6419`. Press Ctrl+C to stop.
 |-------|-----------|
 | Database | SQL Server (local), SQLAlchemy ORM |
 | Backend | Python 3.12, FastAPI, Uvicorn |
-| Auth | Auth0 SPA SDK (admin only), python-jose for JWT verification |
+| Auth | Auth0 SPA SDK (admin + optional public sign-in), python-jose for JWT verification |
 | Data Sources | Yahoo Finance (prices/dividends), FRED (federal funds rate) |
 | Frontend | HTML + CSS + JS (vanilla, no build tools), Canvas charts |
 | Tests | Pytest (read-only integration tests against real DB) |

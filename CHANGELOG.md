@@ -114,6 +114,14 @@
 | | **Stepper allocation controls** — Replaced range input sliders with −/+ button pair (5% increments). `eqSplit()` rounds to nearest 5%. Tickers at 0% silently excluded from simulation |
 | | **Inline hex → CSS var()** — Replaced hardcoded hex colors (`#10b981`, `#ef4444`, `#f59e0b`) with `var(--accent)`, `var(--red)`, `var(--gold)` across 7 JS files for theme adaptability |
 
+### Phase 12 — Public Auth0 Sign-In, Saved Simulations & Tile Tooltips (Feb 21)
+
+| Commit | Description |
+|--------|-------------|
+| `cbc10e4` | **Optional Auth0 sign-in for public pages** — `shared-auth.js` IIFE loaded on all 10 public pages. Sign-in link in header, welcome bar with email + sign out. Auth state cached in localStorage for instant cross-page display. All pages use single `/` callback URL (no Auth0 config changes when adding pages). `POST /api/auth/login-event` now writes to `user_logins` table. Member content section on `index.html` with 3 tiles (Newsletters, Saved Simulations, Watchlists) visible only when signed in |
+| `cbc10e4` | **Saved portfolio simulations** — `SavedSimulation` model (9th DB table). `POST /api/simulations` (save, max 3 per user, 409 if full), `GET /api/simulations` (list by user), `DELETE /api/simulations/{id}` (delete own). Save button on simulator results (signed-in only). New `saved-simulations.html` page: auth-gated, displays simulation cards with ticker tags, 6 value tiles, total return %, MMF comparison, delete buttons. Sequential display numbering via array index (DB IDs may have gaps) |
+| `25c0927` | **Tile info tooltips** — Each of the 6 summary result tiles (Total Invested, Equity Value, Dividends Earned, Cash Accrual, Portfolio Balance, MMF Value) now shows a `?` icon with hover tooltip explaining the metric. Applied to both simulator results and saved simulations page. CSS-only hover with z-index elevation on parent card so tooltips overlay adjacent tiles |
+
 ---
 
 ## Branch History
@@ -135,7 +143,7 @@ main
 |------|---------|
 | `backend/app/config.py` | Settings: DB connection, Auth0, constants |
 | `backend/app/database.py` | SQLAlchemy engine & session factory |
-| `backend/app/models.py` | ORM models: Ticker, MonthlyPrice, Dividend, UserLogin, UserAdmin, ApiRequestLog |
+| `backend/app/models.py` | ORM models: Ticker, MonthlyPrice, Dividend, UserLogin, UserAdmin, ApiRequestLog, SavedSimulation |
 | `backend/app/mm_rates.py` | Money market rate models & loaders |
 | `backend/app/fetcher.py` | Yahoo Finance data fetcher |
 | `backend/app/fred_fetcher.py` | FRED federal funds rate fetcher |
@@ -153,8 +161,8 @@ main
 | `frontend/index.html` | Landing page: tool overview cards. Served at `/` |
 | `frontend/simulator-guide.html` | How It Works guide for the simulator |
 | `frontend/portfolio-simulator.html` | Asset Allocation Simulator |
-| `frontend/portfolio-simulator.css` | Simulator-specific styles (stepper controls, modals, cards, light-mode overrides) |
-| `frontend/portfolio-simulator.js` | Simulation engine + UI rendering (Canvas uses THEME.* getters) |
+| `frontend/portfolio-simulator.css` | Simulator-specific styles (stepper controls, modals, cards, tile info tooltips, light-mode overrides) |
+| `frontend/portfolio-simulator.js` | Simulation engine + UI rendering (Canvas uses THEME.* getters, tile tooltips, save simulation) |
 | `frontend/sector-performance.html` | Annual sector returns & dividends quilt |
 | `frontend/sector-performance.css` | Quilt table, return/dividend color scales, light-mode overrides |
 | `frontend/sector-performance.js` | Sector performance logic |
@@ -164,9 +172,11 @@ main
 | `frontend/dividend-growth.html/js` | Year-over-year dividend growth by sector |
 | `frontend/growth-chart.html/js` | $10K cumulative growth chart (Canvas, THEME.* getters) |
 | `frontend/risk-return.html/js` | Risk vs return scatter plot (Canvas, THEME.* getters) |
-| `frontend/shared-analytics.css` | Single source of truth: CSS variables, reset, fonts, header/nav, dark+light theme overrides, toggle button styles |
+| `frontend/shared-analytics.css` | Single source of truth: CSS variables, reset, fonts, header/nav, welcome bar styles, dark+light theme overrides, toggle button styles |
 | `frontend/shared-analytics.js` | Shared API layer, utilities, sector constants |
+| `frontend/shared-auth.js` | Public Auth0 sign-in IIFE: optional login/logout, welcome bar, _pubAuthFetch(), _pubIsSignedIn(), pubauth event |
 | `frontend/theme-toggle.js` | Dark/light theme toggle (IIFE + localStorage + THEME palette + themechange event) |
+| `frontend/saved-simulations.html` | View & delete saved simulations (auth-gated, tile info tooltips) |
 | `frontend/admin.html` | Admin dashboard (Auth0 login + user_admin whitelist, isolated) |
 | `frontend/CD-simulator.html` | CD portfolio advisor (AI-powered) |
 | `tools/generate_test_spreadsheet.py` | Excel workbook generator |
