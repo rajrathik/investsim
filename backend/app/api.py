@@ -103,7 +103,7 @@ if os.path.exists(env_path):
 
 from app.database import SessionLocal, init_db, engine
 from app.models import Ticker, MonthlyPrice, Dividend, UserLogin, UserAdmin, ApiRequestLog, SavedSimulation
-from app.config import MAX_TICKERS, ENABLE_WRITE_API
+from app.config import MAX_TICKERS, ENABLE_WRITE_API, ALLOWED_ORIGINS
 from app.auth import get_current_user
 
 # Configure logging
@@ -147,7 +147,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # Allow frontend to connect (adjust origins when deploying)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

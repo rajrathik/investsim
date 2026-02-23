@@ -41,6 +41,12 @@ FULL_HISTORY_YEARS = 30
 # Reads from .env: ENABLE_WRITE_API=True
 ENABLE_WRITE_API = os.getenv("ENABLE_WRITE_API", "False").strip().lower() in ("true", "1", "yes")
 
+# CORS allowed origins (comma-separated)
+# Default "*" allows all — lock down for production via .env or Railway variables
+ALLOWED_ORIGINS = [
+    o.strip() for o in os.getenv("ALLOWED_ORIGINS", "*").split(",") if o.strip()
+]
+
 # Auth0 settings
 AUTH0_DOMAIN = os.getenv("AUTH0_DOMAIN", "")
 AUTH0_CLIENT_ID = os.getenv("AUTH0_CLIENT_ID", "")
