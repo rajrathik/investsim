@@ -142,6 +142,28 @@
 | `d435b11` | **SQL Server → PostgreSQL sync tool** — `tools/sync_sql_to_postgres.py`: reads from local SQL Server, writes to Railway PostgreSQL. Creates tables if they don't exist. Truncates + bulk inserts in batches of 1000. Resets auto-increment sequences. Supports `--tables`, `--all`, `--dry-run`, `--status` modes. Data tables synced: `tickers`, `monthly_prices`, `dividends`, `monthly_mm_rates`, `annual_mm_rates`, `user_admin`. Log tables (`user_logins`, `api_request_logs`, `saved_simulations`) synced only with `--all` flag |
 | `ebd0906` | **Remove duplicate backend/requirements.txt** — root `requirements.txt` is what Railway installs from (Railway doesn't install from subdirectories). Removed the duplicate in `backend/` to avoid confusion |
 
+### Phase 21 — Stack & Earn columns, admin rate management, UX copy (Mar 2026)
+
+| Change | Description |
+|--------|-------------|
+| `backend/app/models.py` | Added 3 nullable columns to both `StackEarnSavingsTier` and `StackEarnGoalTier`: `display_rate` (Integer, default 1 — set to 0 to hide rate in UI), `display_upto` (Integer, default 0 — set to 1 to format range as "Upto $X"), `product_type` (String(100), default `'PurposeSaving'` — product identifier for future extensibility) |
+| `backend/onetime/migrate_stack_earn_add_columns.py` | One-time migration script: ALTER TABLE on both tier tables for SQL Server (IF NOT EXISTS guard) and PostgreSQL (ADD COLUMN IF NOT EXISTS); backfills NULLs with defaults |
+| `backend/app/api.py` | Refactored `get_stack_earn_savings_tiers` / `get_stack_earn_goal_tiers` to use shared `_serialize_tier()` returning all 8 fields (with `getattr` fallbacks for pre-migration rows). Added `TierUpsert` Pydantic model and 6 new admin-gated CRUD endpoints: `GET /api/admin/stack-earn/savings-tiers`, `PUT /api/admin/stack-earn/savings-tiers/{n}`, `POST /api/admin/stack-earn/savings-tiers`, and equivalents for goal-tiers |
+| `frontend/stack-earn.js` | `renderTiers()` now shows product name above the table, hides rate cell when `display_rate=0` (collapses Rate column if no tier shows rates), and uses "Upto $X" range format when `display_upto=1` |
+| `frontend/admin.html` | New **Stack & Earn — Rate Management** card: Savings / Goal tab switcher, editable table (label, min, max, rate %, Show Rate checkbox, Upto Format checkbox) with per-row Save button, Add New Tier form with product name field. Loads on `adminInit()` via new admin endpoints |
+| `frontend/montecarlo.html` | Added page-level layman parameter guide below methodology note: plain-English descriptions of Starting Amount, Monthly Cash Flow, Investment Horizon, and Market Cycle Sensitivity with guidance on defaults |
+| `frontend/index.html` | Stack & Earn card: removed `$500/mo` reference and "tiered/split" language; new copy describes recurring deposits accumulating with interest over time. S&P 500 card: renamed from "S&P 500 DCA Simulator" to "S&P 500 Historical Simulator" |
+| `frontend/sp500-simulate.html` | Removed "DCA" from `<title>`, `og:title`, `twitter:title`, JSON-LD `name`, and `<h1>` — now "S&P 500 Historical Simulator" throughout |
+
+### Phase 20 — Annual Market Extremes (Mar 2026)
+
+| Change | Description |
+|--------|-------------|
+| `GET /api/sp500-extreme-years` | New endpoint: returns the N best and N worst full calendar years from Shiller data. Annual returns compounded from 12 monthly NominalTotalReturn values (partial years skipped). Each row: rank, year (string), return_pct, end_value ($10K result). Default N=20, max 50. 60/min rate limit |
+| `frontend/extreme-years.html` | New page: identical layout to Monthly Market Extremes. Side-by-side panels (Worst Years / Best Years) with summary cards. "Year" column header instead of "Month". Chip toggle for top-10 vs top-20 |
+| `frontend/extreme-years.js` | IIFE: fetches n=20 once (cached), re-renders sliced table on chip toggle. Same render logic as extreme-months.js |
+| `frontend/index.html` | Added Annual Market Extremes tool card (📅) after the monthly extremes card |
+
 ### Phase 19 — Monthly Market Extremes (Mar 2026)
 
 | Change | Description |
@@ -252,8 +274,11 @@ main
 | `frontend/theme-toggle.js` | Dark/light theme toggle (IIFE + localStorage + THEME palette + themechange event) |
 | `frontend/saved-simulations.html` | View & delete saved simulations (auth-gated, tile info tooltips) |
 | `frontend/robots.txt` | Search engine crawl directives (allows crawlers, blocks admin + API) |
-| `frontend/sitemap.xml` | XML sitemap for Google — all 11 public URLs with priorities |
-| `frontend/admin.html` | Admin dashboard (Auth0 login + user_admin whitelist, isolated) |
+| `frontend/sitemap.xml` | XML sitemap for Google — all public URLs with priorities |
+| `frontend/extreme-months.html/js` | Monthly Market Extremes — see Phase 19 |
+| `frontend/extreme-years.html/js` | Annual Market Extremes — see Phase 20 |
+| `frontend/admin.html` | Admin dashboard (Auth0 login + user_admin whitelist, isolated). Phase 21: added Stack & Earn Rate Management card |
+| `backend/onetime/migrate_stack_earn_add_columns.py` | One-time migration: adds display_rate, display_upto, product_type columns to both tier tables — see Phase 21 |
 | `frontend/CD-simulator.html` | CD portfolio advisor (AI-powered) |
 | `tools/generate_test_spreadsheet.py` | Excel workbook generator |
 | `tools/sync_sql_to_postgres.py` | Sync local SQL Server data to Railway PostgreSQL |

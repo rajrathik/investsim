@@ -61,45 +61,41 @@
 
   /* ---- Core simulation ---- */
   function simulate(monthlyC, years, tiers) {
-    /* tiers sorted by tier_number, 3 entries */
+    /* tiers sorted by tier_number */
     var t = tiers;
-    var lim1 = t[0] ? t[0].max_amount : 1000;   // upper bound for T1 (inclusive)
-    var lim2 = t[1] ? t[1].max_amount : 10000;  // upper bound for T2
+    /* tier balance thresholds — Infinity when no upper bound */
+    var lim1 = t[0] ? (t[0].max_amount != null ? t[0].max_amount : Infinity) : 1000;
+    var lim2 = t[1] ? (t[1].max_amount != null ? t[1].max_amount : Infinity) : 10000;
     var r1 = t[0] ? t[0].annual_rate / 12 : 0;
     var r2 = t[1] ? t[1].annual_rate / 12 : 0;
     var r3 = t[2] ? t[2].annual_rate / 12 : 0;
 
-    var t1_bal = 0, t2_bal = 0, t3_bal = 0;
+    var balance = 0;
     var totalDeposited = 0;
     var yearRows = [];
-
     var months = years * 12;
     var yearT1Earn = 0, yearT2Earn = 0, yearT3Earn = 0;
     var yearDeposited = 0;
 
     for (var m = 1; m <= months; m++) {
-      /* Split contribution across tiers */
-      var t1_portion = Math.min(monthlyC, lim1);
-      var t2_portion = Math.max(0, Math.min(monthlyC, lim2) - lim1);
-      var t3_portion = Math.max(0, monthlyC - lim2);
-
-      /* Pre-interest balance (for interest calc) */
-      var t1_prev = t1_bal;
-      var t2_prev = t2_bal;
-      var t3_prev = t3_bal;
-
-      /* Add deposit then compound */
-      t1_bal = (t1_bal + t1_portion) * (1 + r1);
-      t2_bal = (t2_bal + t2_portion) * (1 + r2);
-      t3_bal = (t3_bal + t3_portion) * (1 + r3);
-
+      /* Deposit first */
+      balance += monthlyC;
       totalDeposited += monthlyC;
       yearDeposited += monthlyC;
 
-      /* Track interest earned this month */
-      yearT1Earn += (t1_bal - t1_prev - t1_portion);
-      yearT2Earn += (t2_bal - t2_prev - t2_portion);
-      yearT3Earn += (t3_bal - t3_prev - t3_portion);
+      /* Split running balance across tier thresholds, apply each rate */
+      var b1 = Math.min(balance, lim1);
+      var b2 = Math.max(0, Math.min(balance, lim2) - lim1);
+      var b3 = Math.max(0, balance - lim2);
+
+      var i1 = b1 * r1;
+      var i2 = b2 * r2;
+      var i3 = b3 * r3;
+
+      balance += i1 + i2 + i3;
+      yearT1Earn += i1;
+      yearT2Earn += i2;
+      yearT3Earn += i3;
 
       /* Year-end snapshot */
       if (m % 12 === 0) {
@@ -109,7 +105,7 @@
           t1Earned: yearT1Earn,
           t2Earned: yearT2Earn,
           t3Earned: yearT3Earn,
-          balance: t1_bal + t2_bal + t3_bal,
+          balance: balance,
           cumDeposited: totalDeposited,
         });
         yearT1Earn = 0; yearT2Earn = 0; yearT3Earn = 0;
@@ -117,11 +113,10 @@
       }
     }
 
-    var total = t1_bal + t2_bal + t3_bal;
     return {
-      total: total,
+      total: balance,
       totalDeposited: totalDeposited,
-      interestEarned: total - totalDeposited,
+      interestEarned: balance - totalDeposited,
       yearRows: yearRows,
     };
   }
@@ -130,16 +125,27 @@
   function renderTable(tbodyId, rows) {
     var tbody = document.getElementById(tbodyId);
     tbody.innerHTML = '';
-    var cumDep = 0;
+    var showT2 = rows.some(function (r) { return r.t2Earned > 0; });
+    var showT3 = rows.some(function (r) { return r.t3Earned > 0; });
+
+    /* Sync thead columns */
+    var thead = tbody.closest('table').querySelector('thead tr');
+    if (thead) {
+      thead.innerHTML =
+        '<th>Year</th><th>Deposited</th><th>T1 Earned</th>' +
+        (showT2 ? '<th>T2 Earned</th>' : '') +
+        (showT3 ? '<th>T3 Earned</th>' : '') +
+        '<th>Balance</th>';
+    }
+
     rows.forEach(function (r) {
-      cumDep += r.deposited;
       var tr = document.createElement('tr');
       tr.innerHTML =
         '<td>Year ' + r.year + '</td>' +
         '<td>' + fmt$(r.cumDeposited) + '</td>' +
         '<td class="earn-val">+' + fmt$exact(r.t1Earned) + '</td>' +
-        '<td class="earn-val">+' + fmt$exact(r.t2Earned) + '</td>' +
-        '<td class="earn-val">+' + fmt$exact(r.t3Earned) + '</td>' +
+        (showT2 ? '<td class="earn-val">+' + fmt$exact(r.t2Earned) + '</td>' : '') +
+        (showT3 ? '<td class="earn-val">+' + fmt$exact(r.t3Earned) + '</td>' : '') +
         '<td><strong>' + fmt$(r.balance) + '</strong></td>';
       tbody.appendChild(tr);
     });
@@ -213,21 +219,30 @@
 
   /* ---- Render tier rates table ---- */
   function renderTiers(savTiers) {
-    var html = '<table class="tiers-table"><thead><tr>' +
-      '<th>Tier</th><th>Monthly Range</th><th style="text-align:right">Annual Rate</th>' +
+    var productName = (savTiers[0] && savTiers[0].product_type) ? savTiers[0].product_type : 'PurposeSaving';
+    var anyRateVisible = savTiers.some(function (t) { return (t.display_rate !== 0); });
+
+    var html = '<div style="font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:.5rem">' +
+      productName + '</div>';
+    html += '<table class="tiers-table"><thead><tr>' +
+      '<th>Tier</th><th>Monthly Range</th>' +
+      (anyRateVisible ? '<th style="text-align:right">Annual Rate</th>' : '') +
       '</tr></thead><tbody>';
 
-    savTiers.forEach(function (t, i) {
+    savTiers.forEach(function (t) {
+      var showRate = (t.display_rate !== 0);
       var range;
       if (t.max_amount === null || t.max_amount === undefined) {
         range = fmt$(t.min_amount) + '+/mo';
+      } else if (t.display_upto === 1) {
+        range = 'Upto ' + fmt$(t.max_amount);
       } else {
         range = fmt$(t.min_amount === 0 ? 1 : t.min_amount) + ' – ' + fmt$(t.max_amount) + '/mo';
       }
       html += '<tr>' +
         '<td><span class="tier-badge">T' + t.tier_number + '</span></td>' +
         '<td>' + range + '</td>' +
-        '<td><span class="tier-rate">' + (t.annual_rate * 100).toFixed(2) + '%</span></td>' +
+        (anyRateVisible ? '<td>' + (showRate ? '<span class="tier-rate">' + (t.annual_rate * 100).toFixed(2) + '%</span>' : '') + '</td>' : '') +
         '</tr>';
     });
     html += '</tbody></table>';

@@ -50,7 +50,19 @@ venv\Scripts\grip CHANGELOG.md
 venv\Scripts\grip tools\Spreadsheet_Guide.md
 ```
 
-## 5. Update data (when needed)
+## 5. One-time DB migrations (run once per DB after pulling new code)
+
+### Stack & Earn — add display_rate / display_upto / product_type columns (Phase 21)
+
+```bash
+cd C:\Raj\python\portfolio-simulator\backend
+..\venv\Scripts\activate
+python onetime\migrate_stack_earn_add_columns.py
+```
+
+Run once on local SQL Server. To run against Railway PostgreSQL, set `DB_TYPE=postgres` in `backend\.env` first, then run the same script.
+
+## 7. Update data (when needed)
 
 ```bash
 cd C:\Raj\python\portfolio-simulator\backend
@@ -59,7 +71,7 @@ python run_batch.py incremental
 python run_fred_batch.py incremental
 ```
 
-## 6. Run tests
+## 8. Run tests
 
 ```bash
 cd C:\Raj\python\portfolio-simulator\backend
@@ -67,7 +79,7 @@ cd C:\Raj\python\portfolio-simulator\backend
 pytest tests/ -v
 ```
 
-## 7. Generate test spreadsheet
+## 9. Generate test spreadsheet
 
 Edit `tools/spreadsheet_config.txt` then:
 
@@ -79,7 +91,7 @@ venv\Scripts\python tools\generate_test_spreadsheet.py
 
 Output: `tools/Portfolio_Simulator_Test.xlsx`
 
-## 8. Convert Markdown files to PDF
+## 10. Convert Markdown files to PDF
 
 When a `.md` file is new or changed, regenerate its PDF:
 
@@ -101,7 +113,7 @@ Or convert any single file:
 venv\Scripts\mdpdf -o <output>.pdf <input>.md
 ```
 
-## 9. Railway deployment (reference)
+## 11. Railway deployment (reference)
 
 ### One-time: Replace domain placeholder in SEO tags
 
@@ -111,7 +123,7 @@ Find:    investsim.claritycapitaltools.com
 Replace: your-actual-domain.railway.app   (or your custom domain)
 ```
 
-Files affected: `frontend/sitemap.xml`, `frontend/robots.txt`, all 11 HTML files (canonical + OG tags).
+Files affected: `frontend/sitemap.xml`, `frontend/robots.txt`, all 17 HTML files (canonical + OG tags).
 
 ### Railway start command (set in Railway service settings — not a Procfile)
 

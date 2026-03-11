@@ -80,10 +80,11 @@ frontend/theme-toggle.js       ← Dark/light theme IIFE (no FOUC)
 | $10K Growth Chart | `growth-chart.html` |
 | Risk vs Return | `risk-return.html` |
 | S&P 500 History | `sp500-history.html` |
-| S&P 500 DCA Simulator | `sp500-simulate.html` |
+| S&P 500 Historical Simulator | `sp500-simulate.html` |
 | Stack & Earn (Tiered Savings) | `stack-earn.html` |
 | Monte Carlo Simulator | `montecarlo.html` |
 | Monthly Market Extremes | `extreme-months.html` |
+| Annual Market Extremes | `extreme-years.html` |
 | Saved Simulations | `saved-simulations.html` (**sign-in required**) |
 | Admin Dashboard | `admin.html` (**Auth0 + user_admin table**) |
 | CD Portfolio Advisor (AI) | `CD-simulator.html` + `cdapp.js` + `cdstyles.css` |
@@ -135,6 +136,8 @@ cd backend && uvicorn app.api:app --reload
 - Default: 60/min | Heavy reads: 30/min | Writes: 10/min | Batch: 5/min
 
 ## Recent Commits
+- Stack & Earn: added `display_rate`, `display_upto`, `product_type` columns to both tier tables + migration script; `renderTiers()` respects flags; 6 new admin CRUD endpoints (`GET/PUT/POST /api/admin/stack-earn/savings-tiers` + goal-tiers); admin.html Rate Management card (editable table, Add New Tier form, product name display); Monte Carlo parameter guide added to `montecarlo.html`; renamed S&P 500 DCA Simulator → "S&P 500 Historical Simulator" across index.html and sp500-simulate.html; Stack & Earn card copy updated to remove tiered/split language
+- Added Annual Market Extremes (`extreme-years.html/js`): ranked best & worst full calendar years in S&P 500 history since 1871; same side-by-side red/green panel layout as monthly extremes; compounded from monthly Shiller data; top-10/20 chip toggle; new `GET /api/sp500-extreme-years` endpoint
 - Added Monthly Market Extremes (`extreme-months.html/js`): ranked best & worst single months in S&P 500 history since 1871; side-by-side red/green panels; $10K result per month; mini-bar magnitude indicators; top-10/20 chip toggle; new `GET /api/sp500-extreme-months` endpoint
 - Monte Carlo refinements: added 5yr horizon chip; `?` tooltip on Market Cycle Sensitivity explaining Short/Medium/Long in plain terms; Deposited column + `?` tooltip on percentile table
 - Added Monte Carlo Simulator (`montecarlo.html/js`): block-bootstrap 1,000-trial simulation from Shiller history; fan chart P10–P90 bands; withdrawal ruin-rate tracking; one-time lump sum events; new `GET /api/shiller-monthly-returns` endpoint

@@ -1614,6 +1614,59 @@ def get_shiller_monthly_returns(request: Request, db: Session = Depends(get_db))
 _MONTH_ABBR = ["Jan","Feb","Mar","Apr","May","Jun",
                "Jul","Aug","Sep","Oct","Nov","Dec"]
 
+@app.get("/api/sp500-extreme-years")
+@limiter.limit("60/minute")
+def get_sp500_extreme_years(
+    request: Request,
+    n: int = Query(20, ge=5, le=50),
+    db: Session = Depends(get_db),
+):
+    """Return the N best and N worst full calendar years by compounded NominalTotalReturn."""
+    from collections import defaultdict
+
+    try:
+        rows = db.execute(
+            text(
+                'SELECT "Year", "Month", "NominalTotalReturn" '
+                "FROM shiller_market_data "
+                'WHERE "NominalTotalReturn" IS NOT NULL '
+                'ORDER BY "Year", "Month"'
+            )
+        ).fetchall()
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="shiller_market_data unavailable.") from exc
+
+    monthly_by_year: dict = defaultdict(list)
+    for row in rows:
+        monthly_by_year[int(row[0])].append(float(row[2]))
+
+    annual = {}
+    for yr in sorted(monthly_by_year.keys()):
+        months = monthly_by_year[yr]
+        if len(months) < 12:
+            continue
+        compound = 1.0
+        for r in months:
+            compound *= (1.0 + r)
+        annual[yr] = compound - 1.0
+
+    sorted_years = sorted(annual.items(), key=lambda x: x[1])
+    total = len(sorted_years)
+    count = min(n, total)
+
+    def make(yr, ret, rank):
+        return {
+            "rank": rank,
+            "date": str(yr),
+            "return_pct": round(ret * 100, 2),
+            "end_value": round(10000 * (1 + ret)),
+        }
+
+    worst = [make(sorted_years[i][0], sorted_years[i][1], i + 1) for i in range(count)]
+    best  = [make(sorted_years[total - 1 - i][0], sorted_years[total - 1 - i][1], i + 1) for i in range(count)]
+    return {"worst": worst, "best": best}
+
+
 @app.get("/api/sp500-extreme-months")
 @limiter.limit("60/minute")
 def get_sp500_extreme_months(
@@ -1747,21 +1800,25 @@ def get_sp500_simulate(
 # STACK & EARN — TIERED SAVINGS CALCULATOR
 # ===========================================
 
+def _serialize_tier(r):
+    return {
+        "tier_number": r.tier_number,
+        "tier_label": r.tier_label,
+        "min_amount": r.min_amount,
+        "max_amount": r.max_amount,
+        "annual_rate": r.annual_rate,
+        "display_rate": getattr(r, "display_rate", 1) if getattr(r, "display_rate", None) is not None else 1,
+        "display_upto": getattr(r, "display_upto", 0) if getattr(r, "display_upto", None) is not None else 0,
+        "product_type": getattr(r, "product_type", None) or "PurposeSaving",
+    }
+
+
 @app.get("/api/stack-earn/savings-tiers")
 @limiter.limit("60/minute")
 def get_stack_earn_savings_tiers(request: Request, db: Session = Depends(get_db)):
     """Return tiered interest rates for the savings calculator."""
     rows = db.query(StackEarnSavingsTier).order_by(StackEarnSavingsTier.tier_number).all()
-    return [
-        {
-            "tier_number": r.tier_number,
-            "tier_label": r.tier_label,
-            "min_amount": r.min_amount,
-            "max_amount": r.max_amount,
-            "annual_rate": r.annual_rate,
-        }
-        for r in rows
-    ]
+    return [_serialize_tier(r) for r in rows]
 
 
 @app.get("/api/stack-earn/goal-tiers")
@@ -1769,16 +1826,116 @@ def get_stack_earn_savings_tiers(request: Request, db: Session = Depends(get_db)
 def get_stack_earn_goal_tiers(request: Request, db: Session = Depends(get_db)):
     """Return tiered interest rates for the goal calculator."""
     rows = db.query(StackEarnGoalTier).order_by(StackEarnGoalTier.tier_number).all()
-    return [
-        {
-            "tier_number": r.tier_number,
-            "tier_label": r.tier_label,
-            "min_amount": r.min_amount,
-            "max_amount": r.max_amount,
-            "annual_rate": r.annual_rate,
-        }
-        for r in rows
-    ]
+    return [_serialize_tier(r) for r in rows]
+
+
+# ---- Admin CRUD for Stack & Earn tiers ----
+
+class TierUpsert(BaseModel):
+    tier_label: str
+    min_amount: float
+    max_amount: Optional[float] = None
+    annual_rate: float
+    display_rate: Optional[int] = 1
+    display_upto: Optional[int] = 0
+    product_type: Optional[str] = "PurposeSaving"
+
+
+@app.get("/api/admin/stack-earn/savings-tiers")
+@limiter.limit("30/minute")
+def admin_get_savings_tiers(
+    request: Request,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    rows = db.query(StackEarnSavingsTier).order_by(StackEarnSavingsTier.tier_number).all()
+    return [_serialize_tier(r) for r in rows]
+
+
+@app.put("/api/admin/stack-earn/savings-tiers/{tier_number}")
+@limiter.limit("10/minute")
+def admin_update_savings_tier(
+    request: Request,
+    tier_number: int,
+    body: TierUpsert,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    require_write_enabled()
+    row = db.query(StackEarnSavingsTier).filter(StackEarnSavingsTier.tier_number == tier_number).first()
+    if not row:
+        raise HTTPException(status_code=404, detail="Tier not found")
+    for field, val in body.model_dump(exclude_unset=True).items():
+        setattr(row, field, val)
+    db.commit()
+    db.refresh(row)
+    return _serialize_tier(row)
+
+
+@app.post("/api/admin/stack-earn/savings-tiers", status_code=201)
+@limiter.limit("10/minute")
+def admin_create_savings_tier(
+    request: Request,
+    body: TierUpsert,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    require_write_enabled()
+    # auto-assign next tier_number
+    max_num = db.query(StackEarnSavingsTier).count()
+    row = StackEarnSavingsTier(tier_number=max_num + 1, **body.model_dump())
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return _serialize_tier(row)
+
+
+@app.get("/api/admin/stack-earn/goal-tiers")
+@limiter.limit("30/minute")
+def admin_get_goal_tiers(
+    request: Request,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    rows = db.query(StackEarnGoalTier).order_by(StackEarnGoalTier.tier_number).all()
+    return [_serialize_tier(r) for r in rows]
+
+
+@app.put("/api/admin/stack-earn/goal-tiers/{tier_number}")
+@limiter.limit("10/minute")
+def admin_update_goal_tier(
+    request: Request,
+    tier_number: int,
+    body: TierUpsert,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    require_write_enabled()
+    row = db.query(StackEarnGoalTier).filter(StackEarnGoalTier.tier_number == tier_number).first()
+    if not row:
+        raise HTTPException(status_code=404, detail="Tier not found")
+    for field, val in body.model_dump(exclude_unset=True).items():
+        setattr(row, field, val)
+    db.commit()
+    db.refresh(row)
+    return _serialize_tier(row)
+
+
+@app.post("/api/admin/stack-earn/goal-tiers", status_code=201)
+@limiter.limit("10/minute")
+def admin_create_goal_tier(
+    request: Request,
+    body: TierUpsert,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    require_write_enabled()
+    max_num = db.query(StackEarnGoalTier).count()
+    row = StackEarnGoalTier(tier_number=max_num + 1, **body.model_dump())
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return _serialize_tier(row)
 
 
 # ===========================================

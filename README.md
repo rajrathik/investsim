@@ -56,14 +56,16 @@ C:\Raj\python\portfolio-simulator\
 │   ├── risk-return.js
 │   ├── sp500-history.html          ← S&P 500 decade heatmap with methodology panel (Shiller data, 1871–today)
 │   ├── sp500-history.js
-│   ├── sp500-simulate.html         ← Historical DCA simulator: pick year range, starting amount, monthly contribution
+│   ├── sp500-simulate.html         ← Historical Simulator: pick year range, starting amount, monthly contribution
 │   ├── sp500-simulate.js
-│   ├── stack-earn.html             ← Tiered savings calculator: ending balance or required monthly contribution to reach a goal
+│   ├── stack-earn.html             ← Savings calculator: recurring deposits accumulate with interest; reverse-solve for goal contributions
 │   ├── stack-earn.js
 │   ├── montecarlo.html             ← Monte Carlo portfolio simulator: 1,000 block-bootstrap futures from 150+ yrs of S&P 500 history; 5–30yr horizon; Market Cycle Sensitivity tooltip (Short/Medium/Long blocks); percentile table with Deposited column + plain-language tooltip
 │   ├── montecarlo.js
 │   ├── extreme-months.html         ← Monthly Market Extremes: ranked best & worst single months in S&P 500 history since 1871; shows $10K result per month; top-10/20 chip toggle; mini-bar magnitude indicators
 │   ├── extreme-months.js
+│   ├── extreme-years.html          ← Annual Market Extremes: ranked best & worst full calendar years in S&P 500 history since 1871; shows $10K result per year; top-10/20 chip toggle; mini-bar magnitude indicators
+│   ├── extreme-years.js
 │   ├── shared-analytics.css        ← Single source of truth: CSS variables, reset, fonts, header, ← Home link styles, dark+light theme overrides, welcome bar styles, toggle button styles
 │   ├── shared-analytics.js         ← Shared API layer, utilities, error handling, pageview tracking
 │   ├── shared-auth.js              ← Auth0 public sign-in (IIFE): optional login/logout, welcome bar, _pubAuthFetch(), _pubIsSignedIn()
@@ -143,10 +145,11 @@ All public pages are open (no login required). Admin is completely separate.
 | `http://localhost:8000/growth-chart.html` | $10K growth chart | Public |
 | `http://localhost:8000/risk-return.html` | Risk vs return scatter plot | Public |
 | `http://localhost:8000/sp500-history.html` | S&P 500 decade heatmap | Public |
-| `http://localhost:8000/sp500-simulate.html` | S&P 500 historical DCA simulator | Public |
-| `http://localhost:8000/stack-earn.html` | Tiered savings calculator (Stack & Earn) | Public |
+| `http://localhost:8000/sp500-simulate.html` | S&P 500 Historical Simulator | Public |
+| `http://localhost:8000/stack-earn.html` | Stack & Earn savings calculator | Public |
 | `http://localhost:8000/montecarlo.html` | Monte Carlo portfolio simulator (5–30yr horizon, withdrawal mode, lump sum, cycle sensitivity) | Public |
 | `http://localhost:8000/extreme-months.html` | Monthly Market Extremes — best & worst single months, $10K result | Public |
+| `http://localhost:8000/extreme-years.html` | Annual Market Extremes — best & worst full calendar years, $10K result | Public |
 | `http://localhost:8000/saved-simulations.html` | View & delete saved simulations | **Sign-in required** |
 | `http://localhost:8000/admin.html` | Admin dashboard | **Auth0 login required** |
 
@@ -298,6 +301,7 @@ Opens at `http://localhost:6419`. Press Ctrl+C to stop.
 - **Risk vs Return** — scatter plot of annual volatility (X) vs total return (Y); return/risk ratio
 - **S&P 500 History** — 155 years of annual returns from Shiller data; decade heatmap (muted green/red color scale); methodology panel explaining formula, columns used, and assumptions; summary stats (median, best/worst year)
 - **Monthly Market Extremes** — ranked best and worst single months in S&P 500 history since 1871; side-by-side panels (red/green); shows what each month did to $10,000; proportional mini-bar magnitude indicators; chip toggle for top-10 vs top-20
+- **Annual Market Extremes** — ranked best and worst full calendar years in S&P 500 history since 1871; same side-by-side panel layout; annual returns compounded from monthly Shiller data; chip toggle for top-10 vs top-20
 
 ### Infrastructure
 - **Dark/light theme toggle** — 🌙/☀️ button on every page; persists via localStorage; no FOUC (synchronous IIFE in `<head>`); Canvas charts re-render on toggle

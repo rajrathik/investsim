@@ -72,6 +72,18 @@ body{min-height:100vh;background:var(--bg);color:var(--text1);font-family:'DM Sa
 .log-ok{color:var(--accent)}
 .log-err{color:var(--red)}
 .log-info{color:var(--text2)}
+
+/* Stack & Earn tiers table */
+.se-tab-row{display:flex;gap:8px;margin-bottom:16px}
+.se-tab{padding:7px 18px;border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;background:var(--bg);color:var(--text3);font-family:'JetBrains Mono',monospace;transition:all .2s}
+.se-tab.active{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
+.se-tbl{width:100%;border-collapse:collapse;font-size:12px;font-family:'JetBrains Mono',monospace}
+.se-tbl th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);padding:8px 10px;border-bottom:1px solid var(--border)}
+.se-tbl td{padding:8px 10px;border-bottom:1px solid rgba(30,41,59,.4);vertical-align:middle}
+.se-tbl tr:last-child td{border-bottom:none}
+.se-inp{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:5px 8px;color:var(--text1);font-size:12px;font-family:'JetBrains Mono',monospace;width:100%;outline:none}
+.se-inp:focus{border-color:var(--accent)}
+.se-product-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:10px}
 </style>
 </head>
 <body>
@@ -158,6 +170,19 @@ body{min-height:100vh;background:var(--bg);color:var(--text1);font-family:'DM Sa
       <button id="btnFredFull" class="btn" onclick="runFred('full')">📥 Full History</button>
       <button id="btnFredIncr" class="btn" onclick="runFred('incremental')">🔄 Incremental (3 months)</button>
     </div>
+  </div>
+
+  <!-- Stack & Earn — Rate Management -->
+  <div class="card">
+    <h2>Stack &amp; Earn — Rate Management</h2>
+    <div class="se-tab-row">
+      <button class="se-tab active" id="seTabSav" onclick="switchSETab('savings')">Savings Tiers</button>
+      <button class="se-tab" id="seTabGoal" onclick="switchSETab('goal')">Goal Tiers</button>
+    </div>
+    <div id="seContent">
+      <span style="color:var(--text3)">Loading...</span>
+    </div>
+    <div id="seTierMsg" class="banner" style="margin-top:12px;margin-bottom:0"></div>
   </div>
 
   <!-- Batch Status -->
@@ -297,6 +322,7 @@ async function adminInit() {
   await detectWriteApi();
   await loadTickers();
   await pollStatus();
+  await loadStackEarnTiers();
 }
 
 async function detectWriteApi() {
@@ -528,6 +554,140 @@ function formatTime(iso) {
     return d.toLocaleString();
   } catch (e) {
     return iso;
+  }
+}
+
+// ---- Stack & Earn Tier Management ----
+let seTiersData = { savings: [], goal: [] };
+let seCurrentTab = 'savings';
+
+function switchSETab(tab) {
+  seCurrentTab = tab;
+  document.getElementById('seTabSav').classList.toggle('active', tab === 'savings');
+  document.getElementById('seTabGoal').classList.toggle('active', tab === 'goal');
+  renderSETiers(tab);
+}
+
+async function loadStackEarnTiers() {
+  try {
+    const [savRes, goalRes] = await Promise.all([
+      adminFetch(API + '/api/admin/stack-earn/savings-tiers'),
+      adminFetch(API + '/api/admin/stack-earn/goal-tiers'),
+    ]);
+    seTiersData.savings = savRes.ok ? await savRes.json() : [];
+    seTiersData.goal = goalRes.ok ? await goalRes.json() : [];
+    renderSETiers(seCurrentTab);
+  } catch (e) {
+    document.getElementById('seContent').innerHTML =
+      '<span style="color:var(--red)">Failed to load tiers: ' + e.message + '</span>';
+  }
+}
+
+function renderSETiers(tab) {
+  const tiers = seTiersData[tab];
+  if (!tiers.length) {
+    document.getElementById('seContent').innerHTML = '<span style="color:var(--text3)">No tiers found.</span>';
+    return;
+  }
+
+  const productName = tiers[0].product_type || 'PurposeSaving';
+  let html = '<div class="se-product-label">Product: ' + productName + '</div>';
+  html += '<table class="se-tbl"><thead><tr>' +
+    '<th>#</th><th>Label</th><th>Min ($)</th><th>Max ($)</th><th>Rate (%)</th><th>Show Rate</th><th>Upto Format</th><th></th>' +
+    '</tr></thead><tbody>';
+
+  tiers.forEach(function (t) {
+    html += '<tr id="se-row-' + tab + '-' + t.tier_number + '">' +
+      '<td>' + t.tier_number + '</td>' +
+      '<td><input class="se-inp" id="se-label-' + tab + '-' + t.tier_number + '" value="' + (t.tier_label || '') + '" style="width:120px"></td>' +
+      '<td><input class="se-inp" id="se-min-' + tab + '-' + t.tier_number + '" type="number" value="' + (t.min_amount || 0) + '" style="width:80px"></td>' +
+      '<td><input class="se-inp" id="se-max-' + tab + '-' + t.tier_number + '" type="number" value="' + (t.max_amount !== null && t.max_amount !== undefined ? t.max_amount : '') + '" placeholder="∞" style="width:80px"></td>' +
+      '<td><input class="se-inp" id="se-rate-' + tab + '-' + t.tier_number + '" type="number" step="0.01" value="' + ((t.annual_rate * 100).toFixed(2)) + '" style="width:70px"></td>' +
+      '<td style="text-align:center"><input type="checkbox" id="se-dr-' + tab + '-' + t.tier_number + '"' + (t.display_rate !== 0 ? ' checked' : '') + '></td>' +
+      '<td style="text-align:center"><input type="checkbox" id="se-du-' + tab + '-' + t.tier_number + '"' + (t.display_upto === 1 ? ' checked' : '') + '></td>' +
+      '<td><button class="btn btn-accent" style="padding:5px 12px;font-size:11px" onclick="saveSETier(\'' + tab + '\',' + t.tier_number + ')" ' + (writeEnabled ? '' : 'disabled') + '>Save</button></td>' +
+      '</tr>';
+  });
+  html += '</tbody></table>';
+
+  // Add new tier form
+  html += '<div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">' +
+    '<div class="label" style="margin-bottom:8px">Add New Tier</div>' +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">' +
+    '<div><div class="label">Label</div><input class="se-inp inp" id="se-new-label-' + tab + '" placeholder="Tier 4" style="width:110px"></div>' +
+    '<div><div class="label">Min ($)</div><input class="se-inp inp" id="se-new-min-' + tab + '" type="number" value="0" style="width:80px"></div>' +
+    '<div><div class="label">Max ($)</div><input class="se-inp inp" id="se-new-max-' + tab + '" type="number" placeholder="∞" style="width:80px"></div>' +
+    '<div><div class="label">Rate (%)</div><input class="se-inp inp" id="se-new-rate-' + tab + '" type="number" step="0.01" value="1.00" style="width:70px"></div>' +
+    '<div><div class="label">Product</div><input class="se-inp inp" id="se-new-product-' + tab + '" value="PurposeSaving" style="width:130px"></div>' +
+    '<button class="btn btn-accent" style="padding:8px 16px;font-size:12px;align-self:flex-end" onclick="addSETier(\'' + tab + '\')" ' + (writeEnabled ? '' : 'disabled') + '>+ Add</button>' +
+    '</div>' +
+    '</div>';
+
+  document.getElementById('seContent').innerHTML = html;
+}
+
+async function saveSETier(tab, tierNum) {
+  const endpoint = tab === 'savings' ? 'savings-tiers' : 'goal-tiers';
+  const ratePct = parseFloat(document.getElementById('se-rate-' + tab + '-' + tierNum).value);
+  const maxVal = document.getElementById('se-max-' + tab + '-' + tierNum).value;
+  const body = {
+    tier_label: document.getElementById('se-label-' + tab + '-' + tierNum).value.trim(),
+    min_amount: parseFloat(document.getElementById('se-min-' + tab + '-' + tierNum).value) || 0,
+    max_amount: maxVal !== '' ? parseFloat(maxVal) : null,
+    annual_rate: ratePct / 100,
+    display_rate: document.getElementById('se-dr-' + tab + '-' + tierNum).checked ? 1 : 0,
+    display_upto: document.getElementById('se-du-' + tab + '-' + tierNum).checked ? 1 : 0,
+    product_type: seTiersData[tab].find(t => t.tier_number === tierNum)?.product_type || 'PurposeSaving',
+  };
+  try {
+    const r = await adminFetch(API + '/api/admin/stack-earn/' + endpoint + '/' + tierNum, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const d = await r.json();
+    const msgEl = document.getElementById('seTierMsg');
+    if (r.ok) {
+      const idx = seTiersData[tab].findIndex(t => t.tier_number === tierNum);
+      if (idx !== -1) seTiersData[tab][idx] = d;
+      showInlineMsg(msgEl, 'banner-ok', '✅ Tier ' + tierNum + ' saved');
+    } else {
+      showInlineMsg(msgEl, 'banner-err', '❌ ' + (d.detail || 'Save failed'));
+    }
+  } catch (e) {
+    showInlineMsg(document.getElementById('seTierMsg'), 'banner-err', '❌ ' + e.message);
+  }
+}
+
+async function addSETier(tab) {
+  const endpoint = tab === 'savings' ? 'savings-tiers' : 'goal-tiers';
+  const ratePct = parseFloat(document.getElementById('se-new-rate-' + tab).value) || 1;
+  const maxVal = document.getElementById('se-new-max-' + tab).value;
+  const body = {
+    tier_label: document.getElementById('se-new-label-' + tab).value.trim() || ('Tier ' + (seTiersData[tab].length + 1)),
+    min_amount: parseFloat(document.getElementById('se-new-min-' + tab).value) || 0,
+    max_amount: maxVal !== '' ? parseFloat(maxVal) : null,
+    annual_rate: ratePct / 100,
+    display_rate: 1,
+    display_upto: 0,
+    product_type: document.getElementById('se-new-product-' + tab).value.trim() || 'PurposeSaving',
+  };
+  try {
+    const r = await adminFetch(API + '/api/admin/stack-earn/' + endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const d = await r.json();
+    const msgEl = document.getElementById('seTierMsg');
+    if (r.ok) {
+      await loadStackEarnTiers();
+      showInlineMsg(msgEl, 'banner-ok', '✅ New tier added');
+    } else {
+      showInlineMsg(msgEl, 'banner-err', '❌ ' + (d.detail || 'Add failed'));
+    }
+  } catch (e) {
+    showInlineMsg(document.getElementById('seTierMsg'), 'banner-err', '❌ ' + e.message);
   }
 }
 

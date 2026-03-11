@@ -41,7 +41,8 @@ http://localhost:8000/   →   index.html  (landing page — tool cards, no auth
          (no auth)                                      rotation, div-growth,
                                                         growth-chart, risk-return,
                                                         sp500-history, sp500-simulate,
-                                                        stack-earn, extreme-months
+                                                        stack-earn, extreme-months,
+                                                        extreme-years
 
                   all tool pages have a ← Home link back to index.html
 
@@ -175,10 +176,11 @@ Each ticker has: symbol, name, active flag, created/updated timestamps.
 | `growth-chart.html/js` | $10K cumulative growth chart (interactive canvas) |
 | `risk-return.html/js` | Risk vs return scatter plot |
 | `sp500-history.html/js` | S&P 500 decade heatmap. Compounds monthly `NominalTotalReturn` values into annual returns; renders a color-interpolated decade grid (muted green/red); methodology panel explains columns used, formula, and assumptions |
-| `sp500-simulate.html/js` | Historical DCA simulator. Pick year range (1872–2024), starting amount, monthly contribution → final balance, stat strip, area chart (balance vs invested), year-by-year table with inline return bars. API: `GET /api/sp500-simulate` |
-| `stack-earn.html/js` | Tiered savings calculator. Two tabs: Savings (forward simulation with split-bucket compounding) and Goal (binary-search reverse solve). Loads tier rates from `GET /api/stack-earn/savings-tiers` and `GET /api/stack-earn/goal-tiers`. Three independent balance buckets (T1/T2/T3) compound at their own monthly rate |
+| `sp500-simulate.html/js` | S&P 500 Historical Simulator. Pick year range (1872–2024), starting amount, monthly contribution → final balance, stat strip, area chart (balance vs invested), year-by-year table with inline return bars. API: `GET /api/sp500-simulate` |
+| `stack-earn.html/js` | Stack & Earn savings calculator. Two tabs: Savings (forward simulation with split-bucket compounding) and Goal (binary-search reverse solve). Loads tier rates from `GET /api/stack-earn/savings-tiers` and `GET /api/stack-earn/goal-tiers`. Three independent balance buckets (T1/T2/T3) compound at their own monthly rate. Tier table respects `display_rate`, `display_upto`, and `product_type` fields from the API |
 | `montecarlo.html/js` | Monte Carlo portfolio simulator. Block-bootstrap: draws random N-year return blocks from Shiller history, 1,000 trials client-side. Horizon 5–30yr. Fan chart (P10/P25/P50/P75/P90 bands). Supports withdrawal mode (tracks ruin rate) and optional one-time lump sum event. Market Cycle Sensitivity selector (Short·1yr / Medium·3yr / Long·5yr) with plain-language `?` tooltip. Percentile table includes Deposited column and `?` tooltip explaining each column. API: `GET /api/shiller-monthly-returns` |
 | `extreme-months.html/js` | Monthly Market Extremes. Fetches `GET /api/sp500-extreme-months?n=20` once (cached). Renders side-by-side panels: worst months (red) and best months (green). Summary cards show all-time worst and best. Table rows: rank, date, return%, $10K result, mini-bar (width proportional to magnitude, scales to #1 entry). Chip toggle for top-10/top-20 slices from cached 20 with no re-fetch |
+| `extreme-years.html/js` | Annual Market Extremes. Fetches `GET /api/sp500-extreme-years?n=20` once (cached). Same layout as extreme-months. Annual returns compounded from monthly Shiller data server-side. Chip toggle for top-10/top-20 |
 | `saved-simulations.html` | View & delete saved simulations — auth-gated (shows sign-in prompt if not logged in), fetches via `_pubAuthFetch()`, renders cards with ticker tags, value tiles with ? tooltips, delete buttons |
 | `shared-analytics.css` | Single source of truth for CSS: `:root` variables, reset, fonts, header, `← Home` link styles, welcome bar styles, dark+light theme overrides, toggle button styles. All page-specific CSS files contain only overrides |
 | `shared-analytics.js` | Shared API utilities (authFetch, getSectorPerformance, getMonthlyPrices) with error handling (try/catch, resp.ok checks), pageview tracking beacon, chart tooltip helpers, sector constants |
@@ -269,6 +271,9 @@ HTTP Request
 | `POST /api/auth/login-event` | Logs public user login event to `user_logins` table |
 | `POST /api/track/pageview` | Records page view (fire-and-forget, self-hosted analytics) |
 | `GET /api/sp500-extreme-months` | Returns N best and N worst single months from Shiller data (rank, date, return_pct, end_value). Default N=20 |
+| `GET /api/sp500-extreme-years` | Returns N best and N worst full calendar years by compounded NominalTotalReturn (rank, date as year string, return_pct, end_value). Default N=20, max 50. 60/min rate limit |
+| `GET /api/stack-earn/savings-tiers` | Tier rates for the savings calculator. Returns 8 fields: tier_number, tier_label, min_amount, max_amount, annual_rate, display_rate, display_upto, product_type |
+| `GET /api/stack-earn/goal-tiers` | Tier rates for the goal calculator. Same 8-field response |
 
 ### Authenticated endpoints (Auth0 Bearer token required — public sign-in)
 
@@ -291,6 +296,12 @@ HTTP Request
 | `POST /api/batch/incremental` | Incremental load — configurable months (requires Auth0 token + ENABLE_WRITE_API) |
 | `POST /api/batch/fred-full` | Full FRED rate history load (requires Auth0 token + ENABLE_WRITE_API) |
 | `POST /api/batch/fred-incremental` | Incremental FRED load — last 3 months (requires Auth0 token + ENABLE_WRITE_API) |
+| `GET /api/admin/stack-earn/savings-tiers` | List savings tiers (admin-only) |
+| `PUT /api/admin/stack-earn/savings-tiers/{n}` | Update a savings tier (rate, label, display flags) |
+| `POST /api/admin/stack-earn/savings-tiers` | Add a new savings tier (auto-assigns next tier_number) |
+| `GET /api/admin/stack-earn/goal-tiers` | List goal tiers (admin-only) |
+| `PUT /api/admin/stack-earn/goal-tiers/{n}` | Update a goal tier |
+| `POST /api/admin/stack-earn/goal-tiers` | Add a new goal tier |
 
 All write endpoints are **double-gated**: Auth0 JWT token + `ENABLE_WRITE_API=True` in `.env`. Rate limited to 10/min (ticker CRUD) or 5/min (batch loads).
 
@@ -350,10 +361,11 @@ Individual page logic:
 | `growth-chart.js` | Monthly prices + annual dividends | Cumulative growth of $10K invested; interactive canvas with sector toggles |
 | `risk-return.js` | Annual returns | StdDev of annual returns (X) vs average total return (Y); scatter plot |
 | `sp500-history.js` | `shiller_market_data.NominalTotalReturn` | Compounds monthly returns into annual returns; renders decade heatmap with muted color interpolation (dark green/dark red poles); hover tooltip; re-colors on theme change |
-| `sp500-simulate.js` | `GET /api/sp500-simulate` | DCA simulation: each month balance = (balance + monthly) × (1 + NominalTotalReturn); renders stat strip, area chart with hover crosshair, year-by-year table with color-coded return bars |
-| `stack-earn.js` | `GET /api/stack-earn/savings-tiers`, `GET /api/stack-earn/goal-tiers` | Savings: 3-bucket split compounding (t1/t2/t3 each earn their rate independently). Goal: 60-iteration binary search to find monthly contribution → renders hero result + year-by-year table |
+| `sp500-simulate.js` | `GET /api/sp500-simulate` | Historical simulation: each month balance = (balance + monthly) × (1 + NominalTotalReturn); renders stat strip, area chart with hover crosshair, year-by-year table with color-coded return bars |
+| `stack-earn.js` | `GET /api/stack-earn/savings-tiers`, `GET /api/stack-earn/goal-tiers` | Savings: 3-bucket split compounding (t1/t2/t3 each earn their rate independently). Goal: 60-iteration binary search to find monthly contribution → renders hero result + year-by-year table. `renderTiers()` respects display_rate / display_upto / product_type flags |
 | `montecarlo.js` | `GET /api/shiller-monthly-returns` | Fetches ~1,850 monthly returns once (cached). Block-bootstrap: each trial draws random N-year blocks (1/3/5yr cycles), runs 1,000 trials. Horizon selectable 5–30yr. Computes P10/P25/P50/P75/P90 per year. Fan chart draws two filled bands + median line + optional deposits line. Percentile table with Deposited column. Ruin tracking for withdrawal mode. Optional one-time lump sum event |
 | `extreme-months.js` | `GET /api/sp500-extreme-months` | Fetches n=20 worst+best once (cached). Chip toggle re-renders sliced table (top-10 or top-20) without re-fetching. Mini-bars scale to the #1 entry in each list. Red/green color classes adapt to dark-mode via CSS `[data-theme="dark"]` overrides |
+| `extreme-years.js` | `GET /api/sp500-extreme-years` | Same pattern as extreme-months. Annual returns compounded server-side from monthly Shiller data. Chip toggle, mini-bars, dark-mode CSS |
 
 ---
 
@@ -372,13 +384,13 @@ Individual page logic:
 - **Opaque token support**: With no Auth0 audience configured, Auth0 issues opaque tokens. Backend validates via `/userinfo` endpoint — simpler setup, no Custom API registration needed.
 - **Smart batch loading**: Three modes — full-new (only new tickers), incremental (configurable months, default 2), full (all tickers, rare). Background threads keep the API responsive during long loads.
 - **Read-only API by default**: `ENABLE_WRITE_API=False` in config. Write endpoints return 403 until explicitly enabled in `.env`.
-- **Optional public sign-in**: `shared-auth.js` IIFE loaded on all 11 public pages. Handles Auth0 init, login/logout, welcome bar injection, and exposes `_pubAuthFetch()` for authenticated API calls. Completely separate from admin auth. Skips `admin.html`. Uses `localStorage` cache (`pub_auth_user`) for instant welcome bar display across pages.
+- **Optional public sign-in**: `shared-auth.js` IIFE loaded on all public pages. Handles Auth0 init, login/logout, welcome bar injection, and exposes `_pubAuthFetch()` for authenticated API calls. Completely separate from admin auth. Skips `admin.html`. Uses `localStorage` cache (`pub_auth_user`) for instant welcome bar display across pages.
 - **Single callback URL for all public pages**: All public pages use `window.location.origin + '/'` as the Auth0 redirect URI. Only two URLs ever needed in Auth0 Dashboard: `/` (public) and `/admin.html` (admin). Adding new pages never requires Auth0 config changes.
 - **Saved simulations**: Max 3 per user enforced server-side (409 Conflict). Auto-increment DB IDs with gaps after deletions — frontend uses array index + 1 for sequential display numbering (Portfolio #1, #2, #3).
 - **Tile info tooltips**: Each of the 6 summary result tiles has a `?` icon that reveals a description tooltip on hover. Uses CSS-only hover with `.tile-info:hover .tile-tooltip` (no JS). Parent card uses `z-index` elevation on hover so tooltips overlay adjacent cards.
 - **No build tools**: Vanilla HTML/CSS/JS. No Node.js, no webpack, no framework. All static files served by FastAPI's `StaticFiles` mount.
 - **CSS consolidation**: `shared-analytics.css` is the single source of truth for `:root` variables, reset, fonts, header, and shared component styles. `sector-performance.css` and `portfolio-simulator.css` contain only page-specific overrides — no duplicate `:root`, reset, or body rules.
-- **Dark/light theme toggle**: `theme-toggle.js` loaded synchronously in `<head>` on all 11 public pages. IIFE reads localStorage and sets `data-theme` attribute on `<html>` before body renders (prevents flash). DOMContentLoaded injects floating toggle button. Dispatches `themechange` CustomEvent for Canvas re-rendering. Exposes `window.THEME` getter object so Canvas-drawing JS can read computed CSS variable values.
+- **Dark/light theme toggle**: `theme-toggle.js` loaded synchronously in `<head>` on all public pages. IIFE reads localStorage and sets `data-theme` attribute on `<html>` before body renders (prevents flash). DOMContentLoaded injects floating toggle button. Dispatches `themechange` CustomEvent for Canvas re-rendering. Exposes `window.THEME` getter object so Canvas-drawing JS can read computed CSS variable values.
 - **5% stepper allocation controls**: Replaced range sliders with −/+ button pairs that increment/decrement by 5%. Equal Split rounds to nearest 5%. Tickers at 0% are silently excluded from the simulation (filtered at `active` array before any API calls).
 - **Interactive canvas charts**: Custom canvas rendering with crosshair and hover tooltip. No chart library dependency. Canvas structural colors use `THEME.*` getters that re-read CSS variables on theme change.
 - **Excel verification tool**: Python script generates a 5-sheet Excel workbook from real DB data using formulas that mirror the JS simulation. Users can trace every calculation step. Reads from a plain-text config file.
