@@ -3,4 +3,4 @@ User-agent: *
 Allow: /
 Disallow: /admin.html
 Disallow: /api/
-Sitemap: https://YOUR-DOMAIN.com/sitemap.xml
+Sitemap: https://investsim.claritycapitaltools.com/sitemap.xml

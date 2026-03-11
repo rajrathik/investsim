@@ -107,7 +107,7 @@ venv\Scripts\mdpdf -o <output>.pdf <input>.md
 
 ```bash
 # In your editor — find and replace across all files:
-Find:    YOUR-DOMAIN.com
+Find:    investsim.claritycapitaltools.com
 Replace: your-actual-domain.railway.app   (or your custom domain)
 ```
 
