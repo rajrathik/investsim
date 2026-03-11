@@ -120,21 +120,6 @@ function hideTooltip() {
   if (tooltip) tooltip.classList.remove('show');
 }
 
-/* Nav links HTML snippet */
-function navLinks() {
-  return `
-    <a href="/">Home</a>
-    <a href="/portfolio-simulator.html">Simulator</a>
-    <a href="/sector-performance.html">Sector Returns</a>
-    <a href="/correlation.html">Correlation</a>
-    <a href="/drawdown.html">Drawdowns</a>
-    <a href="/sector-rotation.html">Rotation</a>
-    <a href="/dividend-growth.html">Div Growth</a>
-    <a href="/growth-chart.html">$10K Growth</a>
-    <a href="/risk-return.html">Risk vs Return</a>
-  `;
-}
-
 /* ========== PAGE VIEW TRACKING (self-hosted, zero cost) ========== */
 (function() {
   try {

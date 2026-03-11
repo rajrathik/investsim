@@ -3,7 +3,6 @@ let data = null;
 let yearStart = 2005, yearEnd = 2025;
 
 async function loadData() {
-  $('navLinks').innerHTML = navLinks();
   try {
     data = await getSectorPerformance();
     populateYears();

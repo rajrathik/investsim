@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Monte Carlo Portfolio Simulator</title>
+<meta name="description" content="Run 1,000 simulated futures for your portfolio using 150+ years of real S&P 500 return history. See the range of possible outcomes with a fan chart showing best, median, and worst-case paths.">
+<link rel="canonical" href="https://YOUR-DOMAIN.com/montecarlo.html">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Monte Carlo Portfolio Simulator">
+<meta property="og:description" content="Run 1,000 simulated futures using 150+ years of real S&P 500 return history. See your range of outcomes — not just one path.">
+<meta property="og:url" content="https://YOUR-DOMAIN.com/montecarlo.html">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Monte Carlo Portfolio Simulator">
+<meta name="twitter:description" content="1,000 simulated futures from real S&P 500 history — see best, median, and worst-case portfolio paths.">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared-analytics.css">
+<script src="theme-toggle.js"></script>
+<script src="https://cdn.auth0.com/js/auth0-spa-js/2.1/auth0-spa-js.production.js"></script>
+<style>
+  /* ---- Controls card ---- */
+  .controls-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px 28px;margin-bottom:24px}
+  .controls-title{font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;color:var(--text1);margin-bottom:4px}
+  .data-note{font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--border)}
+  .data-note a{color:var(--accent);text-decoration:none}
+  .data-note a:hover{text-decoration:underline}
+  .ctrl-section{margin-bottom:16px}
+  .ctrl-section:last-of-type{margin-bottom:0}
+  .ctrl-section-label{font-size:10px;font-weight:600;color:var(--text3);font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px}
+  .controls-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 20px;align-items:end}
+  .controls-grid-3{grid-template-columns:1fr 1fr auto}
+  .ctrl-group{display:flex;flex-direction:column;gap:6px}
+  .ctrl-label{font-size:10px;font-weight:600;color:var(--text2);font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.05em}
+  .ctrl-label small{font-weight:400;color:var(--text3);text-transform:none;letter-spacing:0}
+  .ctrl-input{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;font-family:'JetBrains Mono',monospace;color:var(--text1);outline:none;width:100%;box-sizing:border-box;transition:border-color .15s}
+  .ctrl-input:focus{border-color:var(--accent)}
+  .ctrl-run{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px 28px;font-size:13px;font-weight:700;font-family:'Space Grotesk',sans-serif;cursor:pointer;transition:opacity .15s;white-space:nowrap;align-self:flex-end}
+  .ctrl-run:hover{opacity:.88}
+  .ctrl-run:disabled{opacity:.45;cursor:default}
+  .ctrl-divider{border:none;border-top:1px solid var(--border);margin:16px 0}
+
+  /* ---- Chip groups ---- */
+  .chip-row{display:flex;flex-wrap:wrap;gap:7px}
+  .ctrl-chip{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:6px 14px;cursor:pointer;transition:border-color .15s,background .15s;font-size:12px;font-weight:600;font-family:'Space Grotesk',sans-serif;color:var(--text2)}
+  .ctrl-chip:hover{border-color:var(--accent);background:var(--accent-dim)}
+  .ctrl-chip.active{border-color:var(--accent);background:var(--accent-dim);color:var(--accent)}
+
+  /* ---- One-time event toggle ---- */
+  .event-toggle{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--accent);cursor:pointer;margin-top:4px;user-select:none}
+  .event-toggle:hover{opacity:.8}
+  .event-panel{display:none;margin-top:12px}
+  .event-panel.show{display:block}
+
+  /* ---- Stat strip ---- */
+  .stat-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:24px}
+  .stat-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 18px}
+  .stat-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;margin-bottom:6px}
+  .stat-value{font-size:22px;font-weight:700;color:var(--text1);font-family:'Space Grotesk',sans-serif;line-height:1.1}
+  .stat-sub{font-size:10px;color:var(--text3);margin-top:3px;font-family:'JetBrains Mono',monospace}
+  .stat-accent{color:var(--accent)!important}
+  .stat-warn{color:var(--red)!important}
+
+  /* ---- Info banner ---- */
+  .info-banner{background:var(--accent-dim);border:1px solid rgba(16,185,129,.22);border-radius:10px;padding:10px 16px;margin-bottom:20px;font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--text2)}
+  .info-banner strong{color:var(--accent)}
+
+  /* ---- Fan chart ---- */
+  .chart-wrap{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px 24px;margin-bottom:28px;position:relative}
+  .chart-title{font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;color:var(--text1);margin-bottom:10px}
+  .chart-legend{display:flex;gap:20px;margin-bottom:12px;flex-wrap:wrap}
+  .legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2);font-family:'JetBrains Mono',monospace}
+  .legend-swatch{width:24px;height:8px;border-radius:3px}
+  #mcCanvas{width:100%;display:block;cursor:crosshair}
+  .chart-tooltip{position:fixed;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--text1);pointer-events:none;opacity:0;transition:opacity .1s;z-index:100;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,.45)}
+  .chart-tooltip.show{opacity:1}
+  .ct-year{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:600;margin-bottom:6px}
+  .ct-row{display:flex;justify-content:space-between;gap:20px;margin-top:2px}
+  .ct-lbl{color:var(--text3)}
+  .ct-val{font-weight:600}
+
+  /* ---- Percentile table ---- */
+  .table-wrap{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:28px}
+  .table-header{padding:16px 20px;border-bottom:1px solid var(--border);font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;color:var(--text1);display:flex;align-items:center;gap:8px}
+  .pct-table{width:100%;border-collapse:collapse}
+  .pct-table th{font-size:10px;font-weight:600;color:var(--text3);font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.05em;padding:10px 16px;text-align:right;border-bottom:1px solid var(--border);background:var(--bg)}
+  .pct-table th:first-child,.pct-table th:nth-child(2){text-align:left}
+  .pct-table td{padding:9px 16px;font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--text2);text-align:right;border-bottom:1px solid rgba(255,255,255,0.04)}
+  html[data-theme="light"] .pct-table td{border-bottom-color:rgba(0,0,0,0.05)}
+  .pct-table td:first-child{text-align:left;font-weight:600;color:var(--text1)}
+  .pct-table td:nth-child(2){text-align:left;color:var(--text3)}
+  .pct-table tbody tr:hover{background:var(--bg)}
+  .pct-median{color:var(--accent)!important;font-weight:700!important}
+  .pct-best{color:var(--accent)!important}
+  .pct-worst{color:var(--red)!important}
+
+  /* ---- Info icon + tooltip ---- */
+  .info-icon{display:inline-flex;align-items:center;justify-content:center;width:17px;height:17px;border-radius:50%;border:1px solid var(--border);color:var(--text3);font-size:10px;font-family:'JetBrains Mono',monospace;cursor:default;position:relative;flex-shrink:0;font-weight:400}
+  .info-icon:hover{border-color:var(--accent);color:var(--accent)}
+  .info-icon:hover .info-tip{opacity:1;pointer-events:auto;transform:translateY(0)}
+  .info-tip{position:absolute;top:calc(100% + 8px);left:0;width:310px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--text2);line-height:1.65;opacity:0;pointer-events:none;transition:opacity .15s,transform .15s;transform:translateY(-4px);z-index:200;box-shadow:0 4px 20px rgba(0,0,0,.4);font-weight:400}
+  .info-tip strong{color:var(--text1)}
+  .info-tip .it-row{margin-bottom:5px}
+  .info-tip .it-row:last-child{margin-bottom:0}
+
+  /* ---- Loading / error ---- */
+  .status-msg{text-align:center;padding:32px;font-size:13px;font-family:'JetBrains Mono',monospace;color:var(--text3)}
+
+  @media(max-width:640px){
+    .controls-grid{grid-template-columns:1fr 1fr}
+    .controls-grid-3{grid-template-columns:1fr 1fr}
+    .ctrl-run{grid-column:1/-1}
+    .stat-strip{grid-template-columns:1fr 1fr}
+    .pct-table th:nth-child(4),.pct-table td:nth-child(4),
+    .pct-table th:nth-child(6),.pct-table td:nth-child(6){display:none}
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1 class="space"><span style="color:var(--accent)">◆</span> Monte Carlo Simulator</h1>
+  <a href="/" class="back-home">← Home</a>
+</div>
+
+<div class="container">
+
+  <!-- Controls -->
+  <div class="controls-card">
+    <div class="controls-title">Simulation Parameters</div>
+    <div class="data-note">
+      ⓘ Runs 1,000 simulations using block-bootstrap sampling from 150+ years of real S&P 500 nominal returns
+      (<a href="/sp500-history.html">Shiller dataset</a>). Each path draws random multi-year return sequences
+      from history — not a formula, not a bell curve.
+    </div>
+
+    <!-- Row 1: amounts -->
+    <div class="ctrl-section">
+      <div class="ctrl-section-label">Your Portfolio</div>
+      <div class="controls-grid controls-grid-3">
+        <div class="ctrl-group">
+          <label class="ctrl-label" for="ctrlInitial">Starting Amount ($)</label>
+          <input class="ctrl-input" id="ctrlInitial" type="number" min="0" max="100000000" step="1000" value="25000">
+        </div>
+        <div class="ctrl-group">
+          <label class="ctrl-label" for="ctrlMonthly">Monthly Cash Flow ($) <small>negative = withdraw</small></label>
+          <input class="ctrl-input" id="ctrlMonthly" type="number" min="-100000" max="100000" step="100" value="500">
+        </div>
+        <div class="ctrl-group">
+          <button class="ctrl-run" id="btnRun" onclick="runMC()">Run Simulation</button>
+        </div>
+      </div>
+    </div>
+
+    <hr class="ctrl-divider">
+
+    <!-- Row 2: horizon + cycle -->
+    <div class="ctrl-section">
+      <div class="controls-grid">
+        <div class="ctrl-group">
+          <div class="ctrl-section-label">Investment Horizon</div>
+          <div class="chip-row" id="horizonChips">
+            <span class="ctrl-chip" data-val="5" onclick="selectChip('horizon',5)">5 yrs</span>
+            <span class="ctrl-chip" data-val="10" onclick="selectChip('horizon',10)">10 yrs</span>
+            <span class="ctrl-chip" data-val="15" onclick="selectChip('horizon',15)">15 yrs</span>
+            <span class="ctrl-chip active" data-val="20" onclick="selectChip('horizon',20)">20 yrs</span>
+            <span class="ctrl-chip" data-val="25" onclick="selectChip('horizon',25)">25 yrs</span>
+            <span class="ctrl-chip" data-val="30" onclick="selectChip('horizon',30)">30 yrs</span>
+          </div>
+        </div>
+        <div class="ctrl-group">
+          <div class="ctrl-section-label" style="display:flex;align-items:center;gap:6px">
+            Market Cycle Sensitivity
+            <span class="info-icon" style="font-size:9px;width:15px;height:15px">?
+              <span class="info-tip">
+                <div class="it-row"><strong>Controls how history is replayed in each simulation.</strong></div>
+                <div class="it-row">Real markets don't flip randomly year-to-year — a recession tends to last 2–3 years, and a bull market can run for 5+. This setting decides how much of that "stickiness" the simulation preserves.</div>
+                <div class="it-row" style="margin-top:6px"><strong>Short · 1yr</strong> — each simulated year is drawn independently. No memory of what came before. Gives the narrowest fan — underestimates how bad (or good) a real streak can get.</div>
+                <div class="it-row"><strong>Medium · 3yr</strong> — draws 3-year chunks at a time. If it lands on 2008, it also picks up 2009 recovery. Captures typical recession-and-recovery cycles. Good default.</div>
+                <div class="it-row"><strong>Long · 5yr</strong> — draws 5-year blocks. Can pull in a full bubble-and-bust (e.g. dot-com 1999–2003). Gives the widest fan — most conservative view of tail risk.</div>
+                <div class="it-row" style="margin-top:6px;color:var(--text3)">When in doubt, use Medium. Use Long if you want a more stress-tested worst case.</div>
+              </span>
+            </span>
+          </div>
+          <div class="chip-row" id="cycleChips">
+            <span class="ctrl-chip" data-val="1" onclick="selectChip('cycle',1)">Short · 1yr</span>
+            <span class="ctrl-chip active" data-val="3" onclick="selectChip('cycle',3)">Medium · 3yr</span>
+            <span class="ctrl-chip" data-val="5" onclick="selectChip('cycle',5)">Long · 5yr</span>
+          </div>
+          <div style="font-size:10px;color:var(--text3);font-family:'JetBrains Mono',monospace;margin-top:6px" id="cycleDesc">
+            Draws 3-year return blocks — preserves bull/bear market clustering
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- One-time event (optional) -->
+    <hr class="ctrl-divider">
+    <span class="event-toggle" onclick="toggleEvent()" id="eventToggle">＋ Add one-time cash event (bonus, inheritance, large withdrawal…)</span>
+    <div class="event-panel" id="eventPanel">
+      <div class="controls-grid" style="max-width:400px">
+        <div class="ctrl-group">
+          <label class="ctrl-label" for="ctrlLumpSum">Amount ($) <small>negative = take out</small></label>
+          <input class="ctrl-input" id="ctrlLumpSum" type="number" min="-10000000" max="10000000" step="1000" value="50000">
+        </div>
+        <div class="ctrl-group">
+          <label class="ctrl-label" for="ctrlLumpYear">At Year</label>
+          <input class="ctrl-input" id="ctrlLumpYear" type="number" min="1" max="30" step="1" value="5">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Results — hidden until sim runs -->
+  <div id="results" style="display:none">
+
+    <div class="info-banner" id="infoBanner"></div>
+
+    <div class="stat-strip" id="statStrip"></div>
+
+    <!-- Fan chart -->
+    <div class="chart-wrap">
+      <div class="chart-title">Portfolio Outcome Range — 1,000 Simulated Futures</div>
+      <div class="chart-legend">
+        <span class="legend-item">
+          <span class="legend-swatch" style="background:rgba(16,185,129,0.35)"></span>P25–P75 range
+        </span>
+        <span class="legend-item">
+          <span class="legend-swatch" style="background:rgba(16,185,129,0.15)"></span>P10–P90 range
+        </span>
+        <span class="legend-item">
+          <span class="legend-swatch" style="background:var(--accent);height:3px"></span>Median (P50)
+        </span>
+        <span class="legend-item" id="depositLegend" style="display:none">
+          <span class="legend-swatch" style="border-top:2px dashed var(--text3);background:transparent"></span>Total deposited
+        </span>
+      </div>
+      <canvas id="mcCanvas" height="300"></canvas>
+    </div>
+    <div class="chart-tooltip" id="chartTip"></div>
+
+    <!-- Percentile table -->
+    <div class="table-wrap">
+      <div class="table-header">
+        Year-by-Year Percentile Outcomes
+        <span class="info-icon">?
+          <span class="info-tip">
+            <div class="it-row"><strong>Each row = one year into your plan.</strong></div>
+            <div class="it-row"><strong>Deposited</strong> — the total cash you've actually put in up to that year. Everything above this is growth from market returns.</div>
+            <div class="it-row"><strong>Worst 10%</strong> — only 1 in 10 simulations ended up this low or worse. Most paths did better.</div>
+            <div class="it-row"><strong>Median</strong> — the middle result across all 1,000 simulations. Half finished above this, half below.</div>
+            <div class="it-row"><strong>Best 10%</strong> — only 1 in 10 simulations reached this high. This is the optimistic end.</div>
+            <div class="it-row" style="margin-top:8px;color:var(--text3)">Each simulation draws a different sequence of real historical market years — so the spread shows genuine uncertainty, not a formula.</div>
+          </span>
+        </span>
+      </div>
+      <table class="pct-table">
+        <thead>
+          <tr>
+            <th>Year</th>
+            <th>Deposited</th>
+            <th class="pct-worst">Worst 10%</th>
+            <th>25th Pct</th>
+            <th class="pct-median">Median</th>
+            <th>75th Pct</th>
+            <th class="pct-best">Best 10%</th>
+          </tr>
+        </thead>
+        <tbody id="pctTableBody"></tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <div id="simStatus" class="status-msg" style="display:none"></div>
+
+</div>
+
+<script src="shared-analytics.js?v=1"></script>
+<script src="montecarlo.js?v=1"></script>
+<script src="shared-auth.js"></script>
+</body>
+</html>

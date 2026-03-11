@@ -155,6 +155,34 @@ class ApiRequestLog(Base):
         )
 
 
+class StackEarnSavingsTier(Base):
+    """Tiered interest rates for the Stack & Earn savings calculator."""
+    __tablename__ = "stack_earn_savings_tiers"
+
+    tier_number = Column(Integer, primary_key=True)
+    tier_label = Column(String(50), nullable=False)
+    min_amount = Column(Float, nullable=False)
+    max_amount = Column(Float, nullable=True)   # NULL = no upper limit
+    annual_rate = Column(Float, nullable=False)  # decimal: 0.05 = 5%
+
+    def __repr__(self):
+        return f"<StackEarnSavingsTier({self.tier_label}, rate={self.annual_rate})>"
+
+
+class StackEarnGoalTier(Base):
+    """Tiered interest rates for the Stack & Earn goal calculator."""
+    __tablename__ = "stack_earn_goal_tiers"
+
+    tier_number = Column(Integer, primary_key=True)
+    tier_label = Column(String(50), nullable=False)
+    min_amount = Column(Float, nullable=False)
+    max_amount = Column(Float, nullable=True)   # NULL = no upper limit
+    annual_rate = Column(Float, nullable=False)  # decimal: 0.05 = 5%
+
+    def __repr__(self):
+        return f"<StackEarnGoalTier({self.tier_label}, rate={self.annual_rate})>"
+
+
 class SavedSimulation(Base):
     """A user's saved portfolio simulation result.
 

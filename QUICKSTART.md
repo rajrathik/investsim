@@ -101,16 +101,52 @@ Or convert any single file:
 venv\Scripts\mdpdf -o <output>.pdf <input>.md
 ```
 
-## 9. Before deploying (one-time)
+## 9. Railway deployment (reference)
 
-Replace the domain placeholder in all SEO tags (sitemap, canonical links, Open Graph URLs):
+### One-time: Replace domain placeholder in SEO tags
 
 ```bash
-# In your editor or via command line — find and replace across all files:
+# In your editor — find and replace across all files:
 Find:    YOUR-DOMAIN.com
-Replace: your-actual-domain.com
+Replace: your-actual-domain.railway.app   (or your custom domain)
 ```
 
-Files containing the placeholder: `frontend/sitemap.xml`, `frontend/robots.txt`, and all 11 HTML files (canonical + OG tags).
+Files affected: `frontend/sitemap.xml`, `frontend/robots.txt`, all 11 HTML files (canonical + OG tags).
 
-Also lock down CORS origins in `backend/app/api.py` — change `allow_origins=["*"]` to your actual domain.
+### Railway start command (set in Railway service settings — not a Procfile)
+
+```
+sh -c "cd backend && uvicorn app.api:app --host 0.0.0.0 --port $PORT"
+```
+
+Must `cd backend` first — Railway runs from the repo root but `app.api` is a relative path inside `backend/`.
+
+### Railway service variables (exactly 6 set)
+
+| Variable | Value |
+|----------|-------|
+| `ALLOWED_ORIGINS` | Your custom domain (e.g. `https://yoursubdomain.yourdomain.com`) |
+| `AUTH0_CLIENT_ID` | Your Auth0 client ID |
+| `AUTH0_DOMAIN` | Your Auth0 tenant domain |
+| `DB_TYPE` | `postgres` |
+| `ENABLE_WRITE_API` | `True` (for admin write access) |
+| `POSTGRES_URL` | Paste from Railway → PostgreSQL service → Connect tab |
+
+> `AUTH0_AUDIENCE` is not set — backend uses opaque token mode (validates via Auth0 `/userinfo`). The code supports it but it is not needed.
+
+### Custom domain via Cloudflare
+
+1. In Railway dashboard: add your custom domain to the service → Railway gives you a CNAME target
+2. In Cloudflare DNS: add a CNAME record — subdomain → Railway CNAME target
+3. Railway handles SSL automatically
+4. Update `ALLOWED_ORIGINS` env var to the custom domain once DNS propagates
+
+### Sync local data to Railway PostgreSQL (run after loading new data locally)
+
+```bash
+cd C:\Raj\python\portfolio-simulator
+venv\Scripts\python tools\sync_sql_to_postgres.py --status   # check counts first
+venv\Scripts\python tools\sync_sql_to_postgres.py            # sync all core data tables
+```
+
+Requires `POSTGRES_URL` in `backend\.env`.

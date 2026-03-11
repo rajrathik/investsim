@@ -134,6 +134,68 @@
 | `a488dbf` | **Rate limiting** — `slowapi` library: 60/min default per IP, 30/min for expensive sector queries, 10/min for ticker CRUD + simulation saves + login events, 5/min for batch load endpoints, 30/min for pageview tracking. Returns HTTP 429 when exceeded |
 | `a488dbf` | **Write endpoint auth** — `POST /api/tickers` and all 5 batch POST endpoints now require Auth0 JWT token (were previously config-flag only). All write endpoints are double-gated: Auth0 token + `ENABLE_WRITE_API=True`. Frontend `adminFetch()` already sent auth — no frontend changes needed |
 
+### Phase 14 — Railway Deployment: PostgreSQL Support & Data Sync Tool (Feb 23)
+
+| Commit | Description |
+|--------|-------------|
+| `0f11c79` | **DB_TYPE switch** — `config.py` now supports `DB_TYPE=sqlserver` (local) or `DB_TYPE=postgres` (Railway). Default is `postgres`. SQL Server connection built from `DB_SERVER/DB_NAME/DB_USER/DB_PASSWORD` env vars; PostgreSQL connection from `POSTGRES_URL`. Both resolved at startup — flip a single env var to switch databases entirely |
+| `d435b11` | **SQL Server → PostgreSQL sync tool** — `tools/sync_sql_to_postgres.py`: reads from local SQL Server, writes to Railway PostgreSQL. Creates tables if they don't exist. Truncates + bulk inserts in batches of 1000. Resets auto-increment sequences. Supports `--tables`, `--all`, `--dry-run`, `--status` modes. Data tables synced: `tickers`, `monthly_prices`, `dividends`, `monthly_mm_rates`, `annual_mm_rates`, `user_admin`. Log tables (`user_logins`, `api_request_logs`, `saved_simulations`) synced only with `--all` flag |
+| `ebd0906` | **Remove duplicate backend/requirements.txt** — root `requirements.txt` is what Railway installs from (Railway doesn't install from subdirectories). Removed the duplicate in `backend/` to avoid confusion |
+
+### Phase 19 — Monthly Market Extremes (Mar 2026)
+
+| Change | Description |
+|--------|-------------|
+| `GET /api/sp500-extreme-months` | New endpoint: returns the N best and N worst single months from Shiller data. Each row includes rank, date label (e.g. "Sep 1931"), return_pct, and end_value ($10K result). Default N=20, max 50. 60/min rate limit |
+| `frontend/extreme-months.html` | New page: side-by-side panels (Worst Months / Best Months) with summary cards showing the single all-time worst and best monthly result. Chip toggle for top-10 vs top-20. Inline mini-bars show relative magnitude. Red/green color coding with dark-mode aware CSS vars |
+| `frontend/extreme-months.js` | IIFE: fetches n=20 once (cached), re-renders sliced table on chip toggle. Bars scale to #1 entry in each list |
+| `frontend/index.html` | Added Monthly Market Extremes tool card |
+| `frontend/sitemap.xml` | Added `extreme-months.html` URL entry |
+
+### Phase 18 — Monte Carlo Portfolio Simulator (Mar 2026)
+
+| Change | Description |
+|--------|-------------|
+| `GET /api/shiller-monthly-returns` | New endpoint: returns all ~1,850 monthly nominal total returns as a flat float array. One small fetch; all simulation work is client-side |
+| `frontend/montecarlo.html` | New page: controls card (starting amount, monthly cash flow, horizon chips 5–30yr, market cycle chips 1/3/5yr with ? tooltip explaining each option in plain terms, optional one-time cash event panel), fan chart, stat strip, percentile table with Deposited column and ? tooltip |
+| `frontend/montecarlo.js` | Block-bootstrap Monte Carlo: draws random N-year return blocks from Shiller history, runs 1,000 trials client-side. Fan chart draws P10/P25/P50/P75/P90 bands. Withdrawal mode tracks ruin rate (% of simulations that ran out of money). One-time lump sum injected at specified year |
+| `frontend/index.html` | Added Monte Carlo tool card |
+| `frontend/sitemap.xml` | Added `montecarlo.html` URL entry |
+| `frontend/extreme-months.html` | New page — see Phase 19 |
+
+### Phase 17 — Stack & Earn Tiered Savings Calculator (Mar 2026)
+
+| Change | Description |
+|--------|-------------|
+| `stack_earn_savings_tiers` | New DB table: tiered interest rates for savings calculator. Three tiers: T1 $0–$1K/mo @ 5%, T2 $1K–$10K/mo @ 3%, T3 $10K+/mo @ 1% |
+| `stack_earn_goal_tiers` | New DB table: same structure as savings tiers, independent dataset so rates can diverge later |
+| `backend/app/models.py` | Added `StackEarnSavingsTier` and `StackEarnGoalTier` ORM models |
+| `backend/app/api.py` | Added `GET /api/stack-earn/savings-tiers` and `GET /api/stack-earn/goal-tiers` endpoints (60/min rate limit, no auth) |
+| `backend/onetime/seed_stack_earn_tiers.py` | One-time seeder: creates tables and inserts 3 tiers into both SQL Server and PostgreSQL |
+| `tools/sync_sql_to_postgres.py` | Added both tier tables to `DATA_TABLES` for sync to Railway |
+| `frontend/stack-earn.html` | New page: two-tab layout (Savings Calculator / Goal Calculator), tier rates table, period chips, hero result card, year-by-year breakdown table |
+| `frontend/stack-earn.js` | Calculator logic: split-bucket forward simulation (t1/t2/t3 balance each compounds independently), binary search reverse-solve for goal calculator (60 iterations → penny accuracy) |
+| `frontend/index.html` | Added Stack & Earn tool card to landing page grid |
+| `frontend/sitemap.xml` | Added `stack-earn.html` URL entry |
+
+### Phase 16 — Navigation Simplification (Mar 2026)
+
+| Change | Description |
+|--------|-------------|
+| Nav bar removed | Replaced full navigation bar (9 links per page) on all 12 public tool pages with a single `← Home` link (top-left, absolutely positioned in header). `index.html` landing page is the hub — users navigate between tools via card grid and return via `← Home` |
+| `shared-analytics.css` | Removed `.nav-links` rules; added `.back-home` style (absolute top-left, `var(--text3)`, hover → `var(--accent)`); updated `.header` bottom padding |
+| `shared-analytics.js` | Removed `navLinks()` function |
+| 6 analytics JS files | Removed `$('navLinks').innerHTML = navLinks()` call from `correlation.js`, `dividend-growth.js`, `drawdown.js`, `growth-chart.js`, `risk-return.js`, `sector-rotation.js` |
+| 12 HTML files | Replaced `<nav class="nav-links">` blocks with `<a href="/" class="back-home">← Home</a>` on all tool pages |
+
+### Phase 15 — Railway Build Fixes (Feb 23)
+
+| Commit | Description |
+|--------|-------------|
+| `d4de646` | **Pin python-jose + runtime.txt** — Railway was failing to build due to python-jose version conflicts. Pinned `python-jose[cryptography]==3.5.0` in `requirements.txt`. Added `runtime.txt` with `python-3.12.3` so Railway picks the correct Python version (Railway defaults to an older version without this file) |
+| `51c1fb5` | **python-jose[cryptography]** — intermediate fix attempt (superseded by `d4de646`) |
+| `e0185c0` | **Configurable CORS origins** — `ALLOWED_ORIGINS` env var added to `config.py`. Comma-separated list of allowed origins; defaults to `*` if not set. Set to your Railway domain in production. No more editing `api.py` to lock down CORS |
+
 ---
 
 ## Branch History
@@ -184,7 +246,7 @@ main
 | `frontend/dividend-growth.html/js` | Year-over-year dividend growth by sector |
 | `frontend/growth-chart.html/js` | $10K cumulative growth chart (Canvas, THEME.* getters) |
 | `frontend/risk-return.html/js` | Risk vs return scatter plot (Canvas, THEME.* getters) |
-| `frontend/shared-analytics.css` | Single source of truth: CSS variables, reset, fonts, header/nav, welcome bar styles, dark+light theme overrides, toggle button styles |
+| `frontend/shared-analytics.css` | Single source of truth: CSS variables, reset, fonts, header, `← Home` link styles, welcome bar styles, dark+light theme overrides, toggle button styles |
 | `frontend/shared-analytics.js` | Shared API layer (with error handling + resp.ok checks), pageview tracking beacon, utilities, sector constants |
 | `frontend/shared-auth.js` | Public Auth0 sign-in IIFE: optional login/logout, welcome bar, _pubAuthFetch(), _pubIsSignedIn(), pubauth event |
 | `frontend/theme-toggle.js` | Dark/light theme toggle (IIFE + localStorage + THEME palette + themechange event) |
@@ -194,12 +256,16 @@ main
 | `frontend/admin.html` | Admin dashboard (Auth0 login + user_admin whitelist, isolated) |
 | `frontend/CD-simulator.html` | CD portfolio advisor (AI-powered) |
 | `tools/generate_test_spreadsheet.py` | Excel workbook generator |
+| `tools/sync_sql_to_postgres.py` | Sync local SQL Server data to Railway PostgreSQL |
 | `tools/spreadsheet_config.txt` | Spreadsheet config (tickers, amount, years, tax, annual growth) |
 | `tools/Spreadsheet_Guide.md` | Spreadsheet user guide |
 | `tools/create_user_logins.sql` | SQL script for user_logins table |
 | `docs/Auth0_Integration_Plan.md` | Auth0 implementation plan |
 | `docs/Welcome_Guide_Plan.md` | Welcome guide implementation plan |
+| `requirements.txt` | Root-level dependencies — Railway installs from here |
+| `runtime.txt` | Pins Python 3.12.3 for Railway builds |
 | `README.md` | Project documentation |
 | `Architecture.md` | Architecture & logic flow |
 | `CHANGELOG.md` | Change history |
 | `QUICKSTART.md` | Quick start guide |
+| `CLAUDE.md` | Claude AI context file — auto-loaded at session start |

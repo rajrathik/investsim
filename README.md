@@ -54,8 +54,18 @@ C:\Raj\python\portfolio-simulator\
 │   ├── growth-chart.js
 │   ├── risk-return.html            ← Risk vs return scatter plot
 │   ├── risk-return.js
-│   ├── shared-analytics.css        ← Single source of truth: CSS variables, reset, fonts, header/nav, dark+light theme overrides, welcome bar styles, toggle button styles
-│   ├── shared-analytics.js         ← Shared API layer, utilities, nav links, error handling, pageview tracking
+│   ├── sp500-history.html          ← S&P 500 decade heatmap with methodology panel (Shiller data, 1871–today)
+│   ├── sp500-history.js
+│   ├── sp500-simulate.html         ← Historical DCA simulator: pick year range, starting amount, monthly contribution
+│   ├── sp500-simulate.js
+│   ├── stack-earn.html             ← Tiered savings calculator: ending balance or required monthly contribution to reach a goal
+│   ├── stack-earn.js
+│   ├── montecarlo.html             ← Monte Carlo portfolio simulator: 1,000 block-bootstrap futures from 150+ yrs of S&P 500 history; 5–30yr horizon; Market Cycle Sensitivity tooltip (Short/Medium/Long blocks); percentile table with Deposited column + plain-language tooltip
+│   ├── montecarlo.js
+│   ├── extreme-months.html         ← Monthly Market Extremes: ranked best & worst single months in S&P 500 history since 1871; shows $10K result per month; top-10/20 chip toggle; mini-bar magnitude indicators
+│   ├── extreme-months.js
+│   ├── shared-analytics.css        ← Single source of truth: CSS variables, reset, fonts, header, ← Home link styles, dark+light theme overrides, welcome bar styles, toggle button styles
+│   ├── shared-analytics.js         ← Shared API layer, utilities, error handling, pageview tracking
 │   ├── shared-auth.js              ← Auth0 public sign-in (IIFE): optional login/logout, welcome bar, _pubAuthFetch(), _pubIsSignedIn()
 │   ├── theme-toggle.js             ← Dark/light theme toggle (IIFE + localStorage persistence)
 │   ├── saved-simulations.html      ← View & delete saved portfolio simulations (auth-gated)
@@ -132,11 +142,17 @@ All public pages are open (no login required). Admin is completely separate.
 | `http://localhost:8000/dividend-growth.html` | Dividend growth by sector | Public |
 | `http://localhost:8000/growth-chart.html` | $10K growth chart | Public |
 | `http://localhost:8000/risk-return.html` | Risk vs return scatter plot | Public |
+| `http://localhost:8000/sp500-history.html` | S&P 500 decade heatmap | Public |
+| `http://localhost:8000/sp500-simulate.html` | S&P 500 historical DCA simulator | Public |
+| `http://localhost:8000/stack-earn.html` | Tiered savings calculator (Stack & Earn) | Public |
+| `http://localhost:8000/montecarlo.html` | Monte Carlo portfolio simulator (5–30yr horizon, withdrawal mode, lump sum, cycle sensitivity) | Public |
+| `http://localhost:8000/extreme-months.html` | Monthly Market Extremes — best & worst single months, $10K result | Public |
 | `http://localhost:8000/saved-simulations.html` | View & delete saved simulations | **Sign-in required** |
 | `http://localhost:8000/admin.html` | Admin dashboard | **Auth0 login required** |
 
 **Navigation rules:**
-- All public pages link to each other (Home, Simulator, and all analytics pages) via hardcoded nav in each HTML file
+- All public tool pages have a `← Home` link (top-left of header) pointing back to the landing page
+- `index.html` is the hub — users navigate out via tool cards and back via `← Home`
 - Admin has no links to or from public pages — it is fully isolated
 - Root `/` serves `index.html` as the landing page
 
@@ -280,11 +296,13 @@ Opens at `http://localhost:6419`. Press Ctrl+C to stop.
 - **Dividend Growth** — year-over-year dividend growth by sector; identify consistent payers vs cutters
 - **$10K Growth Chart** — cumulative growth of $10,000 invested in each sector; interactive canvas chart
 - **Risk vs Return** — scatter plot of annual volatility (X) vs total return (Y); return/risk ratio
+- **S&P 500 History** — 155 years of annual returns from Shiller data; decade heatmap (muted green/red color scale); methodology panel explaining formula, columns used, and assumptions; summary stats (median, best/worst year)
+- **Monthly Market Extremes** — ranked best and worst single months in S&P 500 history since 1871; side-by-side panels (red/green); shows what each month did to $10,000; proportional mini-bar magnitude indicators; chip toggle for top-10 vs top-20
 
 ### Infrastructure
 - **Dark/light theme toggle** — 🌙/☀️ button on every page; persists via localStorage; no FOUC (synchronous IIFE in `<head>`); Canvas charts re-render on toggle
-- **CSS consolidation** — `shared-analytics.css` is the single source of truth for `:root` variables, reset, fonts, header/nav; page-specific CSS files contain only overrides
-- **Optional public Auth0 sign-in** — `shared-auth.js` loaded on all 10 public pages; provides optional sign-in link, welcome bar, `_pubAuthFetch()` for authenticated API calls, `_pubIsSignedIn()` for checking login state; all pages use single `/` callback URL
+- **CSS consolidation** — `shared-analytics.css` is the single source of truth for `:root` variables, reset, fonts, header, and shared component styles; page-specific CSS files contain only overrides
+- **Optional public Auth0 sign-in** — `shared-auth.js` loaded on all 11 public pages; provides optional sign-in link, welcome bar, `_pubAuthFetch()` for authenticated API calls, `_pubIsSignedIn()` for checking login state; all pages use single `/` callback URL
 - **Member content section** — landing page shows member-only tiles (Saved Simulations, Newsletters, Watchlists) when signed in
 - **Public pages, isolated admin** — all public pages are open (no login required); admin is Auth0-protected and completely separate with no cross-links
 - **Landing page with tool cards** — root URL serves `index.html` with clickable cards for each tool; separate `simulator-guide.html` for the How It Works walkthrough
@@ -304,11 +322,117 @@ Opens at `http://localhost:6419`. Press Ctrl+C to stop.
 
 | Layer | Technology |
 |-------|-----------|
-| Database | SQL Server (local), SQLAlchemy ORM |
+| Database | SQL Server (local dev) / PostgreSQL (Railway production), SQLAlchemy ORM |
 | Backend | Python 3.12, FastAPI, Uvicorn |
 | Auth | Auth0 SPA SDK (admin + optional public sign-in), python-jose for JWT verification |
 | Rate Limiting | slowapi (per-IP, tiered limits by endpoint category) |
 | Data Sources | Yahoo Finance (prices/dividends), FRED (federal funds rate) |
 | Frontend | HTML + CSS + JS (vanilla, no build tools), Canvas charts |
+| Deployment | Railway (production), configurable via environment variables |
 | SEO | Meta descriptions, Open Graph, Twitter Cards, canonical links, robots.txt, sitemap.xml, JSON-LD structured data |
 | Tests | Pytest (read-only integration tests against real DB) |
+
+---
+
+## Shiller Historical Data
+
+**Source:** [shillerdata.com](https://shillerdata.com/) — Robert Shiller's S&P 500 monthly data since 1871.
+**Table:** `shiller_market_data` (1,863 rows, Jan 1871 – present)
+
+### How to download the file
+
+1. Go to **[shillerdata.com](https://shillerdata.com/)**
+2. Download the Excel file — it is named **`ie_data.xls`**
+3. Save it to **`C:\Raj\python\portfolio-simulator\inputdata\ie_data.xls`**
+
+### Load into database
+
+```bash
+cd C:\Raj\python\portfolio-simulator
+
+# First time — load into both SQL Server and PostgreSQL
+venv\Scripts\python backend\onetime\load_shiller_data.py --db both
+
+# Updated file downloaded — reload from scratch (wipes existing rows first)
+venv\Scripts\python backend\onetime\load_shiller_data.py --db both --truncate
+
+# SQL Server only (start SQL Server first: net start MSSQLSERVER as admin)
+venv\Scripts\python backend\onetime\load_shiller_data.py --db sqlserver
+
+# PostgreSQL only
+venv\Scripts\python backend\onetime\load_shiller_data.py --db postgres
+
+# Preview without writing anything
+venv\Scripts\python backend\onetime\load_shiller_data.py --dry-run
+```
+
+Data dictionary is in the script docstring: `backend/onetime/load_shiller_data.py`
+
+---
+
+## Railway Deployment
+
+The app is deployed and live on [Railway](https://railway.app).
+
+### How Railway Builds It
+
+- **`requirements.txt`** (project root) — Railway installs from this file. The root-level file is intentional; Railway doesn't look inside `backend/`.
+- **`runtime.txt`** (project root) — Pins `python-3.12.3` so Railway uses the correct Python version.
+- **Start command** (set in Railway service settings — not a Procfile):
+  ```
+  sh -c "cd backend && uvicorn app.api:app --host 0.0.0.0 --port $PORT"
+  ```
+  Must `cd backend` first — Railway runs from repo root but `app.api` is a relative path inside `backend/`.
+
+### Railway Service Variables (6 configured)
+
+| Variable | Description |
+|----------|-------------|
+| `ALLOWED_ORIGINS` | Your custom domain (e.g. `https://yoursubdomain.yourdomain.com`) |
+| `AUTH0_CLIENT_ID` | Auth0 application client ID |
+| `AUTH0_DOMAIN` | Your Auth0 tenant domain |
+| `DB_TYPE` | `postgres` |
+| `ENABLE_WRITE_API` | `True` to allow admin write operations |
+| `POSTGRES_URL` | Copy from Railway → PostgreSQL service → Connect tab |
+
+> `AUTH0_AUDIENCE` is not set in Railway. The backend falls back to opaque token mode (validates via Auth0 `/userinfo`). Supported by the code but not required.
+
+### Custom Domain via Cloudflare
+
+1. In Railway service settings: add your custom domain → Railway gives you a **CNAME target**
+2. In Cloudflare DNS: add a **CNAME record** — your subdomain → Railway's CNAME target
+3. Railway handles SSL/TLS automatically
+4. Update `ALLOWED_ORIGINS` env var to your custom domain once DNS propagates
+
+### Syncing Data to Railway PostgreSQL
+
+All market data lives in local SQL Server. Use the sync tool to push it to Railway:
+
+```bash
+cd C:\Raj\python\portfolio-simulator
+
+# Sync core data tables (tickers, prices, dividends, MM rates, user_admin)
+venv\Scripts\python tools\sync_sql_to_postgres.py
+
+# Check row counts on both sides first
+venv\Scripts\python tools\sync_sql_to_postgres.py --status
+
+# Dry run (preview without writing)
+venv\Scripts\python tools\sync_sql_to_postgres.py --dry-run
+
+# Sync specific tables only
+venv\Scripts\python tools\sync_sql_to_postgres.py --tables tickers monthly_prices dividends
+```
+
+Requires `POSTGRES_URL` set in `backend\.env`. Full replace strategy per table (TRUNCATE + bulk INSERT).
+
+### DB Type Switch
+
+The backend supports both SQL Server (local) and PostgreSQL (Railway) via a single env var:
+
+```
+DB_TYPE=sqlserver   # local development (default fallback)
+DB_TYPE=postgres    # Railway production (default in config.py)
+```
+
+Set in `backend\.env` locally, or in Railway environment variables for production.

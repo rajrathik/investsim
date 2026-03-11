@@ -3,7 +3,6 @@ let monthlyData = null;
 let yearStart = null, yearEnd = null;
 
 async function loadData() {
-  $('navLinks').innerHTML = navLinks();
   try {
     monthlyData = await getMonthlyPrices();
     populateYears();

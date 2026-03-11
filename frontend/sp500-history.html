@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>S&amp;P 500 History — 155 Years of Annual Returns</title>
+<meta name="description" content="Decade-by-decade heatmap of S&P 500 annual returns from 1871 to today, with full methodology.">
+<link rel="canonical" href="https://YOUR-DOMAIN.com/sp500-history.html">
+<meta property="og:type" content="website">
+<meta property="og:title" content="S&amp;P 500 History — 155 Years of Annual Returns">
+<meta property="og:description" content="Decade-by-decade heatmap of S&P 500 annual returns from 1871 to today, with full methodology.">
+<meta property="og:url" content="https://YOUR-DOMAIN.com/sp500-history.html">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="S&amp;P 500 History — 155 Years of Annual Returns">
+<meta name="twitter:description" content="Decade-by-decade heatmap of S&P 500 annual returns from 1871 to today, with full methodology.">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared-analytics.css">
+<script src="theme-toggle.js"></script>
+<script src="https://cdn.auth0.com/js/auth0-spa-js/2.1/auth0-spa-js.production.js"></script>
+<style>
+  /* ---- Stat strip ---- */
+  .stat-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:28px}
+  .stat-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 18px}
+  .stat-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;margin-bottom:6px}
+  .stat-value{font-size:22px;font-weight:700;color:var(--text1);font-family:'Space Grotesk',sans-serif;line-height:1.1}
+  .stat-sub{font-size:10px;color:var(--text3);margin-top:3px;font-family:'JetBrains Mono',monospace}
+
+  /* ---- Methodology card ---- */
+  .meth-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px 24px;margin-bottom:28px;font-size:13px;color:var(--text2);line-height:1.6}
+  .meth-title{font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;color:var(--text1);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+  .meth-row{display:grid;grid-template-columns:148px 1fr;gap:10px 20px;padding:10px 0;border-bottom:1px solid var(--border);align-items:start}
+  .meth-row:last-child{border-bottom:none;padding-bottom:0}
+  .meth-lbl{font-size:10px;font-weight:600;color:var(--text2);font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.04em;padding-top:2px}
+  .meth-lbl small{display:block;text-transform:none;color:var(--text3);letter-spacing:0;font-weight:400;margin-top:2px}
+  .meth-body{color:var(--text2)}
+  .meth-formula{background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:8px 12px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent);margin:8px 0;display:inline-block}
+  .meth-eg{font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace;padding:6px 10px;border-left:2px solid var(--border);margin:6px 0;line-height:1.7}
+  .meth-chip{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent);background:var(--accent-dim);padding:1px 6px;border-radius:4px;white-space:nowrap}
+  @media(max-width:640px){.meth-row{grid-template-columns:1fr}}
+
+  /* ---- Decade heatmap ---- */
+  .hm-wrap{overflow-x:auto;margin-bottom:32px;padding-bottom:4px}
+  .hm-grid{display:table;border-collapse:separate;border-spacing:3px;min-width:max-content}
+  .hm-row{display:table-row}
+  .hm-col-header{display:table-cell;width:58px;height:26px;text-align:center;vertical-align:middle;font-size:10px;color:var(--text3);font-family:'JetBrains Mono',monospace;font-weight:600}
+  .hm-decade-label{display:table-cell;width:54px;padding-right:10px;font-size:11px;color:var(--text2);font-family:'JetBrains Mono',monospace;font-weight:600;vertical-align:middle;white-space:nowrap;text-align:right}
+  .hm-cell{display:table-cell;width:58px;height:40px;border-radius:6px;text-align:center;vertical-align:middle;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;cursor:default;transition:transform .1s,box-shadow .1s;position:relative}
+  .hm-cell:hover{transform:scale(1.1);box-shadow:0 4px 18px rgba(0,0,0,.55);z-index:10}
+  .hm-empty{background:rgba(255,255,255,0.025);border:1px dashed rgba(255,255,255,0.06)}
+  html[data-theme="light"] .hm-empty{background:rgba(0,0,0,0.025);border:1px dashed rgba(0,0,0,0.1)}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1 class="space"><span style="color:var(--accent)">◆</span> S&amp;P 500 History</h1>
+  <a href="/" class="back-home">← Home</a>
+</div>
+
+<div class="container">
+
+  <!-- Methodology panel -->
+  <div class="meth-card">
+    <div class="meth-title">How these returns are calculated</div>
+
+    <div class="meth-row">
+      <div class="meth-lbl">Data source</div>
+      <div class="meth-body">
+        Robert Shiller's monthly S&amp;P 500 dataset &mdash; <a href="https://shillerdata.com/" target="_blank" style="color:var(--accent)">shillerdata.com</a>
+      </div>
+    </div>
+
+    <div class="meth-row">
+      <div class="meth-lbl">Columns used</div>
+      <div class="meth-body">
+        <span class="meth-chip">SpPrice</span> &mdash; monthly average nominal closing price of the S&amp;P Composite index<br>
+        <span class="meth-chip">Dividend</span> &mdash; trailing 12-month total dividends, <strong>annualized</strong> — must divide by 12 to get one month's income
+      </div>
+    </div>
+
+    <div class="meth-row">
+      <div class="meth-lbl">Step 1 &mdash; Monthly return<small>stored as NominalTotalReturn column in the DB</small></div>
+      <div class="meth-body">
+        Each month's return has two parts: <strong>how much the price moved</strong> + <strong>dividend income earned that month</strong>.
+        <div class="meth-formula">NominalTotalReturn = (P<sub>t</sub> / P<sub>t&minus;1</sub> &minus; 1) + (Dividend / 12) / P<sub>t&minus;1</sub></div>
+        <div class="meth-eg">
+          Example &mdash; Feb 2024 &nbsp;|&nbsp; price: $4,846 &rarr; $4,959 &nbsp;|&nbsp; annual dividend: $68.00<br>
+          Price return &nbsp;&nbsp;= (4,959 / 4,846) &minus; 1 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;= +2.33%<br>
+          Monthly div &nbsp;&nbsp;= (68.00 / 12) / 4,846 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;= +0.12%<br>
+          Total &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;= +2.45% &nbsp;← stored in NominalTotalReturn
+        </div>
+        Jan 1871 has no prior month, so <span class="meth-chip">NominalTotalReturn</span> = NULL for that row only.
+        All subsequent months are computed and stored.
+      </div>
+    </div>
+
+    <div class="meth-row">
+      <div class="meth-lbl">Step 2 &mdash; Annual return<small>what each heatmap cell shows</small></div>
+      <div class="meth-body">
+        Multiply all 12 monthly return factors together, then subtract 1.
+        This is proper compounding &mdash; a +5% month followed by a &minus;5% month is <em>not</em> zero.
+        <div class="meth-formula">(1 + r<sub>Jan</sub>) &times; (1 + r<sub>Feb</sub>) &times; &hellip; &times; (1 + r<sub>Dec</sub>) &minus; 1</div>
+        Years with fewer than 12 monthly rows are excluded (first partial year 1871, last partial year if data is mid-year).
+      </div>
+    </div>
+
+    <div class="meth-row">
+      <div class="meth-lbl">Assumptions</div>
+      <div class="meth-body">
+        &bull; <strong>Nominal only</strong> &mdash; not inflation-adjusted. The <span class="meth-chip">Cpi</span> column exists in the table but is not used here.<br>
+        &bull; <strong>Dividend timing</strong> &mdash; Shiller's <span class="meth-chip">Dividend</span> column is a trailing 12-month annualized estimate,
+        not actual ex-dividend dates. Monthly income is approximated as 1&frasl;12 of that annual figure.<br>
+        &bull; <strong>Price is a monthly average</strong> &mdash; <span class="meth-chip">SpPrice</span> is Shiller's average of daily closes for the month, not end-of-month price.
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats strip — populated by JS -->
+  <div class="stat-strip" id="statStrip" style="display:none">
+    <div class="stat-card">
+      <div class="stat-label">Years Analyzed</div>
+      <div class="stat-value" id="statYears">—</div>
+      <div class="stat-sub">complete calendar years</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Positive Years</div>
+      <div class="stat-value" id="statPositive">—</div>
+      <div class="stat-sub">of all years</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Median Annual</div>
+      <div class="stat-value" id="statMedian">—</div>
+      <div class="stat-sub" id="statMeanSub">mean —</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Best Year</div>
+      <div class="stat-value growth-pos" id="statBest">—</div>
+      <div class="stat-sub" id="statBestSub"></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Worst Year</div>
+      <div class="stat-value growth-neg" id="statWorst">—</div>
+      <div class="stat-sub" id="statWorstSub"></div>
+    </div>
+  </div>
+
+  <!-- Main content: loading → heatmap -->
+  <div id="content">
+    <div class="loading">Loading Shiller data…</div>
+  </div>
+
+</div>
+
+<div class="cell-tooltip" id="tooltip"></div>
+<script src="shared-analytics.js?v=1"></script>
+<script src="sp500-history.js?v=2"></script>
+<script src="shared-auth.js"></script>
+</body>
+</html>

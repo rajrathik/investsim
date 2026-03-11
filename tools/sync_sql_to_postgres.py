@@ -228,6 +228,24 @@ class SavedSimulation(Base):
     created_at = Column(DateTime, default=_utcnow, nullable=False)
 
 
+class StackEarnSavingsTier(Base):
+    __tablename__ = "stack_earn_savings_tiers"
+    tier_number = Column(Integer, primary_key=True)
+    tier_label  = Column(String(50), nullable=False)
+    min_amount  = Column(Float, nullable=False)
+    max_amount  = Column(Float, nullable=True)
+    annual_rate = Column(Float, nullable=False)
+
+
+class StackEarnGoalTier(Base):
+    __tablename__ = "stack_earn_goal_tiers"
+    tier_number = Column(Integer, primary_key=True)
+    tier_label  = Column(String(50), nullable=False)
+    min_amount  = Column(Float, nullable=False)
+    max_amount  = Column(Float, nullable=True)
+    annual_rate = Column(Float, nullable=False)
+
+
 # ---------------------------------------------------------------------------
 # Sync order: parent tables first (tickers before prices/dividends)
 # ---------------------------------------------------------------------------
@@ -239,7 +257,9 @@ DATA_TABLES = [
     ("dividends",         Dividend),
     ("monthly_mm_rates",  MonthlyMoneyMarketRate),
     ("annual_mm_rates",   AnnualMoneyMarketRate),
-    ("user_admin",        UserAdmin),
+    ("user_admin",              UserAdmin),
+    ("stack_earn_savings_tiers", StackEarnSavingsTier),
+    ("stack_earn_goal_tiers",    StackEarnGoalTier),
 ]
 
 # Tables that hold transactional/log data (optional, large, slow)

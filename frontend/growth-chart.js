@@ -6,7 +6,6 @@ let allSeries = {};
 let chartMeta = null; // stores scale info for crosshair
 
 async function loadData() {
-  $('navLinks').innerHTML = navLinks();
   try {
     data = await getSectorPerformance();
     populateYears();

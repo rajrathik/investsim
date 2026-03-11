@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>S&amp;P 500 Historical DCA Simulator</title>
+<meta name="description" content="Simulate dollar-cost averaging into the S&P 500 using 155 years of real Shiller return data. Pick any year range, starting amount, and monthly contribution.">
+<link rel="canonical" href="https://YOUR-DOMAIN.com/sp500-simulate.html">
+<meta property="og:type" content="website">
+<meta property="og:title" content="S&amp;P 500 Historical DCA Simulator">
+<meta property="og:description" content="Simulate dollar-cost averaging into the S&P 500 using 155 years of real Shiller return data.">
+<meta property="og:url" content="https://YOUR-DOMAIN.com/sp500-simulate.html">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="S&amp;P 500 Historical DCA Simulator">
+<meta name="twitter:description" content="Simulate dollar-cost averaging into the S&P 500 using 155 years of real Shiller return data.">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared-analytics.css">
+<script src="theme-toggle.js"></script>
+<script src="https://cdn.auth0.com/js/auth0-spa-js/2.1/auth0-spa-js.production.js"></script>
+<style>
+  /* ---- Controls card ---- */
+  .controls-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px 28px;margin-bottom:28px}
+  .controls-title{font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;color:var(--text1);margin-bottom:4px}
+  .data-note{font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--border)}
+  .data-note a{color:var(--accent);text-decoration:none}
+  .data-note a:hover{text-decoration:underline}
+  .ctrl-section{margin-bottom:16px}
+  .ctrl-section:last-of-type{margin-bottom:0}
+  .ctrl-section-label{font-size:10px;font-weight:600;color:var(--text3);font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px}
+  .controls-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px 20px;align-items:end}
+  .controls-grid-2{grid-template-columns:repeat(2,minmax(140px,200px))}
+  .ctrl-group{display:flex;flex-direction:column;gap:6px}
+  .ctrl-label{font-size:10px;font-weight:600;color:var(--text2);font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.05em}
+  .ctrl-input{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;font-family:'JetBrains Mono',monospace;color:var(--text1);outline:none;width:100%;box-sizing:border-box;transition:border-color .15s}
+  .ctrl-input:focus{border-color:var(--accent)}
+  .ctrl-run{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px 28px;font-size:13px;font-weight:700;font-family:'Space Grotesk',sans-serif;cursor:pointer;transition:opacity .15s;white-space:nowrap;align-self:flex-end}
+  .ctrl-run:hover{opacity:.88}
+  .ctrl-run:disabled{opacity:.45;cursor:default}
+  .ctrl-divider{border:none;border-top:1px solid var(--border);margin:16px 0}
+
+  /* ---- Period used banner ---- */
+  .period-banner{background:var(--accent-dim);border:1px solid rgba(16,185,129,.22);border-radius:10px;padding:10px 16px;margin-bottom:20px;font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--text2)}
+  .period-banner strong{color:var(--accent)}
+
+  /* ---- Summary stat strip ---- */
+  .stat-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:24px}
+  .stat-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 18px}
+  .stat-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;margin-bottom:6px}
+  .stat-value{font-size:22px;font-weight:700;color:var(--text1);font-family:'Space Grotesk',sans-serif;line-height:1.1}
+  .stat-sub{font-size:10px;color:var(--text3);margin-top:3px;font-family:'JetBrains Mono',monospace}
+
+  /* ---- Canvas chart ---- */
+  .chart-wrap{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px 24px;margin-bottom:28px;position:relative}
+  .chart-title{font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;color:var(--text1);margin-bottom:10px}
+  .chart-legend{display:flex;gap:20px;margin-bottom:12px;flex-wrap:wrap}
+  .legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2);font-family:'JetBrains Mono',monospace}
+  .legend-swatch{width:24px;height:3px;border-radius:2px}
+  #simCanvas{width:100%;display:block;cursor:crosshair}
+  .chart-tooltip{position:fixed;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--text1);pointer-events:none;opacity:0;transition:opacity .1s;z-index:100;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,.45)}
+  .chart-tooltip.show{opacity:1}
+  .ct-year{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:600;margin-bottom:6px}
+  .ct-row{display:flex;justify-content:space-between;gap:20px;margin-top:2px}
+  .ct-lbl{color:var(--text3)}
+  .ct-val{font-weight:600}
+
+  /* ---- Year table ---- */
+  .table-wrap{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:28px}
+  .table-header{padding:16px 20px;border-bottom:1px solid var(--border);font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;color:var(--text1)}
+  .year-table{width:100%;border-collapse:collapse}
+  .year-table th{font-size:10px;font-weight:600;color:var(--text3);font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.05em;padding:10px 16px;text-align:right;border-bottom:1px solid var(--border);background:var(--bg)}
+  .year-table th:first-child{text-align:left}
+  .year-table td{padding:9px 16px;font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--text2);text-align:right;border-bottom:1px solid rgba(255,255,255,0.04)}
+  html[data-theme="light"] .year-table td{border-bottom-color:rgba(0,0,0,0.05)}
+  .year-table td:first-child{text-align:left;font-weight:600;color:var(--text1)}
+  .year-table tbody tr:hover{background:var(--bg)}
+  .ret-pos{color:var(--accent)!important}
+  .ret-neg{color:var(--red)!important}
+  .ret-bar-wrap{display:inline-block;width:48px;height:6px;background:rgba(255,255,255,0.07);border-radius:3px;vertical-align:middle;overflow:hidden;margin-left:6px}
+  html[data-theme="light"] .ret-bar-wrap{background:rgba(0,0,0,0.08)}
+  .ret-bar{display:block;height:100%;border-radius:3px}
+
+  /* ---- Preset era chips ---- */
+  .preset-chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:0}
+  .preset-chip{display:flex;flex-direction:column;align-items:center;gap:1px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:6px 11px;cursor:pointer;transition:border-color .15s,background .15s;text-align:center;line-height:1.2}
+  .preset-chip:hover{border-color:var(--accent);background:var(--accent-dim)}
+  .preset-chip.active{border-color:var(--accent);background:var(--accent-dim)}
+  .chip-name{font-size:11px;font-weight:600;font-family:'Space Grotesk',sans-serif;color:var(--text1);white-space:nowrap}
+  .preset-chip.active .chip-name{color:var(--accent)}
+  .chip-years{font-size:9px;font-family:'JetBrains Mono',monospace;color:var(--text3)}
+  /* ---- Mode toggle ---- */
+  .mode-toggle{display:flex;background:var(--bg);border:1px solid var(--border);border-radius:9px;padding:3px;width:fit-content;margin-bottom:14px;gap:2px}
+  .mode-btn{padding:6px 20px;border:none;border-radius:7px;font-size:12px;font-weight:600;font-family:'Space Grotesk',sans-serif;color:var(--text2);background:transparent;cursor:pointer;transition:background .15s,color .15s}
+  .mode-btn.active{background:var(--accent);color:#fff}
+  .sim-duration-display{margin-top:10px;font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--text3)}
+  .sim-duration-display strong{color:var(--text1);font-size:12px}
+
+  @media(max-width:640px){
+    .controls-grid-2{grid-template-columns:1fr 1fr}
+    .controls-grid{grid-template-columns:1fr 1fr}
+    .ctrl-run{grid-column:1/-1}
+    .stat-strip{grid-template-columns:1fr 1fr}
+    .year-table th:nth-child(3),.year-table td:nth-child(3),
+    .year-table th:nth-child(5),.year-table td:nth-child(5){display:none}
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1 class="space"><span style="color:var(--accent)">◆</span> S&amp;P 500 DCA Simulator</h1>
+  <a href="/" class="back-home">← Home</a>
+</div>
+
+<div class="container">
+
+  <!-- Controls -->
+  <div class="controls-card">
+    <div class="controls-title">Simulation Parameters</div>
+    <div class="data-note">
+      ⓘ Returns sourced from Robert Shiller's S&P 500 monthly dataset (nominal, not inflation-adjusted).
+      <a href="/sp500-history.html">See full return history &rarr;</a>
+    </div>
+
+    <!-- Group 1: historical period — two exclusive modes -->
+    <div class="ctrl-section">
+      <div class="ctrl-section-label">Historical Return Period</div>
+
+      <div class="mode-toggle">
+        <button class="mode-btn active" id="modeEraBtn" onclick="setMode('era')">Era Presets</button>
+        <button class="mode-btn" id="modeCustomBtn" onclick="setMode('custom')">Custom Years</button>
+      </div>
+
+      <!-- Era panel -->
+      <div id="panelEra">
+        <div class="preset-chips" id="presetChips"></div>
+      </div>
+
+      <!-- Custom years panel (hidden by default) -->
+      <div id="panelCustom" style="display:none">
+        <div class="controls-grid controls-grid-2">
+          <div class="ctrl-group">
+            <label class="ctrl-label" for="ctrlStart">Start Year</label>
+            <select class="ctrl-input" id="ctrlStart"></select>
+          </div>
+          <div class="ctrl-group">
+            <label class="ctrl-label" for="ctrlEnd">End Year</label>
+            <select class="ctrl-input" id="ctrlEnd"></select>
+          </div>
+        </div>
+        <div class="sim-duration-display" id="simDurationDisplay"></div>
+      </div>
+    </div>
+
+    <hr class="ctrl-divider">
+
+    <!-- Group 2: investment plan -->
+    <div class="ctrl-section">
+      <div class="ctrl-section-label">Your Investment Plan</div>
+      <div class="controls-grid">
+        <div class="ctrl-group">
+          <label class="ctrl-label" for="ctrlInitial">Starting Amount ($)</label>
+          <input class="ctrl-input" id="ctrlInitial" type="number" min="0" max="10000000" step="1000" value="20000">
+        </div>
+        <div class="ctrl-group">
+          <label class="ctrl-label" for="ctrlMonthly">Monthly Contribution ($)</label>
+          <input class="ctrl-input" id="ctrlMonthly" type="number" min="0" max="1000000" step="100" value="100">
+        </div>
+        <div class="ctrl-group">
+          <button class="ctrl-run" id="btnRun" onclick="runSim()">Run Simulation</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Results — hidden until sim runs -->
+  <div id="results" style="display:none">
+
+    <!-- Period used banner -->
+    <div class="period-banner" id="periodBanner"></div>
+
+    <!-- Stat strip -->
+    <div class="stat-strip">
+      <div class="stat-card">
+        <div class="stat-label">Final Balance</div>
+        <div class="stat-value" id="sFinal">—</div>
+        <div class="stat-sub" id="sFinalSub"></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Invested</div>
+        <div class="stat-value" id="sContrib">—</div>
+        <div class="stat-sub" id="sContribSub"></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Gain</div>
+        <div class="stat-value" id="sGain">—</div>
+        <div class="stat-sub" id="sGainSub"></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Years Simulated</div>
+        <div class="stat-value" id="sYears">—</div>
+        <div class="stat-sub" id="sYearsSub"></div>
+      </div>
+    </div>
+
+    <!-- Balance chart -->
+    <div class="chart-wrap">
+      <div class="chart-title">Portfolio Balance Over Time</div>
+      <div class="chart-legend">
+        <span class="legend-item">
+          <span class="legend-swatch" style="background:var(--accent)"></span>Balance
+        </span>
+        <span class="legend-item">
+          <span class="legend-swatch" style="border-top:2px dashed var(--text3);background:transparent"></span>Total Invested
+        </span>
+      </div>
+      <canvas id="simCanvas" height="260"></canvas>
+    </div>
+    <div class="cell-tooltip chart-tooltip" id="chartTip"></div>
+
+    <!-- Year-by-year table -->
+    <div class="table-wrap">
+      <div class="table-header">Year-by-Year Results</div>
+      <table class="year-table">
+        <thead>
+          <tr>
+            <th>Year</th>
+            <th>Annual Return</th>
+            <th>Total Invested</th>
+            <th>End Balance</th>
+            <th style="text-align:left">Market Impact</th>
+          </tr>
+        </thead>
+        <tbody id="yearTableBody"></tbody>
+      </table>
+    </div>
+
+  </div><!-- /results -->
+
+  <div id="simStatus" class="loading" style="display:none"></div>
+
+</div>
+
+<script src="shared-analytics.js?v=1"></script>
+<script src="sp500-simulate.js?v=2"></script>
+<script src="shared-auth.js"></script>
+</body>
+</html>

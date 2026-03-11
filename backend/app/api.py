@@ -102,7 +102,7 @@ if os.path.exists(env_path):
                 os.environ.setdefault(key.strip(), value.strip())
 
 from app.database import SessionLocal, init_db, engine
-from app.models import Ticker, MonthlyPrice, Dividend, UserLogin, UserAdmin, ApiRequestLog, SavedSimulation
+from app.models import Ticker, MonthlyPrice, Dividend, UserLogin, UserAdmin, ApiRequestLog, SavedSimulation, StackEarnSavingsTier, StackEarnGoalTier
 from app.config import MAX_TICKERS, ENABLE_WRITE_API, ALLOWED_ORIGINS
 from app.auth import get_current_user
 
@@ -1478,6 +1478,310 @@ def track_pageview(body: PageViewBody, request: Request):
 
 
 # ===========================================
+# SP500 HISTORY (Shiller annual returns + wealth curve)
+# ===========================================
+
+@app.get("/api/sp500-annual-returns")
+@limiter.limit("30/minute")
+def get_sp500_annual_returns(request: Request, db: Session = Depends(get_db)):
+    """Compound monthly NominalTotalReturn values from shiller_market_data into annual returns.
+
+    Returns:
+      annual  — dict {year: annual_return_%} for complete calendar years
+      wealth  — monthly wealth curve [{d: "YYYY-MM", v: dollar_value}, ...] starting at $100
+      stats   — summary statistics (median, best/worst year, % positive, etc.)
+    """
+    from collections import defaultdict
+
+    try:
+        rows = db.execute(
+            text(
+                'SELECT "DataDate", "Year", "Month", "NominalTotalReturn" '
+                "FROM shiller_market_data "
+                'WHERE "NominalTotalReturn" IS NOT NULL '
+                'ORDER BY "DataDate"'
+            )
+        ).fetchall()
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="shiller_market_data unavailable — run load_shiller_data.py first.",
+        ) from exc
+
+    if not rows:
+        return {"annual": {}, "wealth": [], "stats": {}}
+
+    # Group monthly returns by year
+    monthly_by_year: dict = defaultdict(list)
+    monthly_all: list = []
+    for row in rows:
+        yr, mo, ret = int(row[1]), int(row[2]), float(row[3])
+        monthly_by_year[yr].append(ret)
+        monthly_all.append((yr, mo, ret))
+
+    # Annual returns: compound all 12 monthly returns (skip partial years)
+    annual: dict = {}
+    for yr in sorted(monthly_by_year.keys()):
+        months = monthly_by_year[yr]
+        if len(months) < 12:
+            continue
+        compound = 1.0
+        for r in months:
+            compound *= (1.0 + r)
+        annual[yr] = round((compound - 1.0) * 100, 2)
+
+    # Monthly wealth curve starting at $100
+    wealth = 100.0
+    wealth_curve = []
+    for yr, mo, r in monthly_all:
+        wealth *= (1.0 + r)
+        wealth_curve.append({"d": f"{yr}-{mo:02d}", "v": round(wealth, 2)})
+
+    # Summary stats
+    returns_list = list(annual.values())
+    stats: dict = {}
+    if returns_list:
+        n = len(returns_list)
+        sorted_ret = sorted(returns_list)
+        positive_count = sum(1 for r in returns_list if r > 0)
+        mid = n // 2
+        median_ret = sorted_ret[mid] if n % 2 == 1 else (sorted_ret[mid - 1] + sorted_ret[mid]) / 2
+        mean_ret = sum(returns_list) / n
+        best_yr = max(annual, key=annual.get)
+        worst_yr = min(annual, key=annual.get)
+
+        decade_map: dict = defaultdict(list)
+        for yr, ret in annual.items():
+            decade_map[(yr // 10) * 10].append(ret)
+        decade_avgs = {d: sum(v) / len(v) for d, v in decade_map.items()}
+        best_decade = max(decade_avgs, key=decade_avgs.get)
+        worst_decade = min(decade_avgs, key=decade_avgs.get)
+
+        stats = {
+            "total_years": n,
+            "pct_positive": round(positive_count / n * 100, 1),
+            "median": round(median_ret, 1),
+            "mean": round(mean_ret, 1),
+            "best_year": best_yr,
+            "best_return": annual[best_yr],
+            "worst_year": worst_yr,
+            "worst_return": annual[worst_yr],
+            "best_decade": best_decade,
+            "best_decade_avg": round(decade_avgs[best_decade], 1),
+            "worst_decade": worst_decade,
+            "worst_decade_avg": round(decade_avgs[worst_decade], 1),
+            "final_wealth": round(wealth, 2),
+        }
+
+    return {
+        "annual": {str(k): v for k, v in annual.items()},
+        "wealth": wealth_curve,
+        "stats": stats,
+    }
+
+
+# ===========================================
+# SHILLER MONTHLY RETURNS (raw, for Monte Carlo)
+# ===========================================
+
+@app.get("/api/shiller-monthly-returns")
+@limiter.limit("60/minute")
+def get_shiller_monthly_returns(request: Request, db: Session = Depends(get_db)):
+    """Return all monthly nominal total returns as a flat array of floats (chronological).
+    Used by the client-side Monte Carlo block-bootstrap simulation.
+    """
+    try:
+        rows = db.execute(
+            text(
+                'SELECT "NominalTotalReturn" '
+                "FROM shiller_market_data "
+                'WHERE "NominalTotalReturn" IS NOT NULL '
+                'ORDER BY "DataDate"'
+            )
+        ).fetchall()
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="shiller_market_data unavailable — run load_shiller_data.py first.",
+        ) from exc
+    return [float(r[0]) for r in rows]
+
+
+# ===========================================
+# EXTREME MONTHS (best / worst single months)
+# ===========================================
+
+_MONTH_ABBR = ["Jan","Feb","Mar","Apr","May","Jun",
+               "Jul","Aug","Sep","Oct","Nov","Dec"]
+
+@app.get("/api/sp500-extreme-months")
+@limiter.limit("60/minute")
+def get_sp500_extreme_months(
+    request: Request,
+    n: int = Query(20, ge=5, le=50),
+    db: Session = Depends(get_db),
+):
+    """Return the N best and N worst single months by NominalTotalReturn."""
+    try:
+        rows = db.execute(
+            text(
+                'SELECT "Year", "Month", "NominalTotalReturn" '
+                "FROM shiller_market_data "
+                'WHERE "NominalTotalReturn" IS NOT NULL '
+                'ORDER BY "NominalTotalReturn"'
+            )
+        ).fetchall()
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="shiller_market_data unavailable.") from exc
+
+    def make(r, rank):
+        ret = float(r[2])
+        mo = int(r[1])
+        label = f"{_MONTH_ABBR[mo - 1]} {int(r[0])}"
+        return {
+            "rank": rank,
+            "date": label,
+            "return_pct": round(ret * 100, 2),
+            "end_value": round(10000 * (1 + ret)),
+        }
+
+    total = len(rows)
+    count = min(n, total)
+    worst = [make(rows[i], i + 1) for i in range(count)]
+    best  = [make(rows[total - 1 - i], i + 1) for i in range(count)]
+    return {"worst": worst, "best": best}
+
+
+# ===========================================
+# SP500 DCA SIMULATOR (Shiller monthly returns)
+# ===========================================
+
+@app.get("/api/sp500-simulate")
+@limiter.limit("30/minute")
+def get_sp500_simulate(
+    request: Request,
+    start: int = Query(..., ge=1872, le=2023, description="Start year (inclusive)"),
+    end: int = Query(..., ge=1873, le=2024, description="End year (inclusive)"),
+    initial: float = Query(10000.0, ge=0, le=10_000_000),
+    monthly: float = Query(0.0, ge=0, le=1_000_000),
+    db: Session = Depends(get_db),
+):
+    """DCA simulation using Shiller monthly NominalTotalReturn data.
+
+    Each month: balance = (balance + monthly_contribution) * (1 + NominalTotalReturn)
+    Returns year-by-year summary and final stats.
+    """
+    if end <= start:
+        raise HTTPException(status_code=400, detail="end must be greater than start")
+
+    try:
+        rows = db.execute(
+            text(
+                'SELECT "Year", "Month", "NominalTotalReturn" '
+                "FROM shiller_market_data "
+                'WHERE "NominalTotalReturn" IS NOT NULL '
+                'AND "Year" >= :yr_start AND "Year" <= :yr_end '
+                'ORDER BY "Year", "Month"'
+            ),
+            {"yr_start": start, "yr_end": end},
+        ).fetchall()
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="shiller_market_data unavailable.") from exc
+
+    if not rows:
+        raise HTTPException(status_code=404, detail=f"No data found for {start}–{end}.")
+
+    # Group months by year; skip any year with < 12 months
+    from collections import defaultdict
+    months_by_year: dict = defaultdict(list)
+    for row in rows:
+        yr, mo, ret = int(row[0]), int(row[1]), float(row[2])
+        months_by_year[yr].append((mo, ret))
+
+    complete_years = sorted(
+        yr for yr, months in months_by_year.items() if len(months) == 12
+    )
+    if not complete_years:
+        raise HTTPException(status_code=404, detail="No complete calendar years in that range.")
+
+    balance = float(initial)
+    total_contributed = float(initial)
+    yearly = []
+
+    for yr in complete_years:
+        start_balance = balance
+        annual_factor = 1.0
+        for _mo, ret in sorted(months_by_year[yr]):
+            balance = (balance + monthly) * (1.0 + ret)
+            total_contributed += monthly
+            annual_factor *= (1.0 + ret)
+        annual_ret_pct = round((annual_factor - 1.0) * 100, 2)
+        yearly.append({
+            "year": yr,
+            "start_balance": round(start_balance, 2),
+            "end_balance": round(balance, 2),
+            "annual_return_pct": annual_ret_pct,
+            "total_contributed": round(total_contributed, 2),
+        })
+
+    gain = balance - total_contributed
+    gain_pct = (gain / total_contributed * 100) if total_contributed > 0 else 0
+
+    return {
+        "years": yearly,
+        "stats": {
+            "start_year": complete_years[0],
+            "end_year": complete_years[-1],
+            "num_years": len(complete_years),
+            "initial": round(initial, 2),
+            "monthly_contribution": round(monthly, 2),
+            "total_contributed": round(total_contributed, 2),
+            "final_balance": round(balance, 2),
+            "total_gain": round(gain, 2),
+            "total_gain_pct": round(gain_pct, 1),
+        },
+    }
+
+
+# ===========================================
+# STACK & EARN — TIERED SAVINGS CALCULATOR
+# ===========================================
+
+@app.get("/api/stack-earn/savings-tiers")
+@limiter.limit("60/minute")
+def get_stack_earn_savings_tiers(request: Request, db: Session = Depends(get_db)):
+    """Return tiered interest rates for the savings calculator."""
+    rows = db.query(StackEarnSavingsTier).order_by(StackEarnSavingsTier.tier_number).all()
+    return [
+        {
+            "tier_number": r.tier_number,
+            "tier_label": r.tier_label,
+            "min_amount": r.min_amount,
+            "max_amount": r.max_amount,
+            "annual_rate": r.annual_rate,
+        }
+        for r in rows
+    ]
+
+
+@app.get("/api/stack-earn/goal-tiers")
+@limiter.limit("60/minute")
+def get_stack_earn_goal_tiers(request: Request, db: Session = Depends(get_db)):
+    """Return tiered interest rates for the goal calculator."""
+    rows = db.query(StackEarnGoalTier).order_by(StackEarnGoalTier.tier_number).all()
+    return [
+        {
+            "tier_number": r.tier_number,
+            "tier_label": r.tier_label,
+            "min_amount": r.min_amount,
+            "max_amount": r.max_amount,
+            "annual_rate": r.annual_rate,
+        }
+        for r in rows
+    ]
+
+
+# ===========================================
 # SERVE FRONTEND (must be LAST — catch-all)
 # ===========================================
 
@@ -1539,9 +1843,29 @@ if _frontend_dir.exists():
     def serve_risk_return():
         return FileResponse(str(_frontend_dir / "risk-return.html"))
 
+    @app.get("/sp500-history.html")
+    def serve_sp500_history():
+        return FileResponse(str(_frontend_dir / "sp500-history.html"))
+
+    @app.get("/sp500-simulate.html")
+    def serve_sp500_simulate():
+        return FileResponse(str(_frontend_dir / "sp500-simulate.html"))
+
     @app.get("/saved-simulations.html")
     def serve_saved_simulations():
         return FileResponse(str(_frontend_dir / "saved-simulations.html"))
+
+    @app.get("/stack-earn.html")
+    def serve_stack_earn():
+        return FileResponse(str(_frontend_dir / "stack-earn.html"))
+
+    @app.get("/montecarlo.html")
+    def serve_montecarlo():
+        return FileResponse(str(_frontend_dir / "montecarlo.html"))
+
+    @app.get("/extreme-months.html")
+    def serve_extreme_months():
+        return FileResponse(str(_frontend_dir / "extreme-months.html"))
 
     @app.get("/robots.txt")
     def serve_robots():

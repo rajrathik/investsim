@@ -11,10 +11,12 @@
 │  admin.html (Auth0 protected)      │                    └────────┬─────────┘
 └──────────────────────────────────┘                              │ SQLAlchemy ORM
                                                                   ▼
-                                                        ┌──────────────────┐
-                                                        │   SQL Server DB   │
-                                                        │ REDACTED-DB-NAME │
-                                                        └──────────────────┘
+                                                        ┌──────────────────────────────────┐
+                                                        │  Database                         │
+                                                        │  SQL Server (local dev)            │
+                                                        │  PostgreSQL  (Railway production)  │
+                                                        │  DB_TYPE env var selects which     │
+                                                        └──────────────────────────────────┘
                                                                   ▲
                                             One-time & incremental loads
                                               ┌───────────────┴───────────────┐
@@ -36,11 +38,12 @@ http://localhost:8000/   →   index.html  (landing page — tool cards, no auth
                 ▼               ▼                               ▼
     portfolio-simulator.html  sector-performance.html    [all analytics pages]
     simulator-guide.html        (no auth)               correlation, drawdown,
-         (no auth)                  │                   rotation, div-growth,
-                │                   │                   growth-chart, risk-return
-                └───────────────────┘
-                  all link to each other
-                  via hardcoded nav in each HTML
+         (no auth)                                      rotation, div-growth,
+                                                        growth-chart, risk-return,
+                                                        sp500-history, sp500-simulate,
+                                                        stack-earn, extreme-months
+
+                  all tool pages have a ← Home link back to index.html
 
 http://localhost:8000/saved-simulations.html  →  Saved Simulations (sign-in required)
 
@@ -52,7 +55,8 @@ http://localhost:8000/admin.html  →  Auth0 lock screen
 ```
 
 **Navigation rules:**
-- All public pages share a consistent nav bar (Home, Simulator, Sector Returns, Correlation, Drawdowns, Rotation, Div Growth, $10K Growth, Risk vs Return) hardcoded in each HTML file
+- All public tool pages have a `← Home` link (top-left of header) pointing back to `index.html`
+- `index.html` is the hub — no nav bar needed; users navigate out via tool cards and back via `← Home`
 - Admin has no nav links — `admin.html` contains only a Logout button once authenticated
 - Root `/` serves `index.html`
 - Every page loads `theme-toggle.js` in `<head>` for dark/light theme switching with localStorage persistence
@@ -115,7 +119,7 @@ User opens http://localhost:8000/admin.html
 
 ---
 
-## Database Schema (9 Tables)
+## Database Schema (10 Tables)
 
 **tickers** — Master list of asset symbols (XLK, XLV, XLE, etc.)
 Each ticker has: symbol, name, active flag, created/updated timestamps.
@@ -136,19 +140,21 @@ Each ticker has: symbol, name, active flag, created/updated timestamps.
 
 **saved_simulations** — User's saved portfolio simulation results (max 3 per user). Stores auth0_user_id, email, tickers_json (allocation map), start/end year, monthly_amount, annual_growth, 6 result values (total_invested, equity_value, dividends_earned, cash_accrual, mm_earned, portfolio_balance), total_return_pct, mmf_value, created_at. Auto-increment ID with gap management (display numbering handled by frontend).
 
+**shiller_market_data** — Monthly S&P 500 historical data from Robert Shiller (shillerdata.com). 1,863 rows, Jan 1871–present. 22 columns: DataDate, Year, Month, SpPrice, Dividend, Earnings, Cpi, LongInterestRate, real/total-return series, Cape, TrCape, ExcessCapeYield, bond returns, 10-year forward returns, and `NominalTotalReturn` (calculated: monthly price return + dividend yield). Loaded once via `backend/onetime/load_shiller_data.py`. Not in the core ORM (models.py) — queried via raw SQL in the API.
+
 ---
 
 ## Module Purpose
 
 | Module | What It Does |
 |--------|-------------|
-| `config.py` | All settings: DB connection string, Auth0 config, max tickers (50), history depth (30 yrs), write API toggle (reads from `.env`) |
+| `config.py` | All settings: `DB_TYPE` switch (sqlserver/postgres), `POSTGRES_URL`, SQL Server connection params, Auth0 config, max tickers (50), history depth (30 yrs), `ENABLE_WRITE_API` toggle, `ALLOWED_ORIGINS` for CORS. All values from env vars / `.env` |
 | `database.py` | Creates SQLAlchemy engine and session factory. `init_db()` ensures all tables exist at startup |
 | `models.py` | ORM models for `Ticker`, `MonthlyPrice`, `Dividend`, `UserLogin`, `UserAdmin`, `ApiRequestLog`, `SavedSimulation` with constraints and relationships |
 | `mm_rates.py` | ORM models for `MonthlyMoneyMarketRate`, `AnnualMoneyMarketRate` plus loader functions |
 | `fetcher.py` | Pulls monthly OHLCV prices and dividend history from Yahoo Finance. Handles full (30 yr) and incremental (configurable months, default 2) modes |
 | `fred_fetcher.py` | Pulls federal funds rate from FRED public CSV endpoint. No API key needed. Computes annual averages |
-| `loader.py` | Takes fetcher output DataFrames and upserts into SQL Server. `get_tickers_without_data()` identifies new tickers needing initial load |
+| `loader.py` | Takes fetcher output DataFrames and upserts into the configured DB. `get_tickers_without_data()` identifies new tickers needing initial load |
 | `auth.py` | Auth0 token verification. Two modes: JWT via JWKS (when audience is set) or opaque token via `/userinfo` endpoint. `get_current_user` FastAPI dependency. Auth failure logging with IP and path. |
 | `api.py` | FastAPI app: all REST endpoints, Auth0 protection on write/admin routes, rate limiting (slowapi), public access on read endpoints, static file serving, CORS, request ID middleware, API request logging to DB, pageview tracking, serves robots.txt and sitemap.xml |
 | `run_batch.py` | CLI entry point: `python run_batch.py full` or `incremental` — orchestrates fetcher → loader for Yahoo data |
@@ -156,6 +162,7 @@ Each ticker has: symbol, name, active flag, created/updated timestamps.
 | `test_connection.py` | Quick script to verify DB connectivity and create tables |
 | **tools/** | |
 | `generate_test_spreadsheet.py` | Reads `spreadsheet_config.txt`, queries DB for prices/dividends/MM rates, generates 5-sheet Excel workbook with formulas mirroring the JS simulation logic |
+| `sync_sql_to_postgres.py` | Syncs local SQL Server data to Railway PostgreSQL. Full replace per table. Supports `--status`, `--dry-run`, `--tables`, `--all` modes. Requires `POSTGRES_URL` in `backend\.env` |
 | **frontend/** | |
 | `index.html` | Landing page: tool overview cards, member content section (shown when signed in), nav to all public pages. Served at `/` |
 | `simulator-guide.html` | How It Works guide for the simulator (standalone page linked from simulator header) |
@@ -167,8 +174,13 @@ Each ticker has: symbol, name, active flag, created/updated timestamps.
 | `dividend-growth.html/js` | Year-over-year dividend growth by sector |
 | `growth-chart.html/js` | $10K cumulative growth chart (interactive canvas) |
 | `risk-return.html/js` | Risk vs return scatter plot |
+| `sp500-history.html/js` | S&P 500 decade heatmap. Compounds monthly `NominalTotalReturn` values into annual returns; renders a color-interpolated decade grid (muted green/red); methodology panel explains columns used, formula, and assumptions |
+| `sp500-simulate.html/js` | Historical DCA simulator. Pick year range (1872–2024), starting amount, monthly contribution → final balance, stat strip, area chart (balance vs invested), year-by-year table with inline return bars. API: `GET /api/sp500-simulate` |
+| `stack-earn.html/js` | Tiered savings calculator. Two tabs: Savings (forward simulation with split-bucket compounding) and Goal (binary-search reverse solve). Loads tier rates from `GET /api/stack-earn/savings-tiers` and `GET /api/stack-earn/goal-tiers`. Three independent balance buckets (T1/T2/T3) compound at their own monthly rate |
+| `montecarlo.html/js` | Monte Carlo portfolio simulator. Block-bootstrap: draws random N-year return blocks from Shiller history, 1,000 trials client-side. Horizon 5–30yr. Fan chart (P10/P25/P50/P75/P90 bands). Supports withdrawal mode (tracks ruin rate) and optional one-time lump sum event. Market Cycle Sensitivity selector (Short·1yr / Medium·3yr / Long·5yr) with plain-language `?` tooltip. Percentile table includes Deposited column and `?` tooltip explaining each column. API: `GET /api/shiller-monthly-returns` |
+| `extreme-months.html/js` | Monthly Market Extremes. Fetches `GET /api/sp500-extreme-months?n=20` once (cached). Renders side-by-side panels: worst months (red) and best months (green). Summary cards show all-time worst and best. Table rows: rank, date, return%, $10K result, mini-bar (width proportional to magnitude, scales to #1 entry). Chip toggle for top-10/top-20 slices from cached 20 with no re-fetch |
 | `saved-simulations.html` | View & delete saved simulations — auth-gated (shows sign-in prompt if not logged in), fetches via `_pubAuthFetch()`, renders cards with ticker tags, value tiles with ? tooltips, delete buttons |
-| `shared-analytics.css` | Single source of truth for CSS: `:root` variables, reset, fonts, header/nav, welcome bar styles, dark+light theme overrides, toggle button styles. All page-specific CSS files contain only overrides |
+| `shared-analytics.css` | Single source of truth for CSS: `:root` variables, reset, fonts, header, `← Home` link styles, welcome bar styles, dark+light theme overrides, toggle button styles. All page-specific CSS files contain only overrides |
 | `shared-analytics.js` | Shared API utilities (authFetch, getSectorPerformance, getMonthlyPrices) with error handling (try/catch, resp.ok checks), pageview tracking beacon, chart tooltip helpers, sector constants |
 | `shared-auth.js` | Public Auth0 sign-in IIFE: inits Auth0 SPA client, handles login/logout, injects welcome bar + sign-in link, caches user in localStorage, exposes `window._pubAuthFetch()` (authenticated fetch) and `window._pubIsSignedIn()`, dispatches `pubauth` CustomEvent. Skips admin.html. All pages redirect to `/` for Auth0 callback |
 | `theme-toggle.js` | Dark/light theme: synchronous IIFE sets `data-theme` before render (no FOUC), injects toggle button, exposes `window.THEME` getters for Canvas, dispatches `themechange` event, persists via localStorage |
@@ -256,6 +268,7 @@ HTTP Request
 | `GET /api/batch/status` | Status of last batch job |
 | `POST /api/auth/login-event` | Logs public user login event to `user_logins` table |
 | `POST /api/track/pageview` | Records page view (fire-and-forget, self-hosted analytics) |
+| `GET /api/sp500-extreme-months` | Returns N best and N worst single months from Shiller data (rank, date, return_pct, end_value). Default N=20 |
 
 ### Authenticated endpoints (Auth0 Bearer token required — public sign-in)
 
@@ -323,7 +336,6 @@ All analytics pages share `shared-analytics.js` which provides:
 - `getSectorPerformance()` — cached call to `/api/sector-performance` (annual returns + dividends)
 - `getMonthlyPrices()` — cached call to `/api/sector-monthly` (monthly closes + monthly dividends)
 - `pearsonCorrelation()`, `stdDev()`, `totalReturn()` — shared math utilities
-- `navLinks()` — nav HTML injected into `#navLinks` div on each page
 - Tooltip helpers, sector color/order constants
 
 Individual page logic:
@@ -337,6 +349,11 @@ Individual page logic:
 | `dividend-growth.js` | Annual dividends | YoY % change in dividends per sector |
 | `growth-chart.js` | Monthly prices + annual dividends | Cumulative growth of $10K invested; interactive canvas with sector toggles |
 | `risk-return.js` | Annual returns | StdDev of annual returns (X) vs average total return (Y); scatter plot |
+| `sp500-history.js` | `shiller_market_data.NominalTotalReturn` | Compounds monthly returns into annual returns; renders decade heatmap with muted color interpolation (dark green/dark red poles); hover tooltip; re-colors on theme change |
+| `sp500-simulate.js` | `GET /api/sp500-simulate` | DCA simulation: each month balance = (balance + monthly) × (1 + NominalTotalReturn); renders stat strip, area chart with hover crosshair, year-by-year table with color-coded return bars |
+| `stack-earn.js` | `GET /api/stack-earn/savings-tiers`, `GET /api/stack-earn/goal-tiers` | Savings: 3-bucket split compounding (t1/t2/t3 each earn their rate independently). Goal: 60-iteration binary search to find monthly contribution → renders hero result + year-by-year table |
+| `montecarlo.js` | `GET /api/shiller-monthly-returns` | Fetches ~1,850 monthly returns once (cached). Block-bootstrap: each trial draws random N-year blocks (1/3/5yr cycles), runs 1,000 trials. Horizon selectable 5–30yr. Computes P10/P25/P50/P75/P90 per year. Fan chart draws two filled bands + median line + optional deposits line. Percentile table with Deposited column. Ruin tracking for withdrawal mode. Optional one-time lump sum event |
+| `extreme-months.js` | `GET /api/sp500-extreme-months` | Fetches n=20 worst+best once (cached). Chip toggle re-renders sliced table (top-10 or top-20) without re-fetching. Mini-bars scale to the #1 entry in each list. Red/green color classes adapt to dark-mode via CSS `[data-theme="dark"]` overrides |
 
 ---
 
@@ -355,20 +372,20 @@ Individual page logic:
 - **Opaque token support**: With no Auth0 audience configured, Auth0 issues opaque tokens. Backend validates via `/userinfo` endpoint — simpler setup, no Custom API registration needed.
 - **Smart batch loading**: Three modes — full-new (only new tickers), incremental (configurable months, default 2), full (all tickers, rare). Background threads keep the API responsive during long loads.
 - **Read-only API by default**: `ENABLE_WRITE_API=False` in config. Write endpoints return 403 until explicitly enabled in `.env`.
-- **Optional public sign-in**: `shared-auth.js` IIFE loaded on all 10 public pages. Handles Auth0 init, login/logout, welcome bar injection, and exposes `_pubAuthFetch()` for authenticated API calls. Completely separate from admin auth. Skips `admin.html`. Uses `localStorage` cache (`pub_auth_user`) for instant welcome bar display across pages.
+- **Optional public sign-in**: `shared-auth.js` IIFE loaded on all 11 public pages. Handles Auth0 init, login/logout, welcome bar injection, and exposes `_pubAuthFetch()` for authenticated API calls. Completely separate from admin auth. Skips `admin.html`. Uses `localStorage` cache (`pub_auth_user`) for instant welcome bar display across pages.
 - **Single callback URL for all public pages**: All public pages use `window.location.origin + '/'` as the Auth0 redirect URI. Only two URLs ever needed in Auth0 Dashboard: `/` (public) and `/admin.html` (admin). Adding new pages never requires Auth0 config changes.
 - **Saved simulations**: Max 3 per user enforced server-side (409 Conflict). Auto-increment DB IDs with gaps after deletions — frontend uses array index + 1 for sequential display numbering (Portfolio #1, #2, #3).
 - **Tile info tooltips**: Each of the 6 summary result tiles has a `?` icon that reveals a description tooltip on hover. Uses CSS-only hover with `.tile-info:hover .tile-tooltip` (no JS). Parent card uses `z-index` elevation on hover so tooltips overlay adjacent cards.
 - **No build tools**: Vanilla HTML/CSS/JS. No Node.js, no webpack, no framework. All static files served by FastAPI's `StaticFiles` mount.
-- **CSS consolidation**: `shared-analytics.css` is the single source of truth for `:root` variables, reset, fonts, header/nav, and shared component styles. `sector-performance.css` and `portfolio-simulator.css` contain only page-specific overrides — no duplicate `:root`, reset, or body rules.
-- **Dark/light theme toggle**: `theme-toggle.js` loaded synchronously in `<head>` on all 10 public pages. IIFE reads localStorage and sets `data-theme` attribute on `<html>` before body renders (prevents flash). DOMContentLoaded injects floating toggle button. Dispatches `themechange` CustomEvent for Canvas re-rendering. Exposes `window.THEME` getter object so Canvas-drawing JS can read computed CSS variable values.
+- **CSS consolidation**: `shared-analytics.css` is the single source of truth for `:root` variables, reset, fonts, header, and shared component styles. `sector-performance.css` and `portfolio-simulator.css` contain only page-specific overrides — no duplicate `:root`, reset, or body rules.
+- **Dark/light theme toggle**: `theme-toggle.js` loaded synchronously in `<head>` on all 11 public pages. IIFE reads localStorage and sets `data-theme` attribute on `<html>` before body renders (prevents flash). DOMContentLoaded injects floating toggle button. Dispatches `themechange` CustomEvent for Canvas re-rendering. Exposes `window.THEME` getter object so Canvas-drawing JS can read computed CSS variable values.
 - **5% stepper allocation controls**: Replaced range sliders with −/+ button pairs that increment/decrement by 5%. Equal Split rounds to nearest 5%. Tickers at 0% are silently excluded from the simulation (filtered at `active` array before any API calls).
 - **Interactive canvas charts**: Custom canvas rendering with crosshair and hover tooltip. No chart library dependency. Canvas structural colors use `THEME.*` getters that re-read CSS variables on theme change.
 - **Excel verification tool**: Python script generates a 5-sheet Excel workbook from real DB data using formulas that mirror the JS simulation. Users can trace every calculation step. Reads from a plain-text config file.
 - **API request logging**: Every API call (path starting with `/api`) logged to `api_request_logs` table. Static file requests skipped to avoid noise.
-- **Self-hosted pageview tracking**: `navigator.sendBeacon()` on all 12 pages fires `POST /api/track/pageview` writing to existing `api_request_logs` table with `method=PAGEVIEW`. Zero cost, no third-party analytics.
+- **Self-hosted pageview tracking**: `navigator.sendBeacon()` on all 13 pages fires `POST /api/track/pageview` writing to existing `api_request_logs` table with `method=PAGEVIEW`. Zero cost, no third-party analytics.
 - **Error handling**: All analytics pages wrap `loadData()` in try/catch with user-facing error div. Shared API layer checks `resp.ok` and throws on HTTP errors. No silent failures.
 - **Rate limiting**: slowapi library with per-IP limits. Default 60/min for all endpoints. Tighter limits on expensive reads (30/min), writes (10/min), and batch operations (5/min). Returns HTTP 429 Too Many Requests.
 - **Write endpoint double-gating**: All POST/PUT/DELETE endpoints require both a valid Auth0 JWT token AND `ENABLE_WRITE_API=True` config flag. Neither alone is sufficient.
-- **SEO foundations**: All 11 public HTML pages have `<meta name="description">`, canonical links, Open Graph tags, and Twitter Card tags. `robots.txt` allows crawlers but blocks `/admin.html` and `/api/`. `sitemap.xml` lists all public pages with priorities. JSON-LD structured data on key pages (WebSite, WebApplication, BreadcrumbList). All URLs use `YOUR-DOMAIN.com` placeholder — global find-and-replace at deploy time.
+- **SEO foundations**: All 12 public HTML pages have `<meta name="description">`, canonical links, Open Graph tags, and Twitter Card tags. `robots.txt` allows crawlers but blocks `/admin.html` and `/api/`. `sitemap.xml` lists all public pages with priorities. JSON-LD structured data on key pages (WebSite, WebApplication, BreadcrumbList). All URLs use `YOUR-DOMAIN.com` placeholder — global find-and-replace at deploy time.
 - **Structured error responses**: Global exception handlers catch all errors — never leaks stack traces. Returns consistent `{error, detail, request_id}` JSON. Request IDs in headers for correlation.

@@ -44,35 +44,30 @@
     header.appendChild(link);
   }
 
-  function injectWelcomeBar(user) {
+  function injectHeaderAuth(user) {
     if (!user || !user.email) return;
-    /* Remove sign-in link if present */
     var sl = document.getElementById('pubSignInLink');
     if (sl) sl.remove();
+    if (document.getElementById('pubHeaderAuth')) return;
 
-    /* Don't duplicate */
-    if (document.getElementById('pubWelcomeBar')) return;
+    var firstName = (user.name || user.email.split('@')[0]).split(' ')[0];
+    var el = document.createElement('div');
+    el.id = 'pubHeaderAuth';
+    el.className = 'pub-header-auth';
+    el.innerHTML =
+      '<span class="pub-auth-name">' + escHtml(firstName) + '</span>' +
+      '<span class="pub-auth-sep">·</span>' +
+      '<a href="javascript:void(0)" class="pub-signout-link" onclick="window._pubSignOut()">Sign Out</a>';
 
-    var name = user.name || user.email.split('@')[0];
-    var bar = document.createElement('div');
-    bar.id = 'pubWelcomeBar';
-    bar.className = 'pub-welcome-bar';
-    bar.innerHTML =
-      '<span class="pub-welcome-text">Welcome, <strong>' + escHtml(name) + '</strong></span>' +
-      '<button class="pub-signout-btn" onclick="window._pubSignOut()">Sign Out</button>';
-
-    /* Insert right after .header or at top of body */
     var header = document.querySelector('.header') || document.querySelector('.hero');
-    if (header && header.nextSibling) {
-      header.parentNode.insertBefore(bar, header.nextSibling);
-    } else {
-      document.body.prepend(bar);
-    }
+    if (header) header.appendChild(el);
   }
 
-  function removeWelcomeBar() {
+  function removeAuthUI() {
     var bar = document.getElementById('pubWelcomeBar');
     if (bar) bar.remove();
+    var ha = document.getElementById('pubHeaderAuth');
+    if (ha) ha.remove();
   }
 
   function escHtml(s) {
@@ -88,7 +83,7 @@
     var cached = getCachedUser();
     if (cached) {
       _user = cached;
-      injectWelcomeBar(cached);
+      injectHeaderAuth(cached);
     } else {
       injectSignInLink();
     }
@@ -129,11 +124,8 @@
       var u = await auth0Client.getUser();
       _user = { email: u.email, name: u.name, sub: u.sub };
       setCachedUser(_user);
-      removeWelcomeBar();
-      /* Remove sign-in link before injecting bar */
-      var sl = document.getElementById('pubSignInLink');
-      if (sl) sl.remove();
-      injectWelcomeBar(_user);
+      removeAuthUI();
+      injectHeaderAuth(_user);
 
       /* Log login event to backend (fire-and-forget) */
       fetch('/api/auth/login-event', {
@@ -148,7 +140,7 @@
       /* Not authenticated — clear stale cache */
       clearCachedUser();
       _user = null;
-      removeWelcomeBar();
+      removeAuthUI();
       if (!document.getElementById('pubSignInLink')) injectSignInLink();
     }
   }
@@ -167,7 +159,7 @@
     if (auth0Client) {
       auth0Client.logout({ logoutParams: { returnTo: window.location.origin + '/' } });
     } else {
-      removeWelcomeBar();
+      removeAuthUI();
       injectSignInLink();
     }
   };
