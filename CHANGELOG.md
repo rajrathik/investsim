@@ -142,6 +142,15 @@
 | `d435b11` | **SQL Server → PostgreSQL sync tool** — `tools/sync_sql_to_postgres.py`: reads from local SQL Server, writes to Railway PostgreSQL. Creates tables if they don't exist. Truncates + bulk inserts in batches of 1000. Resets auto-increment sequences. Supports `--tables`, `--all`, `--dry-run`, `--status` modes. Data tables synced: `tickers`, `monthly_prices`, `dividends`, `monthly_mm_rates`, `annual_mm_rates`, `user_admin`. Log tables (`user_logins`, `api_request_logs`, `saved_simulations`) synced only with `--all` flag |
 | `ebd0906` | **Remove duplicate backend/requirements.txt** — root `requirements.txt` is what Railway installs from (Railway doesn't install from subdirectories). Removed the duplicate in `backend/` to avoid confusion |
 
+### Phase 22 — Member gating, admin tile, SEO verification, simulation fix (Mar 2026)
+
+| Change | Description |
+|--------|-------------|
+| `frontend/index.html` | Stack & Earn removed from public tool grid; added to Member Content section (sign-in required). Admin tile added at bottom — shown only when signed-in member's token passes `/api/admin/verify`; `_admin_hint` localStorage flag cached to avoid re-checking on every page load |
+| `frontend/admin.html` | Set `_admin_hint` in localStorage on successful admin verification; clear it on logout |
+| `frontend/stack-earn.js` | Fixed tier interest calculation: splits running balance across tier buckets (amounts below T1 max earn T1 rate, amounts above earn T2/T3), not the monthly deposit amount |
+| `frontend/googlefb699e7455843495.html` | Google Search Console HTML file verification (placed at root of frontend so served at `/googlefb699e7455843495.html`) |
+
 ### Phase 21 — Stack & Earn columns, admin rate management, UX copy (Mar 2026)
 
 | Change | Description |

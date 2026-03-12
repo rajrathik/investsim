@@ -62,7 +62,8 @@ http://localhost:8000/admin.html  →  Auth0 lock screen
 - Root `/` serves `index.html`
 - Every page loads `theme-toggle.js` in `<head>` for dark/light theme switching with localStorage persistence
 - Every public page loads Auth0 SPA SDK + `shared-auth.js` for optional sign-in (welcome bar, sign-in link)
-- Signed-in users see member content on the landing page and can access `saved-simulations.html`
+- Signed-in users see member content on the landing page (Saved Simulations + Stack & Earn) and can access `saved-simulations.html` and `stack-earn.html`
+- Signed-in members who are admins also see an Admin tile — auto-detected via `GET /api/admin/verify` using `_pubAuthFetch` on page load; `_admin_hint` flag cached in localStorage
 
 ---
 
@@ -82,6 +83,7 @@ User opens http://localhost:8000/
       → If not authenticated: shows "Sign In" link in header
       → Exposes window._pubAuthFetch() and window._pubIsSignedIn() globally
   → index.html listens for 'pubauth' event → shows/hides member content section
+  → calls /api/admin/verify → if admin, shows Admin tile and sets _admin_hint in localStorage
   → User clicks any tool card or nav link
   → Page loads, fetches data from API (no auth required)
   → Simulator: loadTickers() on DOMContentLoaded → populate dropdown → ready

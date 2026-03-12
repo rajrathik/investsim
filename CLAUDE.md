@@ -81,7 +81,7 @@ frontend/theme-toggle.js       ← Dark/light theme IIFE (no FOUC)
 | Risk vs Return | `risk-return.html` |
 | S&P 500 History | `sp500-history.html` |
 | S&P 500 Historical Simulator | `sp500-simulate.html` |
-| Stack & Earn (Tiered Savings) | `stack-earn.html` |
+| Stack & Earn (Tiered Savings) | `stack-earn.html` (**sign-in required** — member content only, not in public tool grid) |
 | Monte Carlo Simulator | `montecarlo.html` |
 | Monthly Market Extremes | `extreme-months.html` |
 | Annual Market Extremes | `extreme-years.html` |
@@ -136,6 +136,7 @@ cd backend && uvicorn app.api:app --reload
 - Default: 60/min | Heavy reads: 30/min | Writes: 10/min | Batch: 5/min
 
 ## Recent Commits
+- Stack & Earn moved to member content: removed from public tool grid; card now appears in Member Content section of index.html (sign-in required); simulation logic fixed to split interest by running balance buckets (not monthly deposit amount); Google Search Console HTML file verification added (`frontend/googlefb699e7455843495.html`); Admin tile auto-detected on index.html via `/api/admin/verify` — shown when signed-in member is in user_admin table, hidden otherwise; `_admin_hint` localStorage flag set on verify, cleared on logout
 - Stack & Earn: added `display_rate`, `display_upto`, `product_type` columns to both tier tables + migration script; `renderTiers()` respects flags; 6 new admin CRUD endpoints (`GET/PUT/POST /api/admin/stack-earn/savings-tiers` + goal-tiers); admin.html Rate Management card (editable table, Add New Tier form, product name display); Monte Carlo parameter guide added to `montecarlo.html`; renamed S&P 500 DCA Simulator → "S&P 500 Historical Simulator" across index.html and sp500-simulate.html; Stack & Earn card copy updated to remove tiered/split language
 - Added Annual Market Extremes (`extreme-years.html/js`): ranked best & worst full calendar years in S&P 500 history since 1871; same side-by-side red/green panel layout as monthly extremes; compounded from monthly Shiller data; top-10/20 chip toggle; new `GET /api/sp500-extreme-years` endpoint
 - Added Monthly Market Extremes (`extreme-months.html/js`): ranked best & worst single months in S&P 500 history since 1871; side-by-side red/green panels; $10K result per month; mini-bar magnitude indicators; top-10/20 chip toggle; new `GET /api/sp500-extreme-months` endpoint

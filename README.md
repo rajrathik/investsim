@@ -146,7 +146,7 @@ All public pages are open (no login required). Admin is completely separate.
 | `http://localhost:8000/risk-return.html` | Risk vs return scatter plot | Public |
 | `http://localhost:8000/sp500-history.html` | S&P 500 decade heatmap | Public |
 | `http://localhost:8000/sp500-simulate.html` | S&P 500 Historical Simulator | Public |
-| `http://localhost:8000/stack-earn.html` | Stack & Earn savings calculator | Public |
+| `http://localhost:8000/stack-earn.html` | Stack & Earn savings calculator | **Sign-in required** (member content) |
 | `http://localhost:8000/montecarlo.html` | Monte Carlo portfolio simulator (5–30yr horizon, withdrawal mode, lump sum, cycle sensitivity) | Public |
 | `http://localhost:8000/extreme-months.html` | Monthly Market Extremes — best & worst single months, $10K result | Public |
 | `http://localhost:8000/extreme-years.html` | Annual Market Extremes — best & worst full calendar years, $10K result | Public |
@@ -168,7 +168,8 @@ All public pages are open (no login required). Admin is completely separate.
 **Optional public sign-in** (via `shared-auth.js`):
 - Users can optionally sign in on any public page via a **"Sign In"** link in the header
 - Signing in shows a **welcome bar** across all pages with the user's email and a Sign Out button
-- Signed-in users unlock **member content** on the landing page (e.g., Saved Simulations tile)
+- Signed-in users unlock **member content** on the landing page: Saved Simulations and Stack & Earn tiles
+- Signed-in members who are admins additionally see an **Admin** tile (auto-detected via `/api/admin/verify`)
 - Signed-in users can **save up to 3 portfolio simulations** from the simulator and view/delete them on the Saved Simulations page
 - All public pages redirect to `/` after Auth0 login — only one callback URL needed for all public pages
 - Auth state cached in `localStorage` (`pub_auth_user` key) for instant welcome bar across pages
