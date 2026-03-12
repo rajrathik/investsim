@@ -85,6 +85,7 @@ frontend/theme-toggle.js       ← Dark/light theme IIFE (no FOUC)
 | Monte Carlo Simulator | `montecarlo.html` |
 | Monthly Market Extremes | `extreme-months.html` |
 | Annual Market Extremes | `extreme-years.html` |
+| 5-Year Crash Periods & Recovery | `bad-streaks.html` |
 | Saved Simulations | `saved-simulations.html` (**sign-in required**) |
 | Admin Dashboard | `admin.html` (**Auth0 + user_admin table**) — tile on `index.html` visible only when `_admin_hint` localStorage flag set (cleared on admin logout) |
 | CD Portfolio Advisor (AI) | `CD-simulator.html` + `cdapp.js` + `cdstyles.css` |
@@ -136,7 +137,7 @@ cd backend && uvicorn app.api:app --reload
 - Default: 60/min | Heavy reads: 30/min | Writes: 10/min | Batch: 5/min
 
 ## Recent Commits
-- Added **Worst 5-Year Periods & Recovery** section to `extreme-years.html`: non-overlapping 5-year crash windows ranked by total loss, with individual year pills, recovery Yr+1 / Yr+2 / combined columns, summary stat cards (worst period, avg Yr+1 recovery, avg Yr+2 recovery); new `GET /api/sp500-bad-streaks?n=` endpoint; both fetch calls parallel on page load
+- Added **5-Year Crash Periods & Recovery** page (`bad-streaks.html/js`): standalone page, own tile on index.html; non-overlapping 5-year crash windows ranked by total loss; year-by-year pills per period; recovery Yr+1/Yr+2/combined columns; 3 summary stat cards; 5/10 period chip toggle; API: `GET /api/sp500-bad-streaks?n=10`
 - Stack & Earn moved to member content: removed from public tool grid; card now appears in Member Content section of index.html (sign-in required); simulation logic fixed to split interest by running balance buckets (not monthly deposit amount); Google Search Console HTML file verification added (`frontend/googlefb699e7455843495.html`); Admin tile auto-detected on index.html via `/api/admin/verify` — shown when signed-in member is in user_admin table, hidden otherwise; `_admin_hint` localStorage flag set on verify, cleared on logout
 - Stack & Earn: added `display_rate`, `display_upto`, `product_type` columns to both tier tables + migration script; `renderTiers()` respects flags; 6 new admin CRUD endpoints (`GET/PUT/POST /api/admin/stack-earn/savings-tiers` + goal-tiers); admin.html Rate Management card (editable table, Add New Tier form, product name display); Monte Carlo parameter guide added to `montecarlo.html`; renamed S&P 500 DCA Simulator → "S&P 500 Historical Simulator" across index.html and sp500-simulate.html; Stack & Earn card copy updated to remove tiered/split language
 - Added Annual Market Extremes (`extreme-years.html/js`): ranked best & worst full calendar years in S&P 500 history since 1871; same side-by-side red/green panel layout as monthly extremes; compounded from monthly Shiller data; top-10/20 chip toggle; new `GET /api/sp500-extreme-years` endpoint

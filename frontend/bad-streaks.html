@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Worst 5-Year Crash Periods — S&amp;P 500 Recovery Analysis</title>
+  <meta name="description" content="The worst 5-year crash periods in S&P 500 history since 1871, and what the market returned in the 2 years that followed each crash." />
+  <link rel="canonical" href="https://investsim.claritycapitaltools.com/bad-streaks.html" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Worst 5-Year Crash Periods — S&amp;P 500" />
+  <meta property="og:description" content="The worst 5-year stretches in S&P 500 history and what happened in the 2 years of recovery that followed." />
+  <meta property="og:url" content="https://investsim.claritycapitaltools.com/bad-streaks.html" />
+  <meta property="og:site_name" content="Investment Tools" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Worst 5-Year Crash Periods — S&amp;P 500" />
+  <meta name="twitter:description" content="The worst 5-year stretches in S&P 500 history since 1871 and what the market did in the 2 years that followed." />
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Worst 5-Year Crash Periods & Recovery",
+  "description": "The worst 5-year crash periods in S&P 500 history since 1871, and what the market returned in the 2 years that followed each crash.",
+  "url": "https://investsim.claritycapitaltools.com/bad-streaks.html",
+  "applicationCategory": "FinanceApplication",
+  "isPartOf": {"@type": "WebSite", "name": "Investment Tools", "url": "https://investsim.claritycapitaltools.com/"}
+}
+</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="shared-analytics.css" />
+  <script src="theme-toggle.js"></script>
+  <script src="https://cdn.auth0.com/js/auth0-spa-js/2.1/auth0-spa-js.production.js"></script>
+  <style>
+    /* ── summary stat cards ── */
+    .streak-summary {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: .75rem;
+      margin-top: 1rem;
+      margin-bottom: .75rem;
+    }
+    @media (max-width: 600px) { .streak-summary { grid-template-columns: 1fr; } }
+
+    .streak-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: .9rem 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: .25rem;
+    }
+    .streak-card.sc-red   { background: rgba(220,38,38,.05);  border-color: rgba(220,38,38,.18); }
+    .streak-card.sc-green { background: rgba(22,163,74,.05);  border-color: rgba(22,163,74,.18); }
+    .streak-card.sc-blue  { background: rgba(59,130,246,.05); border-color: rgba(59,130,246,.18); }
+    [data-theme="dark"] .streak-card.sc-red   { background: rgba(239,68,68,.09);  border-color: rgba(239,68,68,.22); }
+    [data-theme="dark"] .streak-card.sc-green { background: rgba(74,222,128,.09); border-color: rgba(74,222,128,.22); }
+    [data-theme="dark"] .streak-card.sc-blue  { background: rgba(96,165,250,.09); border-color: rgba(96,165,250,.22); }
+
+    .sc-icon { font-size: 1.25rem; line-height: 1; margin-bottom: .15rem; }
+    .sc-lbl  { font-size: .68rem; font-weight: 600; text-transform: uppercase; letter-spacing: .07em; color: var(--text3); }
+    .sc-val  { font-size: 1.35rem; font-weight: 700; line-height: 1.1; }
+    .sc-sub  { font-size: .74rem; color: var(--text3); margin-top: .1rem; }
+
+    /* ── panel ── */
+    .streaks-panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .panel-head {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      padding: .85rem 1rem .7rem;
+      border-bottom: 2px solid rgba(220,38,38,.2);
+      background: rgba(220,38,38,.04);
+    }
+    [data-theme="dark"] .panel-head { background: rgba(239,68,68,.07); }
+
+    .panel-icon {
+      width: 2rem;
+      height: 2rem;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: .9rem;
+      font-weight: 700;
+      flex-shrink: 0;
+      background: rgba(220,38,38,.15);
+      color: #dc2626;
+    }
+    [data-theme="dark"] .panel-icon { color: #f87171; }
+    .panel-title { font-size: 1rem; font-weight: 700; }
+    .panel-sub   { font-size: .72rem; color: var(--text3); font-family: monospace; margin-top: .15rem; }
+
+    /* ── table ── */
+    .streak-table { width: 100%; border-collapse: collapse; font-size: .81rem; }
+    .streak-table th {
+      padding: .45rem .85rem;
+      font-size: .67rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--text3);
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      white-space: nowrap;
+    }
+    .streak-table th.r { text-align: right; }
+    .streak-table td {
+      padding: .6rem .85rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    .streak-table tr:last-child td { border-bottom: none; }
+    .streak-table tbody tr:hover td { background: var(--bg); transition: background .1s; }
+
+    .td-rank   { color: var(--text3); font-size: .72rem; font-family: monospace; width: 1.6rem; }
+    .td-period { font-weight: 600; font-size: .83rem; white-space: nowrap; }
+    .td-r      { text-align: right; font-family: monospace; font-weight: 600; white-space: nowrap; }
+
+    /* year-by-year mini pills */
+    .yr-pills { display: flex; gap: 3px; flex-wrap: wrap; margin-top: 5px; }
+    .yr-pill {
+      font-size: .62rem;
+      font-family: monospace;
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-weight: 600;
+    }
+    .yr-pill.neg { background: rgba(220,38,38,.12); color: #dc2626; }
+    .yr-pill.pos { background: rgba(22,163,74,.12);  color: #16a34a; }
+    [data-theme="dark"] .yr-pill.neg { background: rgba(239,68,68,.18);  color: #f87171; }
+    [data-theme="dark"] .yr-pill.pos { background: rgba(74,222,128,.18); color: #4ade80; }
+
+    /* recovery column styling */
+    .rec-header {
+      text-align: center !important;
+      border-left: 2px solid rgba(22,163,74,.25);
+      background: rgba(22,163,74,.03);
+    }
+    [data-theme="dark"] .rec-header { background: rgba(74,222,128,.04); }
+    .td-rec {
+      border-left: 2px solid rgba(22,163,74,.15);
+      text-align: right;
+      font-family: monospace;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    /* ── colors ── */
+    .c-worst   { color: #dc2626; }
+    .c-best    { color: #16a34a; }
+    .c-rec-pos { color: #16a34a; }
+    .c-rec-neg { color: #dc2626; }
+    [data-theme="dark"] .c-worst   { color: #f87171; }
+    [data-theme="dark"] .c-best    { color: #4ade80; }
+    [data-theme="dark"] .c-rec-pos { color: #4ade80; }
+    [data-theme="dark"] .c-rec-neg { color: #f87171; }
+    .rec-na { color: var(--text3); font-style: italic; font-family: inherit; font-weight: 400; }
+
+    /* ── misc ── */
+    .chip-row  { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+    .chip-label {
+      font-size: .72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--text3);
+    }
+    .context-note {
+      margin-top: 1rem;
+      font-size: .76rem;
+      color: var(--text3);
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: .7rem 1rem;
+      line-height: 1.55;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div style="display:flex;align-items:center;gap:.5rem;">
+      <h1>📉 5-Year Crash Periods &amp; Recovery</h1>
+    </div>
+    <a href="/" class="back-home">← Home</a>
+  </div>
+
+  <div class="container">
+
+    <!-- controls -->
+    <div class="controls-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem;">
+        <div>
+          <div style="font-size:.88rem;font-weight:600;margin-bottom:.15rem;">Worst 5-Year Crash Periods &amp; What Followed</div>
+          <div style="font-size:.74rem;color:var(--text3);">Non-overlapping 5-year windows ranked by total loss · Right columns show the 2 calendar years that followed each crash</div>
+        </div>
+        <div class="chip-row">
+          <span class="chip-label">Show</span>
+          <div id="nChips" style="display:flex;gap:.35rem;">
+            <button class="ctrl-chip active" data-val="5">5 periods</button>
+            <button class="ctrl-chip" data-val="10">10 periods</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- status -->
+    <div id="statusMsg" class="status-msg" style="display:none"></div>
+
+    <!-- results -->
+    <div id="results" style="display:none">
+
+      <!-- summary stat cards -->
+      <div class="streak-summary" id="streakSummary"></div>
+
+      <!-- table panel -->
+      <div class="streaks-panel">
+        <div class="panel-head">
+          <div class="panel-icon">▼</div>
+          <div>
+            <div class="panel-title">Worst 5-Year Periods</div>
+            <div class="panel-sub" id="panelSub"></div>
+          </div>
+        </div>
+        <div class="table-wrap" style="overflow-x:auto;">
+          <table class="streak-table">
+            <thead>
+              <tr>
+                <th></th>
+                <th>Period</th>
+                <th class="r">5-Yr Return</th>
+                <th class="r">$10K →</th>
+                <th class="r rec-header" colspan="3">— Recovery years —</th>
+              </tr>
+              <tr>
+                <th></th>
+                <th></th>
+                <th></th>
+                <th></th>
+                <th class="r rec-header">Yr +1</th>
+                <th class="r rec-header">Yr +2</th>
+                <th class="r rec-header">Combined</th>
+              </tr>
+            </thead>
+            <tbody id="streaksBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="context-note">
+        Each calendar year appears in at most one period (non-overlapping, greedy worst-first selection).
+        Recovery = the 2 full calendar years immediately after the streak ended.
+        Returns are nominal total returns (price change + dividends), compounded from monthly Shiller data.
+        Data: Robert Shiller / Yale Economics (shillerdata.com), 1871 – present.
+      </div>
+
+    </div><!-- /#results -->
+  </div><!-- /.container -->
+
+  <script src="shared-analytics.js?v=1"></script>
+  <script src="bad-streaks.js?v=1"></script>
+  <script src="shared-auth.js"></script>
+</body>
+</html>
