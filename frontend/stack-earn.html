@@ -91,12 +91,6 @@
   .year-table tbody tr:hover{background:var(--bg)}
   .earn-val{color:var(--accent)!important}
 
-  /* ---- Auth gate ---- */
-  .auth-gate{text-align:center;padding:60px 24px}
-  .auth-gate p{color:var(--text3);font-size:15px;margin-bottom:20px}
-  .auth-gate-btn{display:inline-block;padding:12px 32px;border:none;border-radius:12px;font-size:14px;font-weight:700;font-family:'Space Grotesk',sans-serif;cursor:pointer;background:var(--accent);color:var(--bg);text-decoration:none;transition:opacity .15s}
-  .auth-gate-btn:hover{opacity:.85}
-
   /* ---- Error / loading ---- */
   .status-msg{text-align:center;padding:32px;font-size:13px;font-family:'JetBrains Mono',monospace;color:var(--text3)}
 
@@ -117,16 +111,6 @@
 </div>
 
 <div class="container">
-
-  <!-- Auth gate — shown when not signed in -->
-  <div id="authGate" class="auth-gate" style="display:none">
-    <div style="font-size:48px;margin-bottom:16px">🔒</div>
-    <p>Sign in to access Stack &amp; Earn</p>
-    <button class="auth-gate-btn" onclick="window._pubSignOut?location.href='/':void(0)">Sign In from Home</button>
-  </div>
-
-  <!-- Main content — shown when signed in -->
-  <div id="mainContent" style="display:none">
 
   <!-- Tier rates -->
   <div class="tiers-card" id="tiersCard">
@@ -240,25 +224,10 @@
     </div>
   </div>
 
-  </div><!-- /mainContent -->
-
 </div>
 
 <script src="shared-analytics.js?v=1"></script>
 <script src="stack-earn.js?v=1"></script>
 <script src="shared-auth.js"></script>
-<script>
-function checkAuth(){
-  if(window._pubIsSignedIn&&window._pubIsSignedIn()){
-    document.getElementById('authGate').style.display='none';
-    document.getElementById('mainContent').style.display='';
-  }else{
-    document.getElementById('authGate').style.display='';
-    document.getElementById('mainContent').style.display='none';
-  }
-}
-window.addEventListener('pubauth',function(){checkAuth();});
-setTimeout(checkAuth,500);
-</script>
 </body>
 </html>
