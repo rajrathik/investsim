@@ -209,12 +209,31 @@
       else document.getElementById('memberSection').classList.remove('show');
     } catch(e) {}
   }
-  showMember();
-  window.addEventListener('pubauth', showMember);
-  // Admin tile — visible only if admin has previously authenticated
-  if (localStorage.getItem('_admin_hint') === '1') {
-    document.getElementById('adminSection').style.display = '';
+  function checkAdmin() {
+    var u = JSON.parse(localStorage.getItem('pub_auth_user') || 'null');
+    if (!u || !u.email) {
+      document.getElementById('adminSection').style.display = 'none';
+      localStorage.removeItem('_admin_hint');
+      return;
+    }
+    if (localStorage.getItem('_admin_hint') === '1') {
+      document.getElementById('adminSection').style.display = '';
+      return;
+    }
+    // Ask the backend — reuses existing admin verify endpoint
+    if (window._pubAuthFetch) {
+      window._pubAuthFetch('/api/admin/verify').then(function(r) {
+        if (r.ok) {
+          localStorage.setItem('_admin_hint', '1');
+          document.getElementById('adminSection').style.display = '';
+        }
+      }).catch(function(){});
+    }
   }
+
+  showMember();
+  checkAdmin();
+  window.addEventListener('pubauth', function() { showMember(); checkAdmin(); });
 })();
 </script>
 <script>try{navigator.sendBeacon('/api/track/pageview',JSON.stringify({page:location.pathname,referrer:document.referrer}))}catch(e){}</script>
