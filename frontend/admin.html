@@ -117,6 +117,39 @@ body{min-height:100vh;background:var(--bg);color:var(--text1);font-family:'DM Sa
     ✅ Write API is <strong>enabled</strong>. You can add tickers and load data.
   </div>
 
+  <!-- Quick Reference -->
+  <div class="card" style="background:var(--bg);border-style:dashed;padding:18px 24px">
+    <h2 style="margin-bottom:12px;font-size:14px;color:var(--text2)">📋 Quick Reference</h2>
+    <table style="width:100%;border-collapse:collapse;font-size:12px;font-family:'JetBrains Mono',monospace">
+      <tbody>
+        <tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:7px 16px 7px 0;color:var(--accent);font-weight:700;white-space:nowrap;vertical-align:top">Add Ticker</td>
+          <td style="padding:7px 0;color:var(--text2)">Register a new security symbol (e.g. <em>XLK</em>). Write API must be enabled. After adding, use <strong>Load New Tickers</strong> to pull its price history.</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:7px 16px 7px 0;color:var(--accent);font-weight:700;white-space:nowrap;vertical-align:top">Active Tickers</td>
+          <td style="padding:7px 0;color:var(--text2)">All securities currently tracked in the database. These are the options users see in the portfolio simulator.</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:7px 16px 7px 0;color:var(--accent);font-weight:700;white-space:nowrap;vertical-align:top">Yahoo Finance Data</td>
+          <td style="padding:7px 0;color:var(--text2)"><strong>Load New Tickers</strong> — run once after adding a ticker (pulls 30 yr history). <strong>Refresh Recent</strong> — run monthly to keep prices current (fetches last N months). <strong>Reload All</strong> — rarely needed; re-downloads everything.</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:7px 16px 7px 0;color:var(--accent);font-weight:700;white-space:nowrap;vertical-align:top">FRED Rates</td>
+          <td style="padding:7px 0;color:var(--text2)">Federal funds rate used as the risk-free / money-market benchmark in all simulations. Run <strong>Incremental</strong> monthly; <strong>Full History</strong> only if the table is empty or corrupted.</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:7px 16px 7px 0;color:var(--accent);font-weight:700;white-space:nowrap;vertical-align:top">Stack &amp; Earn Rates</td>
+          <td style="padding:7px 0;color:var(--text2)">Manage the interest tier table shown on the Stack &amp; Earn page. Edit rates, toggle rate visibility (<em>Show Rate</em>), switch range format (<em>Upto</em>), or add new tiers. Savings Tiers and Goal Tiers are managed separately.</td>
+        </tr>
+        <tr>
+          <td style="padding:7px 16px 7px 0;color:var(--accent);font-weight:700;white-space:nowrap;vertical-align:top">Batch Status</td>
+          <td style="padding:7px 0;color:var(--text2)">Live status of the last data-load job. Refreshes automatically while a job is running. Check here if a load seems stuck — shows mode, tickers processed, and any errors.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
   <!-- Add Ticker -->
   <div class="card">
     <h2>Add Ticker</h2>
