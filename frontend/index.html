@@ -184,6 +184,18 @@
     </div>
   </div>
 
+  <!-- Admin section — only rendered when _admin_hint is set -->
+  <div id="adminSection" style="display:none;margin-bottom:48px">
+    <div class="member-title">Admin</div>
+    <div class="tools-grid">
+      <a href="/admin.html" class="tool-card">
+        <div class="tool-icon">⚙️</div>
+        <div class="tool-name">Admin Dashboard</div>
+        <div class="tool-desc">Manage tickers, data sync, interest rates, and platform settings.</div>
+      </a>
+    </div>
+  </div>
+
 </div>
 
 <script src="shared-auth.js"></script>
@@ -199,6 +211,10 @@
   }
   showMember();
   window.addEventListener('pubauth', showMember);
+  // Admin tile — visible only if admin has previously authenticated
+  if (localStorage.getItem('_admin_hint') === '1') {
+    document.getElementById('adminSection').style.display = '';
+  }
 })();
 </script>
 <script>try{navigator.sendBeacon('/api/track/pageview',JSON.stringify({page:location.pathname,referrer:document.referrer}))}catch(e){}</script>

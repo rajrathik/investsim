@@ -259,6 +259,7 @@ async function doLogin() {
 
 function doLogout() {
   if (!auth0Client) return;
+  localStorage.removeItem('_admin_hint');
   auth0Client.logout({ logoutParams: { returnTo: window.location.origin + window.location.pathname } });
 }
 
@@ -294,6 +295,7 @@ function showDenied(msg) {
 }
 
 function onAdminVerified(email) {
+  localStorage.setItem('_admin_hint', '1');
   document.getElementById('authOverlay').classList.add('hidden');
   document.getElementById('mainHeader').style.display = '';
   document.getElementById('mainContainer').style.display = '';

@@ -86,7 +86,7 @@ frontend/theme-toggle.js       ← Dark/light theme IIFE (no FOUC)
 | Monthly Market Extremes | `extreme-months.html` |
 | Annual Market Extremes | `extreme-years.html` |
 | Saved Simulations | `saved-simulations.html` (**sign-in required**) |
-| Admin Dashboard | `admin.html` (**Auth0 + user_admin table**) |
+| Admin Dashboard | `admin.html` (**Auth0 + user_admin table**) — tile on `index.html` visible only when `_admin_hint` localStorage flag set (cleared on admin logout) |
 | CD Portfolio Advisor (AI) | `CD-simulator.html` + `cdapp.js` + `cdstyles.css` |
 
 ## Database (12 Tables)
