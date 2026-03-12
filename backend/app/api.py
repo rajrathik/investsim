@@ -1667,6 +1667,115 @@ def get_sp500_extreme_years(
     return {"worst": worst, "best": best}
 
 
+# ===========================================
+# BAD 5-YEAR STREAKS + RECOVERY
+# ===========================================
+
+@app.get("/api/sp500-bad-streaks")
+@limiter.limit("60/minute")
+def get_sp500_bad_streaks(
+    request: Request,
+    n: int = Query(10, ge=3, le=20),
+    db: Session = Depends(get_db),
+):
+    """Return the N worst non-overlapping 5-year rolling windows plus the 2 recovery years after each."""
+    from collections import defaultdict
+
+    try:
+        rows = db.execute(
+            text(
+                'SELECT "Year", "Month", "NominalTotalReturn" '
+                "FROM shiller_market_data "
+                'WHERE "NominalTotalReturn" IS NOT NULL '
+                'ORDER BY "Year", "Month"'
+            )
+        ).fetchall()
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="shiller_market_data unavailable.") from exc
+
+    monthly_by_year: dict = defaultdict(list)
+    for row in rows:
+        monthly_by_year[int(row[0])].append(float(row[2]))
+
+    annual: dict = {}
+    for yr in sorted(monthly_by_year.keys()):
+        months = monthly_by_year[yr]
+        if len(months) < 12:
+            continue
+        compound = 1.0
+        for r in months:
+            compound *= (1.0 + r)
+        annual[yr] = compound - 1.0
+
+    years = sorted(annual.keys())
+    period = 5
+
+    # Build all rolling 5-year windows (require consecutive calendar years)
+    windows = []
+    for i in range(len(years) - period + 1):
+        window_years = years[i : i + period]
+        if window_years[-1] - window_years[0] != period - 1:
+            continue
+        compound = 1.0
+        for yr in window_years:
+            compound *= (1.0 + annual[yr])
+        windows.append((window_years[0], window_years[-1], compound - 1.0, window_years))
+
+    # Sort worst first
+    windows.sort(key=lambda x: x[2])
+
+    # Greedy pick non-overlapping windows
+    picked = []
+    used = set()
+    for start, end, ret, yrs in windows:
+        if any(y in used for y in yrs):
+            continue
+        picked.append((start, end, ret, yrs))
+        used.update(yrs)
+        if len(picked) >= n:
+            break
+
+    result = []
+    for rank, (start, end, ret, yrs) in enumerate(picked, 1):
+        yr_detail = [{"year": y, "return_pct": round(annual[y] * 100, 2)} for y in yrs]
+
+        r1_yr = end + 1
+        r2_yr = end + 2
+        rec1 = (
+            {"year": r1_yr, "return_pct": round(annual[r1_yr] * 100, 2), "available": True}
+            if r1_yr in annual
+            else {"year": r1_yr, "return_pct": None, "available": False}
+        )
+        rec2 = (
+            {"year": r2_yr, "return_pct": round(annual[r2_yr] * 100, 2), "available": True}
+            if r2_yr in annual
+            else {"year": r2_yr, "return_pct": None, "available": False}
+        )
+
+        if rec1["available"] and rec2["available"]:
+            rec_combined = round(
+                ((1 + annual[r1_yr]) * (1 + annual[r2_yr]) - 1) * 100, 2
+            )
+        elif rec1["available"]:
+            rec_combined = rec1["return_pct"]
+        else:
+            rec_combined = None
+
+        result.append({
+            "rank": rank,
+            "start_year": start,
+            "end_year": end,
+            "return_pct": round(ret * 100, 2),
+            "end_value": round(10000 * (1 + ret)),
+            "years_detail": yr_detail,
+            "recovery_yr1": rec1,
+            "recovery_yr2": rec2,
+            "recovery_combined_pct": rec_combined,
+        })
+
+    return {"periods": result}
+
+
 @app.get("/api/sp500-extreme-months")
 @limiter.limit("60/minute")
 def get_sp500_extreme_months(
