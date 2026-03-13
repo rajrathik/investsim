@@ -142,6 +142,16 @@
 | `d435b11` | **SQL Server → PostgreSQL sync tool** — `tools/sync_sql_to_postgres.py`: reads from local SQL Server, writes to Railway PostgreSQL. Creates tables if they don't exist. Truncates + bulk inserts in batches of 1000. Resets auto-increment sequences. Supports `--tables`, `--all`, `--dry-run`, `--status` modes. Data tables synced: `tickers`, `monthly_prices`, `dividends`, `monthly_mm_rates`, `annual_mm_rates`, `user_admin`. Log tables (`user_logins`, `api_request_logs`, `saved_simulations`) synced only with `--all` flag |
 | `ebd0906` | **Remove duplicate backend/requirements.txt** — root `requirements.txt` is what Railway installs from (Railway doesn't install from subdirectories). Removed the duplicate in `backend/` to avoid confusion |
 
+### Phase 23 — 5-Year Crash Periods & Recovery page (Mar 2026)
+
+| Change | Description |
+|--------|-------------|
+| `GET /api/sp500-bad-streaks` | Existing endpoint (added in prior phase). Returns N worst non-overlapping 5-year windows: rank, start/end year, return_pct, end_value, years_detail (per-year return pills), recovery_yr1, recovery_yr2, recovery_combined_pct. Greedy non-overlapping selection: sorts all rolling 5-year windows worst-first, picks each only if none of its years are already claimed. Recovery = annual[end+1] and annual[end+2] looked up directly |
+| `frontend/bad-streaks.html` | New standalone page with own tile on index.html (🔻). Single table panel: rank, period dates, 5-yr return, $10K result, year-by-year color pills, recovery Yr+1/Yr+2/combined columns. 3 summary stat cards (worst period, avg Yr+1, avg Yr+2). 5/10 period chip toggle. Full SEO: canonical, OG, Twitter Card, JSON-LD WebApplication |
+| `frontend/bad-streaks.js` | IIFE: fetches `GET /api/sp500-bad-streaks?n=10` once on load. Summary cards computed client-side (averages, positive-count). Chip toggle re-renders sliced data without re-fetching. Year pills colored by sign (red/green). Combined recovery compounded on server |
+| `frontend/index.html` | New tile added: "🔻 5-Year Crash Periods & Recovery" after Annual Market Extremes tile. Annual Market Extremes tile description reverted to original |
+| `frontend/extreme-years.html/js` | Reverted to original — 5-year section removed (it is now its own page) |
+
 ### Phase 22 — Member gating, admin tile, SEO verification, simulation fix (Mar 2026)
 
 | Change | Description |
@@ -286,6 +296,7 @@ main
 | `frontend/sitemap.xml` | XML sitemap for Google — all public URLs with priorities |
 | `frontend/extreme-months.html/js` | Monthly Market Extremes — see Phase 19 |
 | `frontend/extreme-years.html/js` | Annual Market Extremes — see Phase 20 |
+| `frontend/bad-streaks.html/js` | 5-Year Crash Periods & Recovery — see Phase 23 |
 | `frontend/admin.html` | Admin dashboard (Auth0 login + user_admin whitelist, isolated). Phase 21: added Stack & Earn Rate Management card |
 | `backend/onetime/migrate_stack_earn_add_columns.py` | One-time migration: adds display_rate, display_upto, product_type columns to both tier tables — see Phase 21 |
 | `frontend/CD-simulator.html` | CD portfolio advisor (AI-powered) |
