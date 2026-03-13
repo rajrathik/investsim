@@ -62,7 +62,7 @@ http://localhost:8000/admin.html  →  Auth0 lock screen
 - Root `/` serves `index.html`
 - Every page loads `theme-toggle.js` in `<head>` for dark/light theme switching with localStorage persistence
 - Every public page loads Auth0 SPA SDK + `shared-auth.js` for optional sign-in (welcome bar, sign-in link)
-- Signed-in users see member content on the landing page (Saved Simulations + Stack & Earn) and can access `saved-simulations.html` and `stack-earn.html`
+- Signed-in users see member content on the landing page (Saved Simulations) and can access `saved-simulations.html`. `stack-earn.html` is fully built but not linked from the landing page — accessible via direct URL only
 - Signed-in members who are admins also see an Admin tile — auto-detected via `GET /api/admin/verify` using `_pubAuthFetch` on page load; `_admin_hint` flag cached in localStorage
 
 ---
