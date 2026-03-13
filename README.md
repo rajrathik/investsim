@@ -148,7 +148,7 @@ All public pages are open (no login required). Admin is completely separate.
 | `http://localhost:8000/risk-return.html` | Risk vs return scatter plot | Public |
 | `http://localhost:8000/sp500-history.html` | S&P 500 decade heatmap | Public |
 | `http://localhost:8000/sp500-simulate.html` | S&P 500 Historical Simulator | Public |
-| `http://localhost:8000/stack-earn.html` | Stack & Earn savings calculator | **Sign-in required** (member content) |
+| `http://localhost:8000/stack-earn.html` | Stack & Earn savings calculator | Accessible via direct URL (not linked from landing page — ready to be re-added to member content when needed) |
 | `http://localhost:8000/montecarlo.html` | Monte Carlo portfolio simulator (5–30yr horizon, withdrawal mode, lump sum, cycle sensitivity) | Public |
 | `http://localhost:8000/extreme-months.html` | Monthly Market Extremes — best & worst single months, $10K result | Public |
 | `http://localhost:8000/extreme-years.html` | Annual Market Extremes — best & worst full calendar years, $10K result | Public |
@@ -171,7 +171,7 @@ All public pages are open (no login required). Admin is completely separate.
 **Optional public sign-in** (via `shared-auth.js`):
 - Users can optionally sign in on any public page via a **"Sign In"** link in the header
 - Signing in shows a **welcome bar** across all pages with the user's email and a Sign Out button
-- Signed-in users unlock **member content** on the landing page: Saved Simulations and Stack & Earn tiles
+- Signed-in users unlock **member content** on the landing page: Saved Simulations tile
 - Signed-in members who are admins additionally see an **Admin** tile (auto-detected via `/api/admin/verify`)
 - Signed-in users can **save up to 3 portfolio simulations** from the simulator and view/delete them on the Saved Simulations page
 - All public pages redirect to `/` after Auth0 login — only one callback URL needed for all public pages
@@ -312,7 +312,7 @@ Opens at `http://localhost:6419`. Press Ctrl+C to stop.
 - **Dark/light theme toggle** — 🌙/☀️ button on every page; persists via localStorage; no FOUC (synchronous IIFE in `<head>`); Canvas charts re-render on toggle
 - **CSS consolidation** — `shared-analytics.css` is the single source of truth for `:root` variables, reset, fonts, header, and shared component styles; page-specific CSS files contain only overrides
 - **Optional public Auth0 sign-in** — `shared-auth.js` loaded on all 11 public pages; provides optional sign-in link, welcome bar, `_pubAuthFetch()` for authenticated API calls, `_pubIsSignedIn()` for checking login state; all pages use single `/` callback URL
-- **Member content section** — landing page shows member-only tiles (Saved Simulations, Newsletters, Watchlists) when signed in
+- **Member content section** — landing page shows member-only tiles (Saved Simulations, Newsletters, Watchlists) when signed in. **Stack & Earn** (`stack-earn.html`) is fully built (DB tables, API, frontend) but not linked from the landing page — re-add its card to the member content section in `index.html` when ready to surface it
 - **Public pages, isolated admin** — all public pages are open (no login required); admin is Auth0-protected and completely separate with no cross-links
 - **Landing page with tool cards** — root URL serves `index.html` with clickable cards for each tool; separate `simulator-guide.html` for the How It Works walkthrough
 - **Admin dashboard** — Auth0 login + `user_admin` table whitelist; two-layer security; no links to/from public pages

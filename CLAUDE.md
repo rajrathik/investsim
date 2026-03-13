@@ -81,7 +81,7 @@ frontend/theme-toggle.js       ← Dark/light theme IIFE (no FOUC)
 | Risk vs Return | `risk-return.html` |
 | S&P 500 History | `sp500-history.html` |
 | S&P 500 Historical Simulator | `sp500-simulate.html` |
-| Stack & Earn (Tiered Savings) | `stack-earn.html` (**sign-in required** — member content only, not in public tool grid) |
+| Stack & Earn (Tiered Savings) | `stack-earn.html` (accessible via direct URL only — not linked from landing page; DB tables, API, and frontend fully built; re-add card to member content section in `index.html` when ready) |
 | Monte Carlo Simulator | `montecarlo.html` |
 | Monthly Market Extremes | `extreme-months.html` |
 | Annual Market Extremes | `extreme-years.html` |
