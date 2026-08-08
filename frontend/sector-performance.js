@@ -55,26 +55,11 @@ function populateYearSelectors() {
 /* ========== RENDERING ========== */
 
 function getReturnClass(val) {
-  if (val >= 50) return 'ret-50plus';
-  if (val >= 40) return 'ret-40';
-  if (val >= 30) return 'ret-30';
-  if (val >= 20) return 'ret-20';
-  if (val >= 10) return 'ret-10';
-  if (val >= 0) return 'ret-0';
-  if (val >= -10) return 'ret-neg0';
-  if (val >= -20) return 'ret-neg10';
-  if (val >= -30) return 'ret-neg20';
-  if (val >= -40) return 'ret-neg30';
-  if (val >= -50) return 'ret-neg40';
-  return 'ret-neg50';
+  return val >= 0 ? 'growth-pos' : 'growth-neg';
 }
 
 function getDividendClass(val) {
-  if (val >= 2.0) return 'div-high';
-  if (val >= 1.0) return 'div-med-high';
-  if (val >= 0.5) return 'div-med';
-  if (val > 0) return 'div-low';
-  return 'div-zero';
+  return val > 0 ? 'growth-gold' : 'growth-na';
 }
 
 const MONTH_NAMES = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];

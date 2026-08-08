@@ -39,20 +39,11 @@ function onYearChange() {
 
 function getRankClass(rank, total) {
   if (total <= 1) return '';
-  // Map rank to color: 1=best(green), last=worst(red)
+  // Map rank to color: 1=best(green), last=worst(red), middle third neutral
   const pct = (rank - 1) / (total - 1); // 0 to 1
-  if (pct <= 0.08) return 'rank-1';
-  if (pct <= 0.17) return 'rank-2';
-  if (pct <= 0.25) return 'rank-3';
-  if (pct <= 0.33) return 'rank-4';
-  if (pct <= 0.42) return 'rank-5';
-  if (pct <= 0.50) return 'rank-6';
-  if (pct <= 0.58) return 'rank-7';
-  if (pct <= 0.67) return 'rank-8';
-  if (pct <= 0.75) return 'rank-9';
-  if (pct <= 0.83) return 'rank-10';
-  if (pct <= 0.92) return 'rank-11';
-  return 'rank-12';
+  if (pct <= 0.33) return 'growth-pos';
+  if (pct <= 0.67) return 'growth-gold';
+  return 'growth-neg';
 }
 
 function render() {

@@ -62,41 +62,13 @@ function renderContent(annual) {
   renderHeatmap(annual);
 }
 
-// ---- Heatmap coloring ------------------------------------
-
-function heatBg(ret, isDark) {
-  const neutral   = isDark ? [17, 24, 39]  : [241, 245, 249];
-  const posTarget = [6, 78, 59];    // #064e3b — dark forest green
-  const negTarget = [120, 28, 28];  // #781c1c — dark burgundy
-
-  const target = ret >= 0 ? posTarget : negTarget;
-  const t      = Math.min(1, Math.abs(ret) / (ret >= 0 ? 50 : 40));
-
-  const r = Math.round(neutral[0] + (target[0] - neutral[0]) * t);
-  const g = Math.round(neutral[1] + (target[1] - neutral[1]) * t);
-  const b = Math.round(neutral[2] + (target[2] - neutral[2]) * t);
-  return `rgb(${r},${g},${b})`;
-}
-
-function heatFg(ret, isDark) {
-  const t = Math.min(1, Math.abs(ret) / 50);
-  if (isDark) {
-    if (t < 0.08) return '#64748b';
-    if (ret >= 0) return t > 0.35 ? '#a7f3d0' : '#86efac';
-    return t > 0.35 ? '#fca5a5' : '#fda4af';
-  } else {
-    if (t < 0.1)  return '#94a3b8';
-    if (t > 0.45) return '#ffffff';
-    return ret >= 0 ? '#065f46' : '#7f1d1d';
-  }
-}
-
 // ---- Heatmap render --------------------------------------
+// Value coloring uses shared .growth-pos/.growth-neg text classes (ChartMill-style:
+// plain background, text-only red/green) instead of a computed gradient fill.
 
 function renderHeatmap(annual) {
   const grid = $('heatmapGrid');
   if (!grid) return;
-  const isDark = document.documentElement.dataset.theme !== 'light';
 
   const decades = {};
   for (const [yr, ret] of Object.entries(annual)) {
@@ -111,7 +83,7 @@ function renderHeatmap(annual) {
 
   // Column header row
   html += '<div class="hm-row">';
-  html += '<div class="hm-decade-label" style="color:var(--text3)">Decade</div>';
+  html += '<div class="hm-decade-label" style="border-bottom:2px solid var(--border)">Decade</div>';
   for (let i = 0; i <= 9; i++) {
     html += `<div class="hm-col-header">&thinsp;+${i}</div>`;
   }
@@ -124,13 +96,12 @@ function renderHeatmap(annual) {
       const ret  = decades[decade][i];
       const year = decade + i;
       if (ret === undefined || ret === null) {
-        html += '<div class="hm-cell hm-empty"></div>';
+        html += '<div class="hm-cell hm-empty">—</div>';
       } else {
-        const bg   = heatBg(ret, isDark);
-        const fg   = heatFg(ret, isDark);
+        const cls  = ret >= 0 ? 'growth-pos' : 'growth-neg';
         const sign = ret >= 0 ? '+' : '';
         html +=
-          `<div class="hm-cell" style="background:${bg};color:${fg}"` +
+          `<div class="hm-cell ${cls}"` +
           ` onmouseenter="hmTooltip(event,${year},${ret})"` +
           ` onmousemove="hmMoveTooltip(event)"` +
           ` onmouseleave="hmHide()">` +

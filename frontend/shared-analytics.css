@@ -36,42 +36,27 @@ body{min-height:100vh;background:var(--bg);color:var(--text1);font-family:'DM Sa
 .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px 20px;animation:fadeUp .5s both}
 
 /* Table base */
+/* ChartMill-style data table: plain background, bold header with border emphasis
+   (not a colored fill), text-only value coloring via .growth-pos/.growth-neg/.growth-gold */
 .data-table-wrap{overflow-x:auto;margin-bottom:32px;border-radius:16px;border:1px solid var(--border);background:var(--card)}
-.data-table{border-collapse:separate;border-spacing:2px;width:100%;font-family:'JetBrains Mono',monospace;font-size:12px}
-.data-table th{padding:10px 8px;text-align:center;color:#ffffff;font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:.06em;background:var(--bg);position:sticky;top:0;z-index:10}
-.data-table th:first-child{text-align:left;padding-left:14px;min-width:90px;position:sticky;left:0;z-index:20;background:var(--bg)}
-.data-table td{padding:8px 6px;text-align:center;border-radius:6px;font-weight:600;font-size:12px;transition:transform .15s,box-shadow .15s;position:relative;min-width:72px}
-.data-table td:first-child{text-align:left;padding-left:14px;font-weight:700;color:var(--text1);background:var(--card);position:sticky;left:0;z-index:5;min-width:90px;border-radius:0}
-.data-table td:hover{transform:scale(1.05);box-shadow:0 4px 16px rgba(0,0,0,.5);z-index:30}
-.data-table td:first-child:hover{transform:none;box-shadow:none}
+.data-table{border-collapse:collapse;width:100%;font-family:'JetBrains Mono',monospace;font-size:12px}
+.data-table th{padding:10px 8px;text-align:center;color:var(--text1);font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.06em;background:var(--card);border-bottom:2px solid var(--border);position:sticky;top:0;z-index:10}
+.data-table th:first-child{text-align:left;padding-left:14px;min-width:90px;position:sticky;left:0;z-index:20;background:var(--card)}
+.data-table td{padding:8px 6px;text-align:center;font-weight:600;font-size:12px;border-bottom:1px solid var(--border);position:relative;min-width:72px}
+.data-table td:first-child{text-align:left;padding-left:14px;font-weight:700;color:var(--text1);background:var(--card);position:sticky;left:0;z-index:5;min-width:90px}
+.data-table tbody tr:hover td{background:var(--bg)}
 .data-table .ticker-name{display:block;font-size:9px;font-weight:400;color:var(--text3);margin-top:1px}
-
-/* Cell colors — rank-based */
-.rank-1{background:#065f46;color:#a7f3d0}
-.rank-2{background:#047857;color:#a7f3d0}
-.rank-3{background:#059669;color:#a7f3d0}
-.rank-4{background:#10b981;color:#064e3b}
-.rank-5{background:rgba(16,185,129,0.4);color:#d1fae5}
-.rank-6{background:rgba(16,185,129,0.15);color:#6ee7b7}
-.rank-7{background:rgba(239,68,68,0.08);color:#fca5a5}
-.rank-8{background:rgba(239,68,68,0.14);color:#fca5a5}
-.rank-9{background:rgba(239,68,68,0.22);color:#fecaca}
-.rank-10{background:rgba(239,68,68,0.30);color:#fecaca}
-.rank-11{background:rgba(239,68,68,0.38);color:#fecaca}
-.rank-12{background:rgba(239,68,68,0.45);color:#fecaca}
-
-/* Correlation colors */
-.corr-high{background:rgba(16,185,129,0.45);color:#d1fae5}
-.corr-med-high{background:rgba(16,185,129,0.30);color:#d1fae5}
-.corr-med{background:rgba(16,185,129,0.15);color:#a7f3d0}
-.corr-low{background:rgba(245,158,11,0.20);color:#fde68a}
-.corr-neg{background:rgba(239,68,68,0.20);color:#fecaca}
-.corr-self{background:var(--accent);color:var(--bg);font-weight:700}
+.data-table .val-self{color:var(--accent);font-weight:700}
 
 /* Growth colors */
 .growth-pos{color:#10b981}
 .growth-neg{color:#ef4444}
 .growth-gold{color:#f59e0b}
+.growth-na{color:var(--text3);font-style:italic;font-weight:400}
+
+/* ChartMill-style data table header: plain background, bold text, thicker border-bottom
+   instead of a colored/dark header fill. Reusable across any page's own table CSS. */
+.cm-th{font-weight:700;background:var(--card);border-bottom:2px solid var(--border)}
 
 /* Chart container */
 .chart-wrap{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;margin-bottom:32px;position:relative}
@@ -129,33 +114,9 @@ body{min-height:100vh;background:var(--bg);color:var(--text1);font-family:'DM Sa
 
 html[data-theme="light"]{--bg:#f8fafc;--card:#ffffff;--border:#e2e8f0;--accent:#059669;--accent-dim:rgba(5,150,105,0.1);--accent-glow:rgba(5,150,105,0.3);--red:#dc2626;--red-dim:rgba(220,38,38,0.1);--gold:#d97706;--gold-dim:rgba(217,119,6,0.1);--blue:#2563eb;--blue-dim:rgba(37,99,235,0.1);--text1:#0f172a;--text2:#475569;--text3:#94a3b8}
 
-/* Table headers — light mode */
-html[data-theme="light"] .data-table th{color:#1e293b;background:#f1f5f9}
-html[data-theme="light"] .data-table th:first-child{background:#f1f5f9}
-html[data-theme="light"] .data-table td:first-child{background:#ffffff}
-html[data-theme="light"] .data-table td:hover{box-shadow:0 4px 16px rgba(0,0,0,.1)}
-
-/* Rank cells — light mode */
-html[data-theme="light"] .rank-1{background:#065f46;color:#ffffff}
-html[data-theme="light"] .rank-2{background:#047857;color:#ffffff}
-html[data-theme="light"] .rank-3{background:#059669;color:#ffffff}
-html[data-theme="light"] .rank-4{background:#10b981;color:#ffffff}
-html[data-theme="light"] .rank-5{background:rgba(16,185,129,0.3);color:#065f46}
-html[data-theme="light"] .rank-6{background:rgba(16,185,129,0.15);color:#065f46}
-html[data-theme="light"] .rank-7{background:rgba(239,68,68,0.08);color:#991b1b}
-html[data-theme="light"] .rank-8{background:rgba(239,68,68,0.12);color:#991b1b}
-html[data-theme="light"] .rank-9{background:rgba(239,68,68,0.18);color:#991b1b}
-html[data-theme="light"] .rank-10{background:rgba(239,68,68,0.25);color:#991b1b}
-html[data-theme="light"] .rank-11{background:rgba(239,68,68,0.32);color:#7f1d1d}
-html[data-theme="light"] .rank-12{background:rgba(239,68,68,0.40);color:#ffffff}
-
-/* Correlation cells — light mode */
-html[data-theme="light"] .corr-high{background:rgba(5,150,105,0.35);color:#064e3b}
-html[data-theme="light"] .corr-med-high{background:rgba(5,150,105,0.22);color:#065f46}
-html[data-theme="light"] .corr-med{background:rgba(5,150,105,0.12);color:#065f46}
-html[data-theme="light"] .corr-low{background:rgba(217,119,6,0.15);color:#92400e}
-html[data-theme="light"] .corr-neg{background:rgba(220,38,38,0.15);color:#991b1b}
-html[data-theme="light"] .corr-self{background:var(--accent);color:#ffffff}
+/* .data-table, rank/correlation values now built entirely from theme-aware CSS vars
+   and shared .growth-pos/.growth-neg/.growth-gold text classes — no per-page
+   light-theme overrides needed. */
 
 /* Growth colors — light mode */
 html[data-theme="light"] .growth-pos{color:#059669}

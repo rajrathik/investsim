@@ -49,12 +49,10 @@ function getReturns(sym) {
 }
 
 function corrClass(val) {
-  if (val === 1) return 'corr-self';
-  if (val >= 0.7) return 'corr-high';
-  if (val >= 0.4) return 'corr-med-high';
-  if (val >= 0.1) return 'corr-med';
-  if (val >= -0.1) return 'corr-low';
-  return 'corr-neg';
+  if (val === 1) return 'val-self';
+  if (val >= 0.4) return 'growth-pos';
+  if (val >= -0.1) return 'growth-gold';
+  return 'growth-neg';
 }
 
 function render() {

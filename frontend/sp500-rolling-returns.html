@@ -66,13 +66,12 @@
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: .06em;
-      color: #ffffff;
-      background: var(--bg);
-      border-bottom: 1px solid var(--border);
+      color: var(--text1);
+      background: var(--card);
+      border-bottom: 2px solid var(--border);
       text-align: right;
       white-space: nowrap;
     }
-    [data-theme="light"] .rr-table th { color: #1e293b; background: #e2e8f0; }
     .rr-table th:first-child { text-align: left; }
     .rr-table td {
       padding: .55rem .7rem;
@@ -86,11 +85,7 @@
     .rr-table tbody tr:hover td { background: var(--bg); transition: background .1s; }
     .rr-table tr:last-child td { border-bottom: none; }
 
-    .c-pos { color: #16a34a; }
-    .c-neg { color: #dc2626; }
-    [data-theme="dark"] .c-pos { color: #4ade80; }
-    [data-theme="dark"] .c-neg { color: #f87171; }
-    .c-na  { color: var(--text3); font-style: italic; font-weight: 400; }
+    /* .growth-pos / .growth-neg / .growth-na from shared-analytics.css handle value coloring */
 
     .context-note {
       margin-top: 1rem;
@@ -117,7 +112,7 @@
     <p style="color:var(--text2);margin-bottom:1rem;font-size:.86rem;max-width:750px">
       For every year since 1928: the 1-year return, and the forward-looking <strong>3/5/7/10-year rolling return</strong> —
       the geometric mean (CAGR) of that year's return and the N-1 years that followed it.
-      A cell shows <span class="c-na">—</span> when the dataset doesn't yet have enough future years to complete that window.
+      A cell shows <span class="growth-na">—</span> when the dataset doesn't yet have enough future years to complete that window.
     </p>
 
     <div class="rr-controls">

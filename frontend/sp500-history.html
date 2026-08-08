@@ -51,16 +51,15 @@
   .meth-chip{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent);background:var(--accent-dim);padding:1px 6px;border-radius:4px;white-space:nowrap}
   @media(max-width:640px){.meth-row{grid-template-columns:1fr}}
 
-  /* ---- Decade heatmap ---- */
-  .hm-wrap{overflow-x:auto;margin-bottom:32px;padding-bottom:4px}
-  .hm-grid{display:table;border-collapse:separate;border-spacing:3px;min-width:max-content}
+  /* ---- Decade grid (ChartMill-style: plain background, text-only coloring) ---- */
+  .hm-wrap{overflow-x:auto;margin-bottom:32px;padding-bottom:4px;border:1px solid var(--border);border-radius:12px;background:var(--card)}
+  .hm-grid{display:table;border-collapse:collapse;min-width:max-content;width:100%}
   .hm-row{display:table-row}
-  .hm-col-header{display:table-cell;width:58px;height:26px;text-align:center;vertical-align:middle;font-size:10px;color:var(--text3);font-family:'JetBrains Mono',monospace;font-weight:600}
-  .hm-decade-label{display:table-cell;width:54px;padding-right:10px;font-size:11px;color:var(--text2);font-family:'JetBrains Mono',monospace;font-weight:600;vertical-align:middle;white-space:nowrap;text-align:right}
-  .hm-cell{display:table-cell;width:58px;height:40px;border-radius:6px;text-align:center;vertical-align:middle;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;cursor:default;transition:transform .1s,box-shadow .1s;position:relative}
-  .hm-cell:hover{transform:scale(1.1);box-shadow:0 4px 18px rgba(0,0,0,.55);z-index:10}
-  .hm-empty{background:rgba(255,255,255,0.025);border:1px dashed rgba(255,255,255,0.06)}
-  html[data-theme="light"] .hm-empty{background:rgba(0,0,0,0.025);border:1px dashed rgba(0,0,0,0.1)}
+  .hm-col-header{display:table-cell;width:58px;height:32px;text-align:center;vertical-align:middle;font-size:10px;color:var(--text1);font-weight:700;text-transform:uppercase;letter-spacing:.05em;font-family:'JetBrains Mono',monospace;border-bottom:2px solid var(--border)}
+  .hm-decade-label{display:table-cell;width:54px;padding-right:10px;font-size:11px;color:var(--text1);font-family:'JetBrains Mono',monospace;font-weight:700;vertical-align:middle;white-space:nowrap;text-align:right;border-bottom:1px solid var(--border)}
+  .hm-cell{display:table-cell;width:58px;height:38px;text-align:center;vertical-align:middle;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;cursor:default;border-bottom:1px solid var(--border);position:relative}
+  .hm-row:hover .hm-cell,.hm-row:hover .hm-decade-label{background:var(--bg)}
+  .hm-empty{color:var(--text3)}
 </style>
 </head>
 <body>

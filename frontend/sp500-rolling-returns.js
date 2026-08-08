@@ -7,8 +7,8 @@
   let _yearEnd = null;
 
   function fmtPct(v) {
-    if (v === null || v === undefined) return '<span class="c-na">—</span>';
-    const cls = v >= 0 ? 'c-pos' : 'c-neg';
+    if (v === null || v === undefined) return '<span class="growth-na">—</span>';
+    const cls = v >= 0 ? 'growth-pos' : 'growth-neg';
     const sign = v >= 0 ? '+' : '';
     return `<span class="${cls}">${sign}${v.toFixed(2)}%</span>`;
   }

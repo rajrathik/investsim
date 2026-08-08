@@ -12,40 +12,18 @@
 .run:hover{box-shadow:0 0 20px var(--accent-glow)}
 .btn-sm{padding:6px 12px;border:none;border-radius:8px;cursor:pointer;font-size:11px;font-weight:600;font-family:'JetBrains Mono',monospace}
 
-/* Quilt / Heatmap table */
+/* Quilt table (S&P sector × year returns) — ChartMill-style: plain background,
+   bold header with border emphasis (not a colored fill), text-only value coloring */
 .quilt-wrap{overflow-x:auto;margin-bottom:32px;border-radius:16px;border:1px solid var(--border);background:var(--card)}
-.quilt{border-collapse:separate;border-spacing:2px;width:100%;font-family:'JetBrains Mono',monospace;font-size:12px}
-.quilt th{padding:10px 8px;text-align:center;color:#ffffff;font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:.06em;background:var(--bg);position:sticky;top:0;z-index:10}
-.quilt th:first-child{text-align:left;padding-left:14px;min-width:90px;position:sticky;left:0;z-index:20;background:var(--bg)}
-.quilt td{padding:8px 6px;text-align:center;border-radius:6px;font-weight:600;font-size:12px;transition:transform .15s, box-shadow .15s;position:relative;min-width:72px}
-.quilt td:first-child{text-align:left;padding-left:14px;font-weight:700;color:var(--text1);background:var(--card);position:sticky;left:0;z-index:5;min-width:90px;border-radius:0}
-.quilt td:hover{transform:scale(1.08);box-shadow:0 4px 16px rgba(0,0,0,.5);z-index:30}
-.quilt td:first-child:hover{transform:none;box-shadow:none}
-.quilt td.partial{outline:2px dashed rgba(255,255,255,.55);outline-offset:-2px}
-html[data-theme="light"] .quilt td.partial{outline-color:rgba(30,41,59,.4)}
+.quilt{border-collapse:collapse;width:100%;font-family:'JetBrains Mono',monospace;font-size:12px}
+.quilt th{padding:10px 8px;text-align:center;color:var(--text1);font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.06em;background:var(--card);border-bottom:2px solid var(--border);position:sticky;top:0;z-index:10}
+.quilt th:first-child{text-align:left;padding-left:14px;min-width:90px;position:sticky;left:0;z-index:20;background:var(--card)}
+.quilt td{padding:8px 6px;text-align:center;font-weight:600;font-size:12px;border-bottom:1px solid var(--border);position:relative;min-width:72px}
+.quilt td:first-child{text-align:left;padding-left:14px;font-weight:700;color:var(--text1);background:var(--card);position:sticky;left:0;z-index:5;min-width:90px}
+.quilt tbody tr:hover td{background:var(--bg)}
+.quilt td.partial{outline:2px dashed var(--gold);outline-offset:-2px}
 .quilt th.partial-col{color:var(--gold)}
 .quilt .ticker-name{display:block;font-size:9px;font-weight:400;color:var(--text3);margin-top:1px}
-
-/* Return color scale — full gradient greens, lighter reds */
-.ret-50plus{background:#065f46;color:#a7f3d0}
-.ret-40{background:#047857;color:#a7f3d0}
-.ret-30{background:#059669;color:#a7f3d0}
-.ret-20{background:#10b981;color:#064e3b}
-.ret-10{background:rgba(16,185,129,0.4);color:#d1fae5}
-.ret-0{background:rgba(16,185,129,0.15);color:#6ee7b7}
-.ret-neg0{background:rgba(239,68,68,0.08);color:#fca5a5}
-.ret-neg10{background:rgba(239,68,68,0.14);color:#fca5a5}
-.ret-neg20{background:rgba(239,68,68,0.22);color:#fecaca}
-.ret-neg30{background:rgba(239,68,68,0.30);color:#fecaca}
-.ret-neg40{background:rgba(239,68,68,0.38);color:#fecaca}
-.ret-neg50{background:rgba(239,68,68,0.45);color:#fecaca}
-
-/* Dividend color scale — light-to-mid green */
-.div-high{background:rgba(16,185,129,0.45);color:#d1fae5}
-.div-med-high{background:rgba(16,185,129,0.32);color:#d1fae5}
-.div-med{background:rgba(16,185,129,0.20);color:#a7f3d0}
-.div-low{background:rgba(16,185,129,0.10);color:#6ee7b7}
-.div-zero{background:rgba(100,116,139,0.08);color:var(--text3)}
 
 /* Summary stats section */
 .stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;margin-bottom:32px}
@@ -78,33 +56,9 @@ html[data-theme="light"] .quilt td.partial{outline-color:rgba(30,41,59,.4)}
 }
 
 /* ========== LIGHT THEME OVERRIDES ========== */
-
-/* Quilt table — light mode */
-html[data-theme="light"] .quilt th{color:#1e293b;background:#f1f5f9}
-html[data-theme="light"] .quilt th:first-child{background:#f1f5f9}
-html[data-theme="light"] .quilt td:first-child{background:#ffffff}
-html[data-theme="light"] .quilt td:hover{box-shadow:0 4px 16px rgba(0,0,0,.1)}
-
-/* Return color scale — light mode */
-html[data-theme="light"] .ret-50plus{background:#065f46;color:#ffffff}
-html[data-theme="light"] .ret-40{background:#047857;color:#ffffff}
-html[data-theme="light"] .ret-30{background:#059669;color:#ffffff}
-html[data-theme="light"] .ret-20{background:#10b981;color:#ffffff}
-html[data-theme="light"] .ret-10{background:rgba(16,185,129,0.3);color:#065f46}
-html[data-theme="light"] .ret-0{background:rgba(16,185,129,0.12);color:#065f46}
-html[data-theme="light"] .ret-neg0{background:rgba(239,68,68,0.06);color:#991b1b}
-html[data-theme="light"] .ret-neg10{background:rgba(239,68,68,0.10);color:#991b1b}
-html[data-theme="light"] .ret-neg20{background:rgba(239,68,68,0.18);color:#991b1b}
-html[data-theme="light"] .ret-neg30{background:rgba(239,68,68,0.25);color:#7f1d1d}
-html[data-theme="light"] .ret-neg40{background:rgba(239,68,68,0.32);color:#7f1d1d}
-html[data-theme="light"] .ret-neg50{background:rgba(239,68,68,0.40);color:#ffffff}
-
-/* Dividend scale — light mode */
-html[data-theme="light"] .div-high{background:rgba(5,150,105,0.35);color:#064e3b}
-html[data-theme="light"] .div-med-high{background:rgba(5,150,105,0.22);color:#065f46}
-html[data-theme="light"] .div-med{background:rgba(5,150,105,0.12);color:#065f46}
-html[data-theme="light"] .div-low{background:rgba(5,150,105,0.06);color:#065f46}
-html[data-theme="light"] .div-zero{background:rgba(148,163,184,0.08);color:#64748b}
+/* Quilt table now built entirely from theme-aware CSS vars (--card/--text1/--border/--bg) —
+   no per-page light overrides needed. Value coloring uses shared .growth-pos/.growth-neg/
+   .growth-gold from shared-analytics.css, which already handle both themes. */
 
 /* Stat values — light mode */
 html[data-theme="light"] .s-val.pos{color:#059669}
