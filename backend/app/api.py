@@ -472,6 +472,29 @@ def require_write_enabled():
         )
 
 
+def require_admin(user: dict = Depends(get_current_user), db: Session = Depends(get_db)) -> dict:
+    """Verify the caller is an authorized admin (Auth0 token + user_admin whitelist).
+
+    Use as a dependency on any endpoint that should be admin-only:
+        user: dict = Depends(require_admin)
+    A valid Auth0 token alone is NOT enough — the token's email must also
+    appear in the user_admin table. Any signed-in public user has a valid
+    token, so endpoints gated only by get_current_user are reachable by
+    anyone with an account, not just admins.
+    """
+    email = (user.get("email") or "").lower().strip()
+    if not email:
+        raise HTTPException(status_code=403, detail="No email associated with this account")
+
+    admin_row = db.query(UserAdmin).filter(UserAdmin.email == email).first()
+    if not admin_row:
+        logger.warning(f"Admin access denied for {email}")
+        raise HTTPException(status_code=403, detail="You are not authorized to access the admin dashboard")
+
+    logger.info(f"Admin access granted for {email}")
+    return {**user, "admin_name": admin_row.name or user.get("name", "")}
+
+
 # ===========================================
 # HEALTH CHECK
 # ===========================================
@@ -521,29 +544,16 @@ def admin_write_status():
 
 
 @app.get("/api/admin/verify")
-def admin_verify(user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+def admin_verify(user: dict = Depends(require_admin)):
     """Verify the logged-in user is an authorized admin.
 
     Checks the user's email against the user_admin table.
     Returns the user's email and admin status.
     """
-    email = (user.get("email") or "").lower().strip()
-    if not email:
-        raise HTTPException(status_code=403, detail="No email associated with this account")
-
-    admin_row = db.query(UserAdmin).filter(
-        UserAdmin.email == email
-    ).first()
-
-    if not admin_row:
-        logger.warning(f"Admin access denied for {email}")
-        raise HTTPException(status_code=403, detail="You are not authorized to access the admin dashboard")
-
-    logger.info(f"Admin access granted for {email}")
     return {
         "authorized": True,
-        "email": email,
-        "name": admin_row.name or user.get("name", ""),
+        "email": (user.get("email") or "").lower().strip(),
+        "name": user.get("admin_name", ""),
     }
 
 
@@ -610,7 +620,7 @@ def list_active_tickers(db: Session = Depends(get_db)):
 
 @app.post("/api/tickers", response_model=TickerResponse, status_code=201)
 @limiter.limit("10/minute")
-def create_ticker(data: TickerCreate, request: Request, user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+def create_ticker(data: TickerCreate, request: Request, user: dict = Depends(require_admin), db: Session = Depends(get_db)):
     """Add a new ticker. Requires Auth0 token + ENABLE_WRITE_API."""
     require_write_enabled()
     symbol = data.symbol  # Already validated and uppercased by Pydantic
@@ -635,7 +645,7 @@ def create_ticker(data: TickerCreate, request: Request, user: dict = Depends(get
 
 @app.put("/api/tickers/{symbol}", response_model=TickerResponse)
 @limiter.limit("10/minute")
-def update_ticker(symbol: str, data: TickerUpdate, request: Request, user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+def update_ticker(symbol: str, data: TickerUpdate, request: Request, user: dict = Depends(require_admin), db: Session = Depends(get_db)):
     """Update ticker name or active status. Requires Auth0 token + ENABLE_WRITE_API."""
     require_write_enabled()
     ticker = get_ticker_or_404(db, symbol)
@@ -653,7 +663,7 @@ def update_ticker(symbol: str, data: TickerUpdate, request: Request, user: dict 
 
 @app.delete("/api/tickers/{symbol}", status_code=200)
 @limiter.limit("10/minute")
-def delete_ticker(symbol: str, request: Request, user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+def delete_ticker(symbol: str, request: Request, user: dict = Depends(require_admin), db: Session = Depends(get_db)):
     """Delete a ticker and all its price/dividend data. Requires Auth0 token + ENABLE_WRITE_API."""
     require_write_enabled()
     ticker = get_ticker_or_404(db, symbol)
@@ -990,7 +1000,7 @@ def _run_fred_in_background(mode: str, months: int = None):
 
 @app.post("/api/batch/full", response_model=BatchResponse)
 @limiter.limit("5/minute")
-def run_batch_full(request: Request, user: dict = Depends(get_current_user), data: BatchRequest = BatchRequest(), db: Session = Depends(get_db)):
+def run_batch_full(request: Request, user: dict = Depends(require_admin), data: BatchRequest = BatchRequest(), db: Session = Depends(get_db)):
     """Trigger a full history data load (runs in background).
     Requires Auth0 token + ENABLE_WRITE_API.
     """
@@ -1021,7 +1031,7 @@ def run_batch_full(request: Request, user: dict = Depends(get_current_user), dat
 
 @app.post("/api/batch/full-new", response_model=BatchResponse)
 @limiter.limit("5/minute")
-def run_batch_full_new(request: Request, user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+def run_batch_full_new(request: Request, user: dict = Depends(require_admin), db: Session = Depends(get_db)):
     """Trigger a full history load ONLY for tickers that have no price data yet.
 
     Skips tickers that already have data — safe and efficient for loading
@@ -1054,7 +1064,7 @@ def run_batch_full_new(request: Request, user: dict = Depends(get_current_user),
 
 @app.post("/api/batch/incremental", response_model=BatchResponse)
 @limiter.limit("5/minute")
-def run_batch_incremental(request: Request, user: dict = Depends(get_current_user), data: BatchRequest = BatchRequest(), db: Session = Depends(get_db)):
+def run_batch_incremental(request: Request, user: dict = Depends(require_admin), data: BatchRequest = BatchRequest(), db: Session = Depends(get_db)):
     """Trigger an incremental data load (runs in background).
     Requires Auth0 token + ENABLE_WRITE_API.
     """
@@ -1085,7 +1095,7 @@ def run_batch_incremental(request: Request, user: dict = Depends(get_current_use
 
 @app.post("/api/batch/fred-full", response_model=BatchResponse)
 @limiter.limit("5/minute")
-def run_fred_full(request: Request, user: dict = Depends(get_current_user)):
+def run_fred_full(request: Request, user: dict = Depends(require_admin)):
     """Trigger a full FRED federal funds rate load (runs in background).
     Requires Auth0 token + ENABLE_WRITE_API.
     """
@@ -1105,7 +1115,7 @@ def run_fred_full(request: Request, user: dict = Depends(get_current_user)):
 
 @app.post("/api/batch/fred-incremental", response_model=BatchResponse)
 @limiter.limit("5/minute")
-def run_fred_incremental(request: Request, user: dict = Depends(get_current_user), data: BatchRequest = BatchRequest()):
+def run_fred_incremental(request: Request, user: dict = Depends(require_admin), data: BatchRequest = BatchRequest()):
     """Trigger an incremental FRED rate load (runs in background).
     Same "months" field as the Yahoo incremental batch (default 3 if omitted).
     Requires Auth0 token + ENABLE_WRITE_API.
@@ -1183,7 +1193,7 @@ def _run_current_month_in_background(symbols: list[str]):
 
 @app.post("/api/batch/current-month", response_model=BatchResponse)
 @limiter.limit("5/minute")
-def run_batch_current_month(request: Request, user: dict = Depends(get_current_user), data: BatchRequest = BatchRequest(), db: Session = Depends(get_db)):
+def run_batch_current_month(request: Request, user: dict = Depends(require_admin), data: BatchRequest = BatchRequest(), db: Session = Depends(get_db)):
     """Trigger a current-calendar-month load across all active tickers AND FRED
     (runs in background). Safe to re-run repeatedly through the month — each
     run overwrites the same current-month row with the latest data.
@@ -2063,7 +2073,7 @@ class TierUpsert(BaseModel):
 @limiter.limit("30/minute")
 def admin_get_savings_tiers(
     request: Request,
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     rows = db.query(StackEarnSavingsTier).order_by(StackEarnSavingsTier.tier_number).all()
@@ -2076,7 +2086,7 @@ def admin_update_savings_tier(
     request: Request,
     tier_number: int,
     body: TierUpsert,
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     require_write_enabled()
@@ -2095,7 +2105,7 @@ def admin_update_savings_tier(
 def admin_create_savings_tier(
     request: Request,
     body: TierUpsert,
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     require_write_enabled()
@@ -2112,7 +2122,7 @@ def admin_create_savings_tier(
 @limiter.limit("30/minute")
 def admin_get_goal_tiers(
     request: Request,
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     rows = db.query(StackEarnGoalTier).order_by(StackEarnGoalTier.tier_number).all()
@@ -2125,7 +2135,7 @@ def admin_update_goal_tier(
     request: Request,
     tier_number: int,
     body: TierUpsert,
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     require_write_enabled()
@@ -2144,7 +2154,7 @@ def admin_update_goal_tier(
 def admin_create_goal_tier(
     request: Request,
     body: TierUpsert,
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     require_write_enabled()
@@ -2184,7 +2194,7 @@ def _serialize_damodaran_row(r):
 @limiter.limit("30/minute")
 def admin_get_damodaran_returns(
     request: Request,
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     """List all Damodaran annual return rows, newest year first."""
@@ -2213,7 +2223,7 @@ def admin_update_damodaran_return(
     request: Request,
     year: int,
     body: DamodaranRowUpdate,
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     require_write_enabled()
@@ -2244,7 +2254,7 @@ def admin_update_damodaran_return(
 @limiter.limit("5/minute")
 def admin_sync_damodaran_returns(
     request: Request,
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     """Fetch the latest table from Damodaran's page (NYU Stern) and upsert by year.
