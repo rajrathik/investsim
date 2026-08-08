@@ -8,9 +8,9 @@ import os
 DB_TYPE = os.getenv("DB_TYPE", "postgres").strip().lower()
 
 # --- SQL Server settings (used when DB_TYPE=sqlserver) --------------------
-DB_SERVER = os.getenv("DB_SERVER", "REDACTED-DB-HOST")
-DB_NAME = os.getenv("DB_NAME", "REDACTED-DB-NAME")
-DB_USER = os.getenv("DB_USER", "REDACTED-DB-USER")
+DB_SERVER = os.getenv("DB_SERVER", "")
+DB_NAME = os.getenv("DB_NAME", "")
+DB_USER = os.getenv("DB_USER", "")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "")  # Set via .env or environment variable
 DB_DRIVER = os.getenv("DB_DRIVER", "ODBC Driver 17 for SQL Server")
 

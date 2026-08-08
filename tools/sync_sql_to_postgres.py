@@ -47,9 +47,9 @@ if os.path.exists(_env_path):
 # ---------------------------------------------------------------------------
 
 # Source: SQL Server (local)
-_DB_SERVER   = os.getenv("DB_SERVER", "REDACTED-DB-HOST")
-_DB_NAME     = os.getenv("DB_NAME", "REDACTED-DB-NAME")
-_DB_USER     = os.getenv("DB_USER", "REDACTED-DB-USER")
+_DB_SERVER   = os.getenv("DB_SERVER", "")
+_DB_NAME     = os.getenv("DB_NAME", "")
+_DB_USER     = os.getenv("DB_USER", "")
 _DB_PASSWORD = os.getenv("DB_PASSWORD", "")
 _DB_DRIVER   = os.getenv("DB_DRIVER", "ODBC Driver 17 for SQL Server")
 
