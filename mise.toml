@@ -1,0 +1,8 @@
+[settings]
+# Railway's Railpack build uses mise to install the Python runtime pinned in
+# runtime.txt. mise now verifies GitHub artifact attestations for language
+# builds by default, but the pinned python-build release (2024-04-15) has no
+# attestation on file, which fails the build before it ever reaches app code:
+#   mise ERROR Failed to install core:python@3.12.3: No GitHub artifact
+#   attestations found for python@3.12.3
+python.github_attestations = false
