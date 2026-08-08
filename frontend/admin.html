@@ -175,6 +175,18 @@ body{min-height:100vh;background:var(--bg);color:var(--text1);font-family:'DM Sa
     </div>
   </div>
 
+  <!-- Load Current Month (all sources) -->
+  <div class="card">
+    <h2>📅 Load Current Month — All Sources</h2>
+    <div class="btn-row" style="margin-bottom:12px">
+      <button id="btnCurMonth" class="btn btn-accent" onclick="runCurrentMonth()">📅 Load Current Month</button>
+    </div>
+    <div style="font-size:12px;color:var(--text3);line-height:1.8">
+      Fetches every active ticker (Yahoo) <strong>and</strong> the money market rate (FRED) for just the current calendar month, through today. Safe to click repeatedly all month — each run overwrites the same current-month row with the latest close/dividends. Once the month actually ends, the row settles into the final value.<br>
+      <strong style="color:var(--gold)">Note:</strong> FRED usually hasn't published the current month's rate yet — that's expected, not an error.
+    </div>
+  </div>
+
   <!-- Data Loading -->
   <div class="card">
     <h2>Yahoo Finance — Price &amp; Dividend Data</h2>
@@ -201,7 +213,10 @@ body{min-height:100vh;background:var(--bg);color:var(--text1);font-family:'DM Sa
     <h2>FRED — Federal Funds Rate Data</h2>
     <div class="btn-row">
       <button id="btnFredFull" class="btn" onclick="runFred('full')">📥 Full History</button>
-      <button id="btnFredIncr" class="btn" onclick="runFred('incremental')">🔄 Incremental (3 months)</button>
+      <button id="btnFredIncr" class="btn" onclick="runFred('incremental')">🔄 Incremental</button>
+    </div>
+    <div style="font-size:12px;color:var(--text3);margin-top:10px">
+      Incremental uses the same <strong style="color:var(--text2)">Months</strong> field as the Yahoo card above.
     </div>
   </div>
 
@@ -216,6 +231,24 @@ body{min-height:100vh;background:var(--bg);color:var(--text1);font-family:'DM Sa
       <span style="color:var(--text3)">Loading...</span>
     </div>
     <div id="seTierMsg" class="banner" style="margin-top:12px;margin-bottom:0"></div>
+  </div>
+
+  <!-- Damodaran Annual Returns -->
+  <div class="card">
+    <h2>Historical Market Returns — Damodaran (NYU Stern)</h2>
+    <div class="btn-row" style="margin-bottom:14px">
+      <button id="btnDmSync" class="btn btn-accent" onclick="syncDamodaranReturns()">🔄 Sync Latest from Damodaran</button>
+    </div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:16px;line-height:1.6">
+      Pulls the current table directly from
+      <a href="https://pages.stern.nyu.edu/~adamodar/New_Home_Page/datafile/histretSP.html" target="_blank" rel="noopener" style="color:var(--text2)">Damodaran's page</a>
+      and updates existing years / inserts new ones (e.g. once he publishes the next calendar year, each January). No manual data entry needed.
+    </div>
+    <div id="dmSyncMsg" class="banner" style="margin-bottom:14px"></div>
+    <div id="dmContent" style="max-height:420px;overflow-y:auto">
+      <span style="color:var(--text3)">Loading...</span>
+    </div>
+    <div id="dmRowMsg" class="banner" style="margin-top:12px;margin-bottom:0"></div>
   </div>
 
   <!-- Batch Status -->
@@ -358,6 +391,7 @@ async function adminInit() {
   await loadTickers();
   await pollStatus();
   await loadStackEarnTiers();
+  await loadDamodaranReturns();
 }
 
 async function detectWriteApi() {
@@ -381,6 +415,8 @@ async function detectWriteApi() {
   document.getElementById('btnIncr').disabled = !writeEnabled;
   document.getElementById('btnFredFull').disabled = !writeEnabled;
   document.getElementById('btnFredIncr').disabled = !writeEnabled;
+  document.getElementById('btnDmSync').disabled = !writeEnabled;
+  document.getElementById('btnCurMonth').disabled = !writeEnabled;
 }
 
 // ---- Tickers ----
@@ -478,13 +514,17 @@ async function runBatch(mode) {
 
 // ---- FRED Batch ----
 async function runFred(mode) {
+  const months = parseInt(document.getElementById('incrMonths').value) || 2;
+  const body = mode === 'incremental' ? { months } : {};
+
   try {
     disableBatchButtons(true);
-    addLog('Starting FRED ' + mode + ' load...', 'info');
+    addLog('Starting FRED ' + mode + ' load...' + (mode === 'incremental' ? ' (' + months + ' months)' : ''), 'info');
 
     const r = await adminFetch(API + '/api/batch/fred-' + mode, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
     });
     const d = await r.json();
 
@@ -560,10 +600,36 @@ function updateStatusPanel(d) {
 
 // ---- Helpers ----
 function disableBatchButtons(disabled) {
-  ['btnFullNew', 'btnFull', 'btnIncr', 'btnFredFull', 'btnFredIncr'].forEach(id => {
+  ['btnFullNew', 'btnFull', 'btnIncr', 'btnFredFull', 'btnFredIncr', 'btnCurMonth'].forEach(id => {
     const el = document.getElementById(id);
     if (writeEnabled) el.disabled = disabled;
   });
+}
+
+// ---- Load Current Month (all sources) ----
+async function runCurrentMonth() {
+  try {
+    disableBatchButtons(true);
+    addLog('Starting current-month load (all tickers + FRED)...', 'info');
+
+    const r = await adminFetch(API + '/api/batch/current-month', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    const d = await r.json();
+
+    if (r.ok) {
+      addLog('✓ ' + d.message, 'ok');
+      startPolling();
+    } else {
+      addLog('✗ ' + (d.detail || d.error || 'Failed'), 'err');
+      disableBatchButtons(false);
+    }
+  } catch (e) {
+    addLog('✗ Network error: ' + e.message, 'err');
+    disableBatchButtons(false);
+  }
 }
 
 function showInlineMsg(el, cls, msg) {
@@ -723,6 +789,100 @@ async function addSETier(tab) {
     }
   } catch (e) {
     showInlineMsg(document.getElementById('seTierMsg'), 'banner-err', '❌ ' + e.message);
+  }
+}
+
+// ---- Damodaran Annual Returns ----
+let dmRowsData = [];
+
+async function loadDamodaranReturns() {
+  try {
+    const r = await adminFetch(API + '/api/admin/damodaran-returns');
+    dmRowsData = r.ok ? await r.json() : [];
+    renderDamodaranReturns();
+  } catch (e) {
+    document.getElementById('dmContent').innerHTML =
+      '<span style="color:var(--red)">Failed to load: ' + e.message + '</span>';
+  }
+}
+
+function renderDamodaranReturns() {
+  if (!dmRowsData.length) {
+    document.getElementById('dmContent').innerHTML = '<span style="color:var(--text3)">No data yet — click Sync above.</span>';
+    return;
+  }
+  const cols = [
+    ['sp500_return', 'S&P 500'], ['small_cap_return', 'Small Cap'],
+    ['tbill_3month', 'T.Bill 3mo'], ['tbond_10year', 'T.Bond 10yr'],
+    ['baa_corporate_bond', 'Baa Corp'], ['real_estate', 'Real Estate'], ['gold', 'Gold'],
+  ];
+  let html = '<table class="se-tbl"><thead><tr><th>Year</th>' +
+    cols.map(c => '<th>' + c[1] + ' (%)</th>').join('') + '<th></th></tr></thead><tbody>';
+
+  dmRowsData.forEach(function (row) {
+    html += '<tr>';
+    html += '<td>' + row.year + '</td>';
+    cols.forEach(function (c) {
+      const val = row[c[0]];
+      html += '<td><input class="se-inp" id="dm-' + c[0] + '-' + row.year + '" type="number" step="0.01" ' +
+        'value="' + (val !== null && val !== undefined ? (val * 100).toFixed(2) : '') + '" style="width:75px"></td>';
+    });
+    html += '<td><button class="btn btn-accent" style="padding:5px 12px;font-size:11px" ' +
+      'onclick="saveDamodaranRow(' + row.year + ')" ' + (writeEnabled ? '' : 'disabled') + '>Save</button></td>';
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  document.getElementById('dmContent').innerHTML = html;
+}
+
+async function saveDamodaranRow(year) {
+  const cols = ['sp500_return', 'small_cap_return', 'tbill_3month', 'tbond_10year',
+    'baa_corporate_bond', 'real_estate', 'gold'];
+  const body = {};
+  cols.forEach(function (c) {
+    const raw = document.getElementById('dm-' + c + '-' + year).value;
+    body[c] = raw !== '' ? parseFloat(raw) / 100 : null;
+  });
+  const msgEl = document.getElementById('dmRowMsg');
+  try {
+    const r = await adminFetch(API + '/api/admin/damodaran-returns/' + year, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const d = await r.json();
+    if (r.ok) {
+      const idx = dmRowsData.findIndex(row => row.year === year);
+      if (idx !== -1) dmRowsData[idx] = d;
+      showInlineMsg(msgEl, 'banner-ok', '✅ ' + year + ' saved');
+    } else {
+      showInlineMsg(msgEl, 'banner-err', '❌ ' + (d.detail || 'Save failed'));
+    }
+  } catch (e) {
+    showInlineMsg(msgEl, 'banner-err', '❌ ' + e.message);
+  }
+}
+
+async function syncDamodaranReturns() {
+  const btn = document.getElementById('btnDmSync');
+  const msgEl = document.getElementById('dmSyncMsg');
+  btn.disabled = true;
+  btn.textContent = '⏳ Syncing...';
+  try {
+    const r = await adminFetch(API + '/api/admin/damodaran-returns/sync', { method: 'POST' });
+    const d = await r.json();
+    if (r.ok) {
+      showInlineMsg(msgEl, 'banner-ok',
+        '✅ Synced — ' + d.inserted + ' inserted, ' + d.updated + ' updated (through ' + d.latest_year + ')');
+      await loadDamodaranReturns();
+    } else {
+      showInlineMsg(msgEl, 'banner-err', '❌ ' + (d.detail || 'Sync failed'));
+    }
+  } catch (e) {
+    showInlineMsg(msgEl, 'banner-err', '❌ Network error: ' + e.message);
+  } finally {
+    btn.disabled = !writeEnabled;
+    btn.textContent = '🔄 Sync Latest from Damodaran';
   }
 }
 

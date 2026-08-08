@@ -69,6 +69,17 @@ def get_monthly_rates(start_date: str = None, end_date: str = None) -> pd.DataFr
         })
 
         result = result.drop_duplicates(subset=["year", "month"], keep="last")
+
+        # FRED's CSV endpoint silently ignores cosd/coed and returns the FULL
+        # series when the requested window contains zero published
+        # observations (e.g. asking for a month FRED hasn't published yet).
+        # Always re-enforce the window client-side so callers get an empty
+        # DataFrame in that case instead of the entire history.
+        start_ts = pd.Timestamp(start_date)
+        end_ts = pd.Timestamp(end_date)
+        obs_period = pd.to_datetime(result["year"].astype(str) + "-" + result["month"].astype(str) + "-01")
+        result = result[(obs_period >= start_ts.replace(day=1)) & (obs_period <= end_ts)]
+
         result = result.reset_index(drop=True)
 
         logger.info(f"Fetched {len(result)} monthly rate records from FRED")
@@ -79,10 +90,23 @@ def get_monthly_rates(start_date: str = None, end_date: str = None) -> pd.DataFr
         raise FredFetcherError(f"Failed to fetch FRED data: {e}")
 
 
-def get_monthly_rates_incremental() -> pd.DataFrame:
-    """Fetch last 3 months of rates for incremental update."""
-    start_date = (date.today() - relativedelta(months=3)).replace(day=1).isoformat()
+def get_monthly_rates_incremental(months: int = 3) -> pd.DataFrame:
+    """Fetch the last N months of rates for incremental update (default 3)."""
+    start_date = (date.today() - relativedelta(months=months)).replace(day=1).isoformat()
     end_date = date.today().isoformat()
+    return get_monthly_rates(start_date=start_date, end_date=end_date)
+
+
+def get_monthly_rates_current_month() -> pd.DataFrame:
+    """Fetch just the current calendar month's rate, if FRED has published it yet.
+
+    FRED publishes FEDFUNDS as a monthly average AFTER the month closes (with a
+    short lag into the following month) — so this commonly returns an empty
+    DataFrame mid-month. That's expected, not an error.
+    """
+    today = date.today()
+    start_date = today.replace(day=1).isoformat()
+    end_date = today.isoformat()
     return get_monthly_rates(start_date=start_date, end_date=end_date)
 
 

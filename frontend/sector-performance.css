@@ -21,6 +21,9 @@
 .quilt td:first-child{text-align:left;padding-left:14px;font-weight:700;color:var(--text1);background:var(--card);position:sticky;left:0;z-index:5;min-width:90px;border-radius:0}
 .quilt td:hover{transform:scale(1.08);box-shadow:0 4px 16px rgba(0,0,0,.5);z-index:30}
 .quilt td:first-child:hover{transform:none;box-shadow:none}
+.quilt td.partial{outline:2px dashed rgba(255,255,255,.55);outline-offset:-2px}
+html[data-theme="light"] .quilt td.partial{outline-color:rgba(30,41,59,.4)}
+.quilt th.partial-col{color:var(--gold)}
 .quilt .ticker-name{display:block;font-size:9px;font-weight:400;color:var(--text3);margin-top:1px}
 
 /* Return color scale — full gradient greens, lighter reds */

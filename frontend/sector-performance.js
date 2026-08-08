@@ -11,7 +11,7 @@ async function authFetch(url, options = {}) {
 /* ========== DATA ========== */
 let sectorData = null;
 let currentView = 'returns'; // 'returns' or 'dividends'
-let yearStart = 2005, yearEnd = 2025;
+let yearStart = 2005, yearEnd = 9999; // yearEnd clamped to latest available year in populateYearSelectors()
 
 // Preferred display order
 const SECTOR_ORDER = [
@@ -77,6 +77,17 @@ function getDividendClass(val) {
   return 'div-zero';
 }
 
+const MONTH_NAMES = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+// True if any sector has a partial (YTD) figure for this year
+function yearIsPartial(y) {
+  for (const sym of SECTOR_ORDER) {
+    const d = sectorData[sym] && sectorData[sym].data[String(y)];
+    if (d && d.partial) return true;
+  }
+  return false;
+}
+
 function render() {
   if (!sectorData) return;
   renderQuilt();
@@ -88,7 +99,10 @@ function renderQuilt() {
   for (let y = yearStart; y <= yearEnd; y++) years.push(y);
 
   let html = '<table class="quilt"><thead><tr><th>Sector</th>';
-  for (const y of years) html += `<th>${y}</th>`;
+  for (const y of years) {
+    const partialYr = yearIsPartial(y);
+    html += `<th${partialYr ? ' class="partial-col"' : ''}>${y}${partialYr ? ' (YTD)' : ''}</th>`;
+  }
   html += '</tr></thead><tbody>';
 
   for (const sym of SECTOR_ORDER) {
@@ -103,14 +117,15 @@ function renderQuilt() {
         continue;
       }
 
+      const partialCls = d.partial ? ' partial' : '';
       if (currentView === 'returns') {
         const totalRet = d.prev_close > 0 ? ((d.close - d.prev_close + d.dividend) / d.prev_close) * 100 : d.return;
         const cls = getReturnClass(totalRet);
         const sign = totalRet >= 0 ? '+' : '';
-        html += `<td class="${cls}" data-sym="${sym}" data-year="${y}">${sign}${totalRet.toFixed(1)}%</td>`;
+        html += `<td class="${cls}${partialCls}" data-sym="${sym}" data-year="${y}">${sign}${totalRet.toFixed(1)}%${d.partial ? '*' : ''}</td>`;
       } else {
         const cls = getDividendClass(d.dividend);
-        html += `<td class="${cls}" data-sym="${sym}" data-year="${y}">$${d.dividend.toFixed(2)}</td>`;
+        html += `<td class="${cls}${partialCls}" data-sym="${sym}" data-year="${y}">$${d.dividend.toFixed(2)}${d.partial ? '*' : ''}</td>`;
       }
     }
     html += '</tr>';
@@ -141,16 +156,18 @@ function showTooltip(e, cell) {
   const totalColor = totalRet >= 0 ? 'var(--accent)' : 'var(--red)';
   const priceSign = d.return >= 0 ? '+' : '';
   const priceColor = d.return >= 0 ? 'var(--accent)' : 'var(--red)';
+  const endLabel = d.partial ? `As of ${MONTH_NAMES[d.as_of_month]} ${year}` : 'Year End';
   tooltip.innerHTML = `
     <div><span class="tt-sym">${sym}</span><span class="tt-year">${info.name}</span></div>
     <div style="margin-top:6px">
-      <div class="tt-row"><span class="tt-label">Year</span><span class="tt-val">${year}</span></div>
+      <div class="tt-row"><span class="tt-label">Year</span><span class="tt-val">${year}${d.partial ? ' (YTD)' : ''}</span></div>
       <div class="tt-row"><span class="tt-label">Total Return</span><span class="tt-val" style="color:${totalColor}">${totalSign}${totalRet.toFixed(2)}%</span></div>
       <div class="tt-row"><span class="tt-label">Price Return</span><span class="tt-val" style="color:${priceColor}">${priceSign}${d.return.toFixed(2)}%</span></div>
       <div class="tt-row"><span class="tt-label">Dividend (cash)</span><span class="tt-val" style="color:var(--gold)">$${d.dividend.toFixed(2)}</span></div>
       <div class="tt-row"><span class="tt-label">Year Begin</span><span class="tt-val">$${d.prev_close.toFixed(2)}</span></div>
-      <div class="tt-row"><span class="tt-label">Year End</span><span class="tt-val">$${d.close.toFixed(2)}</span></div>
+      <div class="tt-row"><span class="tt-label">${endLabel}</span><span class="tt-val">$${d.close.toFixed(2)}</span></div>
     </div>
+    ${d.partial ? '<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:11px;color:var(--gold)">⚠ Partial year — will update as more months load</div>' : ''}
   `;
   tooltip.classList.add('show');
   moveTooltip(e);

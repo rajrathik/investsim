@@ -166,6 +166,15 @@ def fetch_all_tickers(
         start_date = (today - relativedelta(months=incr_months)).replace(day=1).isoformat()
         end_date = today.isoformat()
         logger.info(f"Incremental mode: {start_date} to {end_date} ({incr_months} months)")
+    elif mode == "current-month":
+        # Pinned to the 1st of the current calendar month through today.
+        # Yahoo's monthly bar for an in-progress month is a live candle, so
+        # this returns exactly one row per ticker (the current month) —
+        # never touches any other month's data.
+        today = date.today()
+        start_date = today.replace(day=1).isoformat()
+        end_date = today.isoformat()
+        logger.info(f"Current-month mode: {start_date} to {end_date}")
 
     results = {
         "prices": {},

@@ -946,7 +946,7 @@ def _run_batch_in_background(symbols: list[str], mode: str, months: int = None):
         )
 
 
-def _run_fred_in_background(mode: str):
+def _run_fred_in_background(mode: str, months: int = None):
     """Run FRED rate fetch+load in a background thread."""
     _update_batch_status(
         status="running",
@@ -964,7 +964,7 @@ def _run_fred_in_background(mode: str):
         if mode == "full":
             monthly_df = get_monthly_rates()
         else:
-            monthly_df = get_monthly_rates_incremental()
+            monthly_df = get_monthly_rates_incremental(months=months or 3)
 
         db = SessionLocal()
         try:
@@ -1105,8 +1105,9 @@ def run_fred_full(request: Request, user: dict = Depends(get_current_user)):
 
 @app.post("/api/batch/fred-incremental", response_model=BatchResponse)
 @limiter.limit("5/minute")
-def run_fred_incremental(request: Request, user: dict = Depends(get_current_user)):
-    """Trigger an incremental FRED rate load (last 3 months, runs in background).
+def run_fred_incremental(request: Request, user: dict = Depends(get_current_user), data: BatchRequest = BatchRequest()):
+    """Trigger an incremental FRED rate load (runs in background).
+    Same "months" field as the Yahoo incremental batch (default 3 if omitted).
     Requires Auth0 token + ENABLE_WRITE_API.
     """
     require_write_enabled()
@@ -1114,12 +1115,100 @@ def run_fred_incremental(request: Request, user: dict = Depends(get_current_user
     if current["status"] == "running":
         raise HTTPException(status_code=409, detail="A batch job is already running. Check /api/batch/status")
 
-    thread = threading.Thread(target=_run_fred_in_background, args=("incremental",), daemon=True)
+    thread = threading.Thread(target=_run_fred_in_background, args=("incremental", data.months), daemon=True)
+    thread.start()
+
+    months_msg = f" (last {data.months} months)" if data.months else " (last 3 months)"
+    return BatchResponse(
+        status="started",
+        message=f"FRED incremental rate load started{months_msg}. Check /api/batch/status for progress.",
+    )
+
+
+def _run_current_month_in_background(symbols: list[str]):
+    """Fetch+load just the current calendar month, across Yahoo tickers AND FRED,
+    in one job. Safe to re-run any day of the month — each run overwrites the
+    same current-month row with the latest data; it settles into the final
+    value once the month actually closes. Runs in a background thread.
+    """
+    _update_batch_status(
+        status="running",
+        mode="current-month",
+        started_at=datetime.now(timezone.utc).isoformat(),
+        completed_at=None,
+        tickers_requested=symbols + ["FRED:FEDFUNDS"],
+        summary=None,
+    )
+
+    try:
+        from app.loader import load_all
+        from app.fetcher import fetch_all_tickers
+        from app.fred_fetcher import get_monthly_rates_current_month
+        from app.mm_rates import load_all_rates
+
+        # --- Tickers (Yahoo) ---
+        fetch_results = fetch_all_tickers(symbols, mode="current-month", delay_seconds=1.0)
+
+        db = SessionLocal()
+        try:
+            # Loader upserts by (year, month) regardless of how the date
+            # window was chosen — "incremental" mode here just means
+            # update-if-exists, which is what we want for a live current-month row.
+            ticker_summary = load_all(db, fetch_results, mode="incremental")
+
+            # --- FRED ---
+            fred_df = get_monthly_rates_current_month()
+            if fred_df.empty:
+                fred_summary = {"note": "No FRED observation published yet for the current month"}
+            else:
+                fred_summary = load_all_rates(db, fred_df, mode="incremental")
+        finally:
+            db.close()
+
+        _update_batch_status(
+            status="completed",
+            summary={"tickers": ticker_summary, "fred": fred_summary},
+            completed_at=datetime.now(timezone.utc).isoformat(),
+        )
+        logger.info("Current-month load completed")
+
+    except Exception as e:
+        logger.error(f"Current-month load failed: {traceback.format_exc()}")
+        _update_batch_status(
+            status="failed",
+            summary={"error": str(e)},
+            completed_at=datetime.now(timezone.utc).isoformat(),
+        )
+
+
+@app.post("/api/batch/current-month", response_model=BatchResponse)
+@limiter.limit("5/minute")
+def run_batch_current_month(request: Request, user: dict = Depends(get_current_user), data: BatchRequest = BatchRequest(), db: Session = Depends(get_db)):
+    """Trigger a current-calendar-month load across all active tickers AND FRED
+    (runs in background). Safe to re-run repeatedly through the month — each
+    run overwrites the same current-month row with the latest data.
+    Requires Auth0 token + ENABLE_WRITE_API.
+    """
+    require_write_enabled()
+    current = _get_batch_status()
+    if current["status"] == "running":
+        raise HTTPException(status_code=409, detail="A batch job is already running. Check /api/batch/status")
+
+    from app.loader import get_active_tickers
+
+    symbols = data.symbols
+    if not symbols:
+        symbols = get_active_tickers(db)
+
+    if not symbols:
+        raise HTTPException(status_code=400, detail="No active tickers found")
+
+    thread = threading.Thread(target=_run_current_month_in_background, args=(symbols,), daemon=True)
     thread.start()
 
     return BatchResponse(
         status="started",
-        message="FRED incremental rate load started (last 3 months). Check /api/batch/status for progress.",
+        message=f"Current-month load started for {len(symbols)} tickers + FRED. Check /api/batch/status for progress.",
     )
 
 
@@ -1143,6 +1232,12 @@ def get_sector_performance(
 
     Return = (Dec close[Y] - Dec close[Y-1]) / Dec close[Y-1] * 100
     Dividend = sum of all dividends paid during year Y
+
+    The current in-progress year (no December close yet) is included as a
+    partial/YTD figure using the latest available month's close instead of
+    December. It's flagged with "partial": true and "as_of_month" so the
+    frontend can label it — the value updates automatically as more months
+    of data get loaded through the year.
     """
     sector_symbols = [
         "XLK", "XLV", "XLF", "XLE", "XLY", "XLP",
@@ -1155,19 +1250,21 @@ def get_sector_performance(
         if not ticker:
             continue
 
-        # December close prices keyed by year
-        dec_rows = (
-            db.query(MonthlyPrice.year, MonthlyPrice.close)
-            .filter(
-                and_(
-                    MonthlyPrice.ticker_id == ticker.id,
-                    MonthlyPrice.month == 12,
-                )
-            )
-            .order_by(MonthlyPrice.year)
+        # All monthly closes, keyed by year -> {month: close}
+        from collections import defaultdict
+        month_rows = (
+            db.query(MonthlyPrice.year, MonthlyPrice.month, MonthlyPrice.close)
+            .filter(MonthlyPrice.ticker_id == ticker.id)
+            .order_by(MonthlyPrice.year, MonthlyPrice.month)
             .all()
         )
-        dec_map = {y: c for y, c in dec_rows if c is not None}
+        year_months: dict = defaultdict(dict)
+        for y, m, c in month_rows:
+            if c is not None:
+                year_months[y][m] = c
+
+        # December close prices keyed by year (used as prior-year baseline)
+        dec_map = {y: months[12] for y, months in year_months.items() if 12 in months}
 
         # Annual dividend totals
         from sqlalchemy import func as sa_func
@@ -1183,16 +1280,28 @@ def get_sector_performance(
         div_map = {int(yr): float(total) for yr, total in div_rows}
 
         yearly = {}
-        for y in sorted(dec_map.keys()):
+        for y in sorted(year_months.keys()):
             if y - 1 not in dec_map:
                 continue
             prev = dec_map[y - 1]
-            curr = dec_map[y]
+            months = year_months[y]
+
+            if 12 in months:
+                curr = months[12]
+                partial = False
+                as_of_month = 12
+            else:
+                as_of_month = max(months.keys())
+                curr = months[as_of_month]
+                partial = True
+
             yearly[str(y)] = {
                 "return": round(((curr - prev) / prev) * 100, 2),
                 "dividend": round(div_map.get(y, 0), 2),
                 "prev_close": round(prev, 2),
                 "close": round(curr, 2),
+                "partial": partial,
+                "as_of_month": as_of_month,
             }
 
         results[sym] = {"name": ticker.name, "data": yearly}
@@ -2045,6 +2154,152 @@ def admin_create_goal_tier(
     db.commit()
     db.refresh(row)
     return _serialize_tier(row)
+
+
+# ===========================================
+# DAMODARAN ANNUAL RETURNS (admin-managed reference data)
+# ===========================================
+
+_DAMODARAN_COLS = (
+    '"Year", "SP500Return", "SmallCapReturn", "TBill3Month", "TBond10Year", '
+    '"BaaCorporateBond", "RealEstate", "Gold", "Source"'
+)
+
+
+def _serialize_damodaran_row(r):
+    return {
+        "year": r[0],
+        "sp500_return": float(r[1]) if r[1] is not None else None,
+        "small_cap_return": float(r[2]) if r[2] is not None else None,
+        "tbill_3month": float(r[3]) if r[3] is not None else None,
+        "tbond_10year": float(r[4]) if r[4] is not None else None,
+        "baa_corporate_bond": float(r[5]) if r[5] is not None else None,
+        "real_estate": float(r[6]) if r[6] is not None else None,
+        "gold": float(r[7]) if r[7] is not None else None,
+        "source": r[8],
+    }
+
+
+@app.get("/api/admin/damodaran-returns")
+@limiter.limit("30/minute")
+def admin_get_damodaran_returns(
+    request: Request,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """List all Damodaran annual return rows, newest year first."""
+    try:
+        rows = db.execute(
+            text(f"SELECT {_DAMODARAN_COLS} FROM damodaran_annual_returns ORDER BY \"Year\" DESC")
+        ).fetchall()
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="damodaran_annual_returns unavailable.") from exc
+    return [_serialize_damodaran_row(r) for r in rows]
+
+
+class DamodaranRowUpdate(BaseModel):
+    sp500_return: float
+    small_cap_return: Optional[float] = None
+    tbill_3month: Optional[float] = None
+    tbond_10year: Optional[float] = None
+    baa_corporate_bond: Optional[float] = None
+    real_estate: Optional[float] = None
+    gold: Optional[float] = None
+
+
+@app.put("/api/admin/damodaran-returns/{year}")
+@limiter.limit("10/minute")
+def admin_update_damodaran_return(
+    request: Request,
+    year: int,
+    body: DamodaranRowUpdate,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    require_write_enabled()
+    result = db.execute(
+        text(
+            'UPDATE damodaran_annual_returns SET '
+            '"SP500Return"=:sp, "SmallCapReturn"=:sc, "TBill3Month"=:tb, "TBond10Year"=:tn, '
+            '"BaaCorporateBond"=:baa, "RealEstate"=:re, "Gold"=:gold '
+            'WHERE "Year"=:yr'
+        ),
+        {
+            "sp": body.sp500_return, "sc": body.small_cap_return, "tb": body.tbill_3month,
+            "tn": body.tbond_10year, "baa": body.baa_corporate_bond, "re": body.real_estate,
+            "gold": body.gold, "yr": year,
+        },
+    )
+    if result.rowcount == 0:
+        raise HTTPException(status_code=404, detail=f"Year {year} not found")
+    db.commit()
+    row = db.execute(
+        text(f"SELECT {_DAMODARAN_COLS} FROM damodaran_annual_returns WHERE \"Year\"=:yr"),
+        {"yr": year},
+    ).fetchone()
+    return _serialize_damodaran_row(row)
+
+
+@app.post("/api/admin/damodaran-returns/sync")
+@limiter.limit("5/minute")
+def admin_sync_damodaran_returns(
+    request: Request,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Fetch the latest table from Damodaran's page (NYU Stern) and upsert by year.
+
+    Existing years are updated in place; new years (e.g. once Damodaran
+    publishes the next calendar year, each January) are inserted.
+    """
+    require_write_enabled()
+    from app.damodaran_fetcher import fetch_damodaran_returns, DamodaranFetchError, SOURCE_LABEL, DAMODARAN_URL
+
+    try:
+        records = fetch_damodaran_returns()
+    except DamodaranFetchError as e:
+        raise HTTPException(status_code=502, detail=str(e))
+
+    inserted = 0
+    updated = 0
+    for rec in records:
+        existing = db.execute(
+            text('SELECT "Year" FROM damodaran_annual_returns WHERE "Year"=:yr'),
+            {"yr": rec["Year"]},
+        ).fetchone()
+        params = {
+            "yr": rec["Year"], "sp": rec["SP500Return"], "sc": rec["SmallCapReturn"],
+            "tb": rec["TBill3Month"], "tn": rec["TBond10Year"], "baa": rec["BaaCorporateBond"],
+            "re": rec["RealEstate"], "gold": rec["Gold"],
+        }
+        if existing:
+            db.execute(
+                text(
+                    'UPDATE damodaran_annual_returns SET '
+                    '"SP500Return"=:sp, "SmallCapReturn"=:sc, "TBill3Month"=:tb, "TBond10Year"=:tn, '
+                    '"BaaCorporateBond"=:baa, "RealEstate"=:re, "Gold"=:gold '
+                    'WHERE "Year"=:yr'
+                ),
+                params,
+            )
+            updated += 1
+        else:
+            db.execute(
+                text(
+                    'INSERT INTO damodaran_annual_returns '
+                    '("Year", "SP500Return", "SmallCapReturn", "TBill3Month", "TBond10Year", '
+                    '"BaaCorporateBond", "RealEstate", "Gold", "Source", "SourceUrl", "CreatedAt") '
+                    'VALUES (:yr, :sp, :sc, :tb, :tn, :baa, :re, :gold, :src, :url, :created)'
+                ),
+                {**params, "src": SOURCE_LABEL, "url": DAMODARAN_URL,
+                 "created": datetime.now(timezone.utc)},
+            )
+            inserted += 1
+    db.commit()
+
+    total = db.execute(text("SELECT COUNT(*) FROM damodaran_annual_returns")).scalar()
+    latest_year = db.execute(text('SELECT MAX("Year") FROM damodaran_annual_returns')).scalar()
+    return {"inserted": inserted, "updated": updated, "total": total, "latest_year": latest_year}
 
 
 # ===========================================

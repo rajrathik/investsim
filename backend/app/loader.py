@@ -14,6 +14,20 @@ from app.models import Ticker, MonthlyPrice, Dividend
 logger = logging.getLogger(__name__)
 
 
+def _to_float(val):
+    """Cast a pandas/numpy scalar to a native Python float (None-safe).
+
+    numpy.float64's repr changed in NumPy 2.0 (now "np.float64(1.23)" instead
+    of "1.23"), which psycopg2 falls back to for unregistered types — passing
+    a raw numpy value straight into an INSERT/UPDATE corrupts the SQL. Always
+    cast DataFrame-sourced numeric values through this before assigning to an
+    ORM column or raw SQL param.
+    """
+    if val is None or (isinstance(val, float) and val != val):  # NaN check
+        return None
+    return float(val)
+
+
 def get_active_tickers(db: Session) -> list[str]:
     """Return list of active ticker symbols from the database."""
     tickers = db.query(Ticker.symbol).filter(Ticker.active == True).all()
@@ -81,10 +95,10 @@ def load_prices(db: Session, symbol: str, prices_df: pd.DataFrame, mode: str = "
         if existing:
             if mode == "incremental":
                 # Update existing record
-                existing.high = row.get("high")
-                existing.low = row.get("low")
-                existing.close = row.get("close")
-                existing.adj_close = row.get("adj_close")
+                existing.high = _to_float(row.get("high"))
+                existing.low = _to_float(row.get("low"))
+                existing.close = _to_float(row.get("close"))
+                existing.adj_close = _to_float(row.get("adj_close"))
                 counts["updated"] += 1
             else:
                 # Full mode - skip existing
@@ -95,10 +109,10 @@ def load_prices(db: Session, symbol: str, prices_df: pd.DataFrame, mode: str = "
                 ticker_id=ticker_id,
                 year=year,
                 month=month,
-                high=row.get("high"),
-                low=row.get("low"),
-                close=row.get("close"),
-                adj_close=row.get("adj_close"),
+                high=_to_float(row.get("high")),
+                low=_to_float(row.get("low")),
+                close=_to_float(row.get("close")),
+                adj_close=_to_float(row.get("adj_close")),
             )
             db.add(price)
             counts["inserted"] += 1
@@ -145,7 +159,7 @@ def load_dividends(db: Session, symbol: str, divs_df: pd.DataFrame, mode: str = 
 
         if existing:
             if mode == "incremental":
-                existing.amount = row["amount"]
+                existing.amount = _to_float(row["amount"])
                 counts["updated"] += 1
             else:
                 counts["skipped"] += 1
@@ -153,7 +167,7 @@ def load_dividends(db: Session, symbol: str, divs_df: pd.DataFrame, mode: str = 
             div = Dividend(
                 ticker_id=ticker_id,
                 pay_date=pay_date,
-                amount=row["amount"],
+                amount=_to_float(row["amount"]),
             )
             db.add(div)
             counts["inserted"] += 1
