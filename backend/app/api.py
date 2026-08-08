@@ -2302,6 +2302,44 @@ def admin_sync_damodaran_returns(
     return {"inserted": inserted, "updated": updated, "total": total, "latest_year": latest_year}
 
 
+@app.get("/api/damodaran-forward-returns")
+@limiter.limit("30/minute")
+def get_damodaran_forward_returns(request: Request, db: Session = Depends(get_db)):
+    """Rolling forward-looking N-year returns (1/3/5/7/10Y) for every year in
+    damodaran_annual_returns, computed from S&P 500 annual total returns.
+
+    N-year return for year Y = geometric mean (CAGR) of Y's return and the
+    next (N-1) years: [(1+r_Y) * (1+r_Y+1) * ... * (1+r_Y+N-1)]^(1/N) - 1.
+    Null when the dataset doesn't have enough future years to fill the window
+    (e.g. near the most recent year on record).
+    """
+    rows = db.execute(
+        text('SELECT "Year", "SP500Return" FROM damodaran_annual_returns ORDER BY "Year" ASC')
+    ).fetchall()
+
+    if not rows:
+        return {"years": [], "source": "Damodaran (NYU Stern)"}
+
+    returns = [float(r[1]) for r in rows]
+    years = [int(r[0]) for r in rows]
+    n = len(returns)
+    windows = (1, 3, 5, 7, 10)
+
+    result = []
+    for i in range(n):
+        entry = {"year": years[i], "r1": None, "r3": None, "r5": None, "r7": None, "r10": None}
+        for w in windows:
+            if i + w <= n:
+                product = 1.0
+                for k in range(w):
+                    product *= (1 + returns[i + k])
+                cagr = product ** (1.0 / w) - 1
+                entry[f"r{w}"] = round(cagr * 100, 2)
+        result.append(entry)
+
+    return {"years": result, "source": "Damodaran (NYU Stern)"}
+
+
 # ===========================================
 # SERVE FRONTEND (must be LAST — catch-all)
 # ===========================================

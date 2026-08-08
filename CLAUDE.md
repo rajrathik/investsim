@@ -86,18 +86,25 @@ frontend/theme-toggle.js       ← Dark/light theme IIFE (no FOUC)
 | Monthly Market Extremes | `extreme-months.html` |
 | Annual Market Extremes | `extreme-years.html` |
 | 5-Year Crash Periods & Recovery | `bad-streaks.html` |
+| S&P 500 Rolling Returns | `sp500-rolling-returns.html` — 1/3/5/7/10yr forward CAGR per year since 1928, from `damodaran_annual_returns` (Damodaran/NYU Stern dataset) |
 | Saved Simulations | `saved-simulations.html` (**sign-in required**) |
 | Admin Dashboard | `admin.html` (**Auth0 + user_admin table**) — tile on `index.html` visible only when `_admin_hint` localStorage flag set (cleared on admin logout) |
 | CD Portfolio Advisor (AI) | `CD-simulator.html` + `cdapp.js` + `cdstyles.css` |
 
-## Database (12 Tables)
+## Database (13 Tables)
 `tickers`, `monthly_prices`, `dividends`, `monthly_mm_rates`, `annual_mm_rates`,
 `user_logins`, `user_admin`, `api_request_logs`, `saved_simulations`, `shiller_market_data`,
-`stack_earn_savings_tiers`, `stack_earn_goal_tiers`
+`stack_earn_savings_tiers`, `stack_earn_goal_tiers`, `damodaran_annual_returns`
 
 > `shiller_market_data` — 1,863 rows, Jan 1871–Mar 2026. Loaded once via `backend/onetime/load_shiller_data.py`.
 > 22 columns including `NominalTotalReturn` (calculated: monthly price return + dividend yield).
 > Source: Robert Shiller / shillerdata.com — file `inputdata/ie_data.xls`.
+
+> `damodaran_annual_returns` — 98 rows, 1928–2025. Loaded via `backend/onetime/load_damodaran_data.py`,
+> re-synced anytime via admin.html's "Sync Latest from Damodaran" button (`POST /api/admin/damodaran-returns/sync`).
+> Columns: Year, SP500Return, SmallCapReturn, TBill3Month, TBond10Year, BaaCorporateBond, RealEstate, Gold
+> (all decimal fractions), Source, SourceUrl. Source: Aswath Damodaran / NYU Stern — "Historical Returns on
+> Stocks, Bonds and Bills." Powers `sp500-rolling-returns.html` via `GET /api/damodaran-forward-returns`.
 
 ## Untracked / In-Progress Files
 - `backend/app/backend.py` — Flask-based CD portfolio recommendation engine (separate prototype, not integrated into FastAPI yet)

@@ -152,6 +152,15 @@
 | `frontend/index.html` | New tile added: "🔻 5-Year Crash Periods & Recovery" after Annual Market Extremes tile. Annual Market Extremes tile description reverted to original |
 | `frontend/extreme-years.html/js` | Reverted to original — 5-year section removed (it is now its own page) |
 
+### Phase 24 — S&P 500 Rolling Returns page (Aug 2026)
+
+| Change | Description |
+|--------|-------------|
+| `GET /api/damodaran-forward-returns` | New public endpoint. For every year in `damodaran_annual_returns`, computes 1/3/5/7/10-year rolling forward CAGR: geometric mean of that year's return and the next N-1 years — `[(1+r_Y) × (1+r_Y+1) × ... × (1+r_Y+N-1)]^(1/N) − 1`. Null when the dataset doesn't have enough future years to fill the window (e.g. near the most recent year on record). 30/min rate limit. Values verified by hand against an independently-computed reference table — exact match on every year checked, including all N/A edge cases |
+| `frontend/sp500-rolling-returns.html` | New standalone page with own tile on index.html (📈). Single table: Year, 1Y, 3Y, 5Y, 7Y, 10Y. From/To year `<select>` filter, sorted newest-first by default. No summary stat cards (table only, by design). Full SEO: canonical, OG, Twitter Card, JSON-LD WebApplication |
+| `frontend/sp500-rolling-returns.js` | IIFE: fetches all 98 years once on load (cached client-side). From/To selectors populated from actual min/max years in the response. Filtering and sort happen client-side against the cached array — no re-fetch on range change |
+| `frontend/index.html` | New tile added: "📈 S&P 500 Rolling Returns" after 5-Year Crash Periods & Recovery tile |
+
 ### Phase 22 — Member gating, admin tile, SEO verification, simulation fix (Mar 2026)
 
 | Change | Description |

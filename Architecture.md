@@ -42,7 +42,8 @@ http://localhost:8000/   →   index.html  (landing page — tool cards, no auth
                                                         growth-chart, risk-return,
                                                         sp500-history, sp500-simulate,
                                                         stack-earn, extreme-months,
-                                                        extreme-years, bad-streaks
+                                                        extreme-years, bad-streaks,
+                                                        sp500-rolling-returns
 
                   all tool pages have a ← Home link back to index.html
 
@@ -184,6 +185,7 @@ Each ticker has: symbol, name, active flag, created/updated timestamps.
 | `extreme-months.html/js` | Monthly Market Extremes. Fetches `GET /api/sp500-extreme-months?n=20` once (cached). Renders side-by-side panels: worst months (red) and best months (green). Summary cards show all-time worst and best. Table rows: rank, date, return%, $10K result, mini-bar (width proportional to magnitude, scales to #1 entry). Chip toggle for top-10/top-20 slices from cached 20 with no re-fetch |
 | `extreme-years.html/js` | Annual Market Extremes. Fetches `GET /api/sp500-extreme-years?n=20` once (cached). Same layout as extreme-months. Annual returns compounded from monthly Shiller data server-side. Chip toggle for top-10/top-20 |
 | `bad-streaks.html/js` | 5-Year Crash Periods & Recovery. Fetches `GET /api/sp500-bad-streaks?n=10` once (cached). Renders worst non-overlapping 5-year windows in a single panel table: rank, period dates, 5-yr return, $10K result, year-by-year color pills, recovery Yr+1/Yr+2/combined columns. 3 summary stat cards. 5/10 period chip toggle re-renders from cached data with no re-fetch |
+| `sp500-rolling-returns.html/js` | S&P 500 Rolling Returns. Fetches `GET /api/damodaran-forward-returns` once (all 98 years, cached client-side). Table columns: Year, 1Y, 3Y, 5Y, 7Y, 10Y — all computed server-side as geometric mean (CAGR) of that year's return and the following N-1 years, null when the window runs past the last year on record. From/To year selectors filter the cached data client-side; default sort newest-first. Source: `damodaran_annual_returns` table |
 | `saved-simulations.html` | View & delete saved simulations — auth-gated (shows sign-in prompt if not logged in), fetches via `_pubAuthFetch()`, renders cards with ticker tags, value tiles with ? tooltips, delete buttons |
 | `shared-analytics.css` | Single source of truth for CSS: `:root` variables, reset, fonts, header, `← Home` link styles, welcome bar styles, dark+light theme overrides, toggle button styles. All page-specific CSS files contain only overrides |
 | `shared-analytics.js` | Shared API utilities (authFetch, getSectorPerformance, getMonthlyPrices) with error handling (try/catch, resp.ok checks), pageview tracking beacon, chart tooltip helpers, sector constants |
@@ -276,6 +278,7 @@ HTTP Request
 | `GET /api/sp500-extreme-months` | Returns N best and N worst single months from Shiller data (rank, date, return_pct, end_value). Default N=20 |
 | `GET /api/sp500-extreme-years` | Returns N best and N worst full calendar years by compounded NominalTotalReturn (rank, date as year string, return_pct, end_value). Default N=20, max 50. 60/min rate limit |
 | `GET /api/sp500-bad-streaks` | Returns N worst non-overlapping 5-year windows. Each period includes rank, start/end year, return_pct, end_value ($10K result), years_detail (per-year pills), recovery_yr1, recovery_yr2, recovery_combined_pct. Default N=10, max 20. 60/min rate limit |
+| `GET /api/damodaran-forward-returns` | Returns 1/3/5/7/10-year rolling forward CAGR for every year in `damodaran_annual_returns`. Each entry: year, r1, r3, r5, r7, r10 (null when the dataset doesn't have enough future years to fill the window). 30/min rate limit |
 | `GET /api/stack-earn/savings-tiers` | Tier rates for the savings calculator. Returns 8 fields: tier_number, tier_label, min_amount, max_amount, annual_rate, display_rate, display_upto, product_type |
 | `GET /api/stack-earn/goal-tiers` | Tier rates for the goal calculator. Same 8-field response |
 
@@ -371,6 +374,7 @@ Individual page logic:
 | `extreme-months.js` | `GET /api/sp500-extreme-months` | Fetches n=20 worst+best once (cached). Chip toggle re-renders sliced table (top-10 or top-20) without re-fetching. Mini-bars scale to the #1 entry in each list. Red/green color classes adapt to dark-mode via CSS `[data-theme="dark"]` overrides |
 | `extreme-years.js` | `GET /api/sp500-extreme-years` | Same pattern as extreme-months. Annual returns compounded server-side from monthly Shiller data. Chip toggle, mini-bars, dark-mode CSS |
 | `bad-streaks.js` | `GET /api/sp500-bad-streaks` | Fetches n=10 once (cached). Greedy non-overlapping 5-year window selection done server-side. Client computes summary card averages (avg Yr+1, avg Yr+2 across all shown periods). Chip toggle (5/10) re-slices cached data. Year pills colored red/green by sign. Recovery columns use green/red with `c-rec-pos`/`c-rec-neg` classes. Combined recovery = compounded Yr+1 × Yr+2 |
+| `sp500-rolling-returns.js` | `GET /api/damodaran-forward-returns` | Fetches all 98 years once (cached). N-year CAGR windows computed server-side. From/To year `<select>`s (populated from actual min/max years in the response) filter the cached array client-side and re-render sorted newest-first. Null cells render as a muted em-dash |
 
 ---
 

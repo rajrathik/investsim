@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>S&amp;P 500 Rolling Returns — 1/3/5/7/10-Year Forward CAGR</title>
+  <meta name="description" content="S&P 500 annual total returns and rolling 1/3/5/7/10-year forward CAGR for every year since 1928, sourced from the Damodaran (NYU Stern) dataset." />
+  <link rel="canonical" href="https://investsim.claritycapitaltools.com/sp500-rolling-returns.html" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="S&amp;P 500 Rolling Returns — 1/3/5/7/10-Year Forward CAGR" />
+  <meta property="og:description" content="S&P 500 annual total returns and rolling 1/3/5/7/10-year forward CAGR for every year since 1928." />
+  <meta property="og:url" content="https://investsim.claritycapitaltools.com/sp500-rolling-returns.html" />
+  <meta property="og:site_name" content="Investment Tools" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="S&amp;P 500 Rolling Returns — 1/3/5/7/10-Year Forward CAGR" />
+  <meta name="twitter:description" content="S&P 500 annual total returns and rolling 1/3/5/7/10-year forward CAGR for every year since 1928." />
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "S&P 500 Rolling Returns",
+  "description": "S&P 500 annual total returns and rolling 1/3/5/7/10-year forward CAGR for every year since 1928, sourced from the Damodaran (NYU Stern) dataset.",
+  "url": "https://investsim.claritycapitaltools.com/sp500-rolling-returns.html",
+  "applicationCategory": "FinanceApplication",
+  "isPartOf": {"@type": "WebSite", "name": "Investment Tools", "url": "https://investsim.claritycapitaltools.com/"}
+}
+</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="shared-analytics.css" />
+  <script src="theme-toggle.js"></script>
+  <script src="https://cdn.auth0.com/js/auth0-spa-js/2.1/auth0-spa-js.production.js"></script>
+  <style>
+    .rr-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: .75rem;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: .85rem 1rem;
+      margin-bottom: 1rem;
+    }
+    .rr-controls .range-row { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+    .rr-controls label { font-size: .74rem; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: .06em; }
+    .rr-controls select {
+      padding: .4rem .6rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text1);
+      font-family: inherit;
+      font-size: .84rem;
+    }
+
+    .rr-panel { background: var(--card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+    .rr-table-wrap { overflow-x: auto; max-height: 70vh; overflow-y: auto; }
+    .rr-table { width: 100%; border-collapse: collapse; font-size: .84rem; }
+    .rr-table th {
+      position: sticky; top: 0; z-index: 5;
+      padding: .55rem .85rem;
+      font-size: .68rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--text3);
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      text-align: right;
+      white-space: nowrap;
+    }
+    .rr-table th:first-child { text-align: left; }
+    .rr-table td {
+      padding: .55rem .85rem;
+      border-bottom: 1px solid var(--border);
+      text-align: right;
+      font-family: monospace;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .rr-table td:first-child { text-align: left; font-weight: 700; font-family: inherit; }
+    .rr-table tbody tr:hover td { background: var(--bg); transition: background .1s; }
+    .rr-table tr:last-child td { border-bottom: none; }
+
+    .c-pos { color: #16a34a; }
+    .c-neg { color: #dc2626; }
+    [data-theme="dark"] .c-pos { color: #4ade80; }
+    [data-theme="dark"] .c-neg { color: #f87171; }
+    .c-na  { color: var(--text3); font-style: italic; font-weight: 400; }
+
+    .context-note {
+      margin-top: 1rem;
+      font-size: .76rem;
+      color: var(--text3);
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: .7rem 1rem;
+      line-height: 1.55;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div style="display:flex;align-items:center;gap:.5rem;">
+      <h1>📈 S&amp;P 500 Rolling Returns</h1>
+    </div>
+    <a href="/" class="back-home">← Home</a>
+  </div>
+
+  <div class="container">
+
+    <p style="color:var(--text2);margin-bottom:1rem;font-size:.86rem;max-width:750px">
+      For every year since 1928: the 1-year return, and the forward-looking <strong>3/5/7/10-year rolling return</strong> —
+      the geometric mean (CAGR) of that year's return and the N-1 years that followed it.
+      A cell shows <span class="c-na">—</span> when the dataset doesn't yet have enough future years to complete that window.
+    </p>
+
+    <div class="rr-controls">
+      <div class="range-row">
+        <label>From</label>
+        <select id="yearStart"></select>
+        <label>To</label>
+        <select id="yearEnd"></select>
+      </div>
+      <div style="font-size:.74rem;color:var(--text3)" id="rowCount"></div>
+    </div>
+
+    <div id="statusMsg" class="status-msg" style="display:none">Loading…</div>
+
+    <div class="rr-panel" id="rrPanel" style="display:none">
+      <div class="rr-table-wrap">
+        <table class="rr-table">
+          <thead>
+            <tr>
+              <th>Year</th>
+              <th>1Y</th>
+              <th>3Y</th>
+              <th>5Y</th>
+              <th>7Y</th>
+              <th>10Y</th>
+            </tr>
+          </thead>
+          <tbody id="rrBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="context-note">
+      N-year return = geometric mean (CAGR) of that year's return and the next (N−1) years:
+      [(1+r<sub>Y</sub>) × (1+r<sub>Y+1</sub>) × ... × (1+r<sub>Y+N-1</sub>)]<sup>1/N</sup> − 1.
+      Sorted newest year first. Returns are nominal total returns (dividends reinvested).
+      Data: Aswath Damodaran, NYU Stern School of Business — "Historical Returns on Stocks, Bonds and Bills," updated January 2026.
+      This is the S&amp;P 500 index itself, not the SPY ETF (which only exists since 1993 and differs slightly due to fees/tracking).
+    </div>
+
+  </div>
+
+  <script src="shared-analytics.js?v=1"></script>
+  <script src="sp500-rolling-returns.js?v=1"></script>
+  <script src="shared-auth.js"></script>
+</body>
+</html>

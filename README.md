@@ -68,6 +68,8 @@ C:\Raj\python\portfolio-simulator\
 │   ├── extreme-years.js
 │   ├── bad-streaks.html            ← 5-Year Crash Periods & Recovery: worst non-overlapping 5-year windows ranked by total loss; year-by-year color pills; recovery Yr+1/Yr+2/combined columns; 3 summary stat cards; 5/10 period chip toggle
 │   ├── bad-streaks.js
+│   ├── sp500-rolling-returns.html   ← S&P 500 Rolling Returns: 1/3/5/7/10-year forward CAGR for every year since 1928, sourced from the Damodaran (NYU Stern) dataset; From/To year filter, sorted newest-first
+│   ├── sp500-rolling-returns.js
 │   ├── shared-analytics.css        ← Single source of truth: CSS variables, reset, fonts, header, ← Home link styles, dark+light theme overrides, welcome bar styles, toggle button styles
 │   ├── shared-analytics.js         ← Shared API layer, utilities, error handling, pageview tracking
 │   ├── shared-auth.js              ← Auth0 public sign-in (IIFE): optional login/logout, welcome bar, _pubAuthFetch(), _pubIsSignedIn()
@@ -153,6 +155,7 @@ All public pages are open (no login required). Admin is completely separate.
 | `http://localhost:8000/extreme-months.html` | Monthly Market Extremes — best & worst single months, $10K result | Public |
 | `http://localhost:8000/extreme-years.html` | Annual Market Extremes — best & worst full calendar years, $10K result | Public |
 | `http://localhost:8000/bad-streaks.html` | 5-Year Crash Periods & Recovery — worst 5-yr windows, year pills, recovery Yr+1/Yr+2 | Public |
+| `http://localhost:8000/sp500-rolling-returns.html` | S&P 500 Rolling Returns — 1/3/5/7/10-year forward CAGR per year since 1928 (Damodaran dataset) | Public |
 | `http://localhost:8000/saved-simulations.html` | View & delete saved simulations | **Sign-in required** |
 | `http://localhost:8000/admin.html` | Admin dashboard | **Auth0 login required** |
 
@@ -307,6 +310,7 @@ Opens at `http://localhost:6419`. Press Ctrl+C to stop.
 - **Monthly Market Extremes** — ranked best and worst single months in S&P 500 history since 1871; side-by-side panels (red/green); shows what each month did to $10,000; proportional mini-bar magnitude indicators; chip toggle for top-10 vs top-20
 - **Annual Market Extremes** — ranked best and worst full calendar years in S&P 500 history since 1871; same side-by-side panel layout; annual returns compounded from monthly Shiller data; chip toggle for top-10 vs top-20
 - **5-Year Crash Periods & Recovery** — worst non-overlapping 5-year windows since 1871, ranked by total loss; year-by-year color pills per period; recovery Yr+1, Yr+2, and combined columns; 3 summary stat cards (worst period, avg Yr+1, avg Yr+2); 5/10 period chip toggle
+- **S&P 500 Rolling Returns** — 1/3/5/7/10-year forward CAGR for every year since 1928, sourced from the Damodaran (NYU Stern) dataset; N-year return = geometric mean of that year's return and the next N-1 years; From/To year range filter, sorted newest-first
 
 ### Infrastructure
 - **Dark/light theme toggle** — 🌙/☀️ button on every page; persists via localStorage; no FOUC (synchronous IIFE in `<head>`); Canvas charts re-render on toggle
