@@ -6,7 +6,7 @@
 
 // === IMMEDIATE: runs during <head> parse, before body renders ===
 (function() {
-  var t = localStorage.getItem('theme') || 'dark';
+  var t = localStorage.getItem('theme') || 'light';
   document.documentElement.setAttribute('data-theme', t);
 })();
 

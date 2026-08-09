@@ -27,8 +27,8 @@
 }
 </script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="shared-analytics.css">
-<script src="theme-toggle.js"></script>
+<link rel="stylesheet" href="shared-analytics.css?v=1">
+<script src="theme-toggle.js?v=2"></script>
 <script src="https://cdn.auth0.com/js/auth0-spa-js/2.1/auth0-spa-js.production.js"></script>
 <style>
   /* ---- Controls card ---- */
@@ -83,8 +83,7 @@
   .table-header{padding:16px 20px;border-bottom:1px solid var(--border);font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;color:var(--text1)}
   .data-table th,.data-table td{text-align:right}
   .data-table th:first-child,.data-table td:first-child{text-align:left}
-  .ret-pos{color:var(--accent)!important}
-  .ret-neg{color:var(--red)!important}
+  /* No red/green -- plain bold text, sign carries direction. */
   .ret-bar-wrap{display:inline-block;width:48px;height:6px;background:rgba(255,255,255,0.07);border-radius:3px;vertical-align:middle;overflow:hidden;margin-left:6px}
   html[data-theme="light"] .ret-bar-wrap{background:rgba(0,0,0,0.08)}
   .ret-bar{display:block;height:100%;border-radius:3px}
@@ -251,7 +250,7 @@
 </div>
 
 <script src="shared-analytics.js?v=1"></script>
-<script src="sp500-simulate.js?v=2"></script>
+<script src="sp500-simulate.js?v=3"></script>
 <script src="shared-auth.js"></script>
 </body>
 </html>

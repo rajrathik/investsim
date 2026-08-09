@@ -99,7 +99,7 @@ function render() {
         <span class="dd-sym">${r.sym}</span>
         <span class="dd-name">${r.name}</span>
         <div class="dd-bar-wrap">
-          <div class="dd-bar" style="width:${barWidth}%;background:rgba(239,68,68,${0.2 + Math.abs(r.maxDD/100)*0.6})"></div>
+          <div class="dd-bar" style="width:${barWidth}%;background:var(--text3);opacity:${0.35 + Math.abs(r.maxDD/100)*0.65}"></div>
         </div>
         <span class="dd-val">${r.maxDD.toFixed(1)}%</span>
         <span class="dd-period">${r.maxPeakDate || ''} → ${r.maxTroughDate || ''}</span>

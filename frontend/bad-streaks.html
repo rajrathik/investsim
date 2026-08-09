@@ -28,8 +28,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="shared-analytics.css" />
-  <script src="theme-toggle.js"></script>
+  <link rel="stylesheet" href="shared-analytics.css?v=1" />
+  <script src="theme-toggle.js?v=2"></script>
   <script src="https://cdn.auth0.com/js/auth0-spa-js/2.1/auth0-spa-js.production.js"></script>
   <style>
     /* ── summary stat cards ── */
@@ -51,12 +51,7 @@
       flex-direction: column;
       gap: .25rem;
     }
-    .streak-card.sc-red   { background: rgba(220,38,38,.05);  border-color: rgba(220,38,38,.18); }
-    .streak-card.sc-green { background: rgba(22,163,74,.05);  border-color: rgba(22,163,74,.18); }
-    .streak-card.sc-blue  { background: rgba(59,130,246,.05); border-color: rgba(59,130,246,.18); }
-    [data-theme="dark"] .streak-card.sc-red   { background: rgba(239,68,68,.09);  border-color: rgba(239,68,68,.22); }
-    [data-theme="dark"] .streak-card.sc-green { background: rgba(74,222,128,.09); border-color: rgba(74,222,128,.22); }
-    [data-theme="dark"] .streak-card.sc-blue  { background: rgba(96,165,250,.09); border-color: rgba(96,165,250,.22); }
+    /* No color-coding by stat type -- plain card, matches the reference sites' restraint. */
 
     .sc-icon { font-size: 1.25rem; line-height: 1; margin-bottom: .15rem; }
     .sc-lbl  { font-size: .68rem; font-weight: 600; text-transform: uppercase; letter-spacing: .07em; color: var(--text3); }
@@ -75,10 +70,9 @@
       align-items: center;
       gap: .75rem;
       padding: .85rem 1rem .7rem;
-      border-bottom: 2px solid rgba(220,38,38,.2);
-      background: rgba(220,38,38,.04);
+      border-bottom: 2px solid var(--border);
+      background: var(--card);
     }
-    [data-theme="dark"] .panel-head { background: rgba(239,68,68,.07); }
 
     .panel-icon {
       width: 2rem;
@@ -90,10 +84,9 @@
       font-size: .9rem;
       font-weight: 700;
       flex-shrink: 0;
-      background: rgba(220,38,38,.15);
-      color: #dc2626;
+      background: var(--bg);
+      color: var(--text1);
     }
-    [data-theme="dark"] .panel-icon { color: #f87171; }
     .panel-title { font-size: 1rem; font-weight: 700; }
     .panel-sub   { font-size: .72rem; color: var(--text3); font-family: monospace; margin-top: .15rem; }
 
@@ -121,20 +114,16 @@
       border-radius: 3px;
       font-weight: 600;
     }
-    .yr-pill.neg { background: rgba(220,38,38,.12); color: #dc2626; }
-    .yr-pill.pos { background: rgba(22,163,74,.12);  color: #16a34a; }
-    [data-theme="dark"] .yr-pill.neg { background: rgba(239,68,68,.18);  color: #f87171; }
-    [data-theme="dark"] .yr-pill.pos { background: rgba(74,222,128,.18); color: #4ade80; }
+    .yr-pill.neg, .yr-pill.pos { background: var(--bg); color: var(--text1); }
 
-    /* recovery column styling */
+    /* recovery column styling -- grouping indicator only, not value coloring */
     .rec-header {
       text-align: center !important;
-      border-left: 2px solid rgba(22,163,74,.25);
-      background: rgba(22,163,74,.03);
+      border-left: 2px solid var(--border);
+      background: var(--card);
     }
-    [data-theme="dark"] .rec-header { background: rgba(74,222,128,.04); }
     .td-rec {
-      border-left: 2px solid rgba(22,163,74,.15);
+      border-left: 2px solid var(--border);
       text-align: right;
       font-family: monospace;
       font-weight: 600;
@@ -142,14 +131,8 @@
     }
 
     /* ── colors ── */
-    .c-worst   { color: #dc2626; }
-    .c-best    { color: #16a34a; }
-    .c-rec-pos { color: #16a34a; }
-    .c-rec-neg { color: #dc2626; }
-    [data-theme="dark"] .c-worst   { color: #f87171; }
-    [data-theme="dark"] .c-best    { color: #4ade80; }
-    [data-theme="dark"] .c-rec-pos { color: #4ade80; }
-    [data-theme="dark"] .c-rec-neg { color: #f87171; }
+    /* No red/green -- every value is plain bold text, sign carries direction. */
+    .c-worst, .c-best, .c-rec-pos, .c-rec-neg { color: var(--text1); }
     .rec-na { color: var(--text3); font-style: italic; font-family: inherit; font-weight: 400; }
 
     /* ── misc ── */

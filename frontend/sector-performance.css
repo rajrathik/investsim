@@ -34,9 +34,7 @@
 .stat-card .s-row{display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-size:12px}
 .stat-card .s-label{color:var(--text3)}
 .stat-card .s-val{font-weight:600;font-family:'JetBrains Mono',monospace}
-.s-val.pos{color:#10b981}
-.s-val.neg{color:#ef4444}
-.s-val.gold{color:#f59e0b}
+.s-val.pos,.s-val.neg,.s-val.gold{color:var(--text1)}
 
 /* Legend */
 .legend{display:flex;gap:24px;align-items:center;flex-wrap:wrap;margin-bottom:24px;padding:14px 20px;background:var(--card);border:1px solid var(--border);border-radius:12px}
@@ -60,7 +58,4 @@
    no per-page light overrides needed. Value coloring uses shared .growth-pos/.growth-neg/
    .growth-gold from shared-analytics.css, which already handle both themes. */
 
-/* Stat values — light mode */
-html[data-theme="light"] .s-val.pos{color:#059669}
-html[data-theme="light"] .s-val.neg{color:#dc2626}
-html[data-theme="light"] .s-val.gold{color:#d97706}
+/* Stat values now var(--text1) in both themes — no color-coding, override no longer needed. */

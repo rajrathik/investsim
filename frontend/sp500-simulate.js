@@ -367,8 +367,8 @@ function drawTable() {
     const sign       = ret >= 0 ? '+' : '';
     const retCls     = ret >= 0 ? 'ret-pos' : 'ret-neg';
     const barW       = Math.round(Math.abs(ret) / (maxAbsRet || 1) * 48);
-    const barCol     = ret >= 0 ? '#10b981' : '#ef4444';
-    const bar        = `<span class="ret-bar-wrap"><span class="ret-bar" style="width:${barW}px;background:${barCol}"></span></span>`;
+    // No red/green -- bar length shows magnitude, sign in the number shows direction.
+    const bar        = `<span class="ret-bar-wrap"><span class="ret-bar" style="width:${barW}px;background:var(--text3)"></span></span>`;
     const dollarGain = y.end_balance - y.start_balance - monthly * 12;
     const comment    = yearComment(ret, dollarGain);
 

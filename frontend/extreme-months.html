@@ -28,8 +28,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="shared-analytics.css" />
-  <script src="theme-toggle.js"></script>
+  <link rel="stylesheet" href="shared-analytics.css?v=1" />
+  <script src="theme-toggle.js?v=2"></script>
   <script src="https://cdn.auth0.com/js/auth0-spa-js/2.1/auth0-spa-js.production.js"></script>
   <style>
     /* ── layout ── */
@@ -59,16 +59,10 @@
       flex-direction: column;
       gap: .3rem;
     }
-    .summary-card.worst {
-      background: rgba(220,38,38,.07);
-      border: 1px solid rgba(220,38,38,.2);
+    .summary-card.worst, .summary-card.best {
+      background: var(--card);
+      border: 1px solid var(--border);
     }
-    .summary-card.best {
-      background: rgba(22,163,74,.07);
-      border: 1px solid rgba(22,163,74,.2);
-    }
-    [data-theme="dark"] .summary-card.worst { background: rgba(239,68,68,.1);  border-color: rgba(239,68,68,.25); }
-    [data-theme="dark"] .summary-card.best  { background: rgba(74,222,128,.1); border-color: rgba(74,222,128,.25); }
 
     .sc-label {
       font-size: .68rem;
@@ -101,16 +95,10 @@
       gap: .75rem;
       padding: .85rem 1rem .7rem;
     }
-    .worst-panel .panel-head {
-      border-bottom: 2px solid rgba(220,38,38,.2);
-      background: rgba(220,38,38,.05);
+    .worst-panel .panel-head, .best-panel .panel-head {
+      border-bottom: 2px solid var(--border);
+      background: var(--card);
     }
-    .best-panel .panel-head {
-      border-bottom: 2px solid rgba(22,163,74,.2);
-      background: rgba(22,163,74,.05);
-    }
-    [data-theme="dark"] .worst-panel .panel-head { background: rgba(239,68,68,.08); }
-    [data-theme="dark"] .best-panel  .panel-head { background: rgba(74,222,128,.08); }
 
     .panel-icon {
       width: 2rem;
@@ -123,10 +111,7 @@
       font-weight: 700;
       flex-shrink: 0;
     }
-    .worst-panel .panel-icon { background: rgba(220,38,38,.15); color: #dc2626; }
-    .best-panel  .panel-icon { background: rgba(22,163,74,.15);  color: #16a34a; }
-    [data-theme="dark"] .worst-panel .panel-icon { color: #f87171; }
-    [data-theme="dark"] .best-panel  .panel-icon { color: #4ade80; }
+    .worst-panel .panel-icon, .best-panel .panel-icon { background: var(--bg); color: var(--text1); }
 
     .panel-title { font-size: 1rem; font-weight: 700; }
     .panel-sub {
@@ -156,15 +141,10 @@
     .mini-bar  { height: 3px; border-radius: 2px; min-width: 2px; }
 
     /* ── colors ── */
-    .c-worst { color: #dc2626; }
-    .c-best  { color: #16a34a; }
-    [data-theme="dark"] .c-worst { color: #f87171; }
-    [data-theme="dark"] .c-best  { color: #4ade80; }
-
-    .bar-worst { background: #dc2626; opacity: .55; }
-    .bar-best  { background: #16a34a; opacity: .55; }
-    [data-theme="dark"] .bar-worst { background: #f87171; opacity: .7; }
-    [data-theme="dark"] .bar-best  { background: #4ade80; opacity: .7; }
+    /* No red/green -- plain bold text, sign carries direction. Mini-bars keep
+       their magnitude (length) but drop the hue, same reasoning. */
+    .c-worst, .c-best { color: var(--text1); }
+    .bar-worst, .bar-best { background: var(--text3); opacity: .7; }
 
     /* ── misc ── */
     .chip-row { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }

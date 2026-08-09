@@ -27,16 +27,16 @@
 }
 </script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="shared-analytics.css">
-<script src="theme-toggle.js"></script>
+<link rel="stylesheet" href="shared-analytics.css?v=1">
+<script src="theme-toggle.js?v=2"></script>
 <script src="https://cdn.auth0.com/js/auth0-spa-js/2.1/auth0-spa-js.production.js"></script>
 <style>
   .dd-bar{height:18px;border-radius:4px;min-width:2px;transition:width .3s}
   .dd-row{display:flex;align-items:center;gap:12px;padding:6px 0;border-bottom:1px solid var(--border)}
   .dd-sym{width:50px;font-weight:700;font-size:13px;color:var(--accent);font-family:'Space Grotesk',sans-serif}
   .dd-name{width:140px;font-size:10px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .dd-bar-wrap{flex:1;background:rgba(239,68,68,0.05);border-radius:4px;overflow:hidden}
-  .dd-val{width:70px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;color:#ef4444}
+  .dd-bar-wrap{flex:1;background:var(--bg);border-radius:4px;overflow:hidden}
+  .dd-val{width:70px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;color:var(--text1)}
   .dd-period{width:120px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text3)}
   .dd-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:16px}
   .dd-card-title{font-size:14px;font-weight:600;color:var(--text1);margin-bottom:12px;font-family:'Space Grotesk',sans-serif}
@@ -74,7 +74,7 @@
 
 <div class="cell-tooltip" id="tooltip"></div>
 <script src="shared-analytics.js?v=1"></script>
-<script src="drawdown.js?v=2"></script>
+<script src="drawdown.js?v=3"></script>
 <script src="shared-auth.js"></script>
 </body>
 </html>

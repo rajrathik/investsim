@@ -51,12 +51,15 @@ body{min-height:100vh;background:var(--bg);color:var(--text1);font-family:'DM Sa
 .data-table td:first-child{text-align:left;padding-left:16px;font-weight:700;color:var(--text1);background:var(--card);position:sticky;left:0;z-index:5;min-width:90px}
 .data-table tbody tr:hover td{background:var(--bg)}
 .data-table .ticker-name{display:block;font-size:10px;font-weight:400;color:var(--text3);margin-top:1px}
-.data-table .val-self{color:var(--accent);font-weight:700}
+.data-table .val-self{color:var(--text1);font-weight:700}
 
-/* Growth colors */
-.growth-pos{color:#10b981}
-.growth-neg{color:#ef4444}
-.growth-gold{color:#f59e0b}
+/* Growth colors -- deliberately NOT red/green. Matches the reference financial
+   sites we're aligning to (Vanguard, VanEck): every value is plain bold text,
+   direction is carried by the +/- sign already present in the number itself,
+   not by color. */
+.growth-pos{color:var(--text1)}
+.growth-neg{color:var(--text1)}
+.growth-gold{color:var(--text1)}
 .growth-na{color:var(--text3);font-style:italic;font-weight:400}
 
 /* Chart container */
@@ -117,13 +120,8 @@ body{min-height:100vh;background:var(--bg);color:var(--text1);font-family:'DM Sa
 html[data-theme="light"]{--bg:#f8fafc;--card:#ffffff;--border:#e2e8f0;--accent:#059669;--accent-dim:rgba(5,150,105,0.1);--accent-glow:rgba(5,150,105,0.3);--red:#dc2626;--red-dim:rgba(220,38,38,0.1);--gold:#d97706;--gold-dim:rgba(217,119,6,0.1);--blue:#2563eb;--blue-dim:rgba(37,99,235,0.1);--text1:#0f172a;--text2:#475569;--text3:#94a3b8}
 
 /* .data-table, rank/correlation values now built entirely from theme-aware CSS vars
-   and shared .growth-pos/.growth-neg/.growth-gold text classes — no per-page
-   light-theme overrides needed. */
-
-/* Growth colors — light mode */
-html[data-theme="light"] .growth-pos{color:#059669}
-html[data-theme="light"] .growth-neg{color:#dc2626}
-html[data-theme="light"] .growth-gold{color:#d97706}
+   and shared .growth-pos/.growth-neg/.growth-gold text classes (all just
+   var(--text1) now — no color-coding, no per-page light-theme overrides needed). */
 
 /* Tooltip — light mode */
 html[data-theme="light"] .cell-tooltip{box-shadow:0 8px 32px rgba(0,0,0,.15)}
