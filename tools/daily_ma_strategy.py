@@ -104,9 +104,68 @@ def backtest_ma_crossover(df: pd.DataFrame, starting_value: float = 10000.0) -> 
     }
 
 
+def build_monthly_investment_dates(df: pd.DataFrame) -> pd.DataFrame:
+    """One row per calendar month: the first trading day on file that month,
+    with that day's close/sma50/sma100/sma200. This stands in for 'the day
+    you'd have made your regular DCA contribution' -- picked without regard
+    to price, same as a real DCA investor just picking a day-of-month.
+    """
+    monthly = df.groupby(df.index.to_period("M")).first()
+    monthly = monthly.dropna(subset=["sma200"])  # only once 200-day history exists
+    return monthly
+
+
+def backtest_dca_tilt(df: pd.DataFrame, base_amount: float = 500.0) -> dict:
+    """Compare a fixed monthly DCA amount against the SAME total budget spread
+    across months by a moving-average 'value' tilt: invest more in months
+    where price sits below its MA(50/100/200) average (cheap vs trend), less
+    where it sits above (pricey vs trend). Total dollars invested is
+    identical between the two -- this is about weighting WHEN within your
+    existing DCA plan, not whether/when to be in or out of the market.
+    """
+    monthly = build_monthly_investment_dates(df)
+    if monthly.empty:
+        return {"error": "Not enough history for a 200-day SMA yet."}
+
+    avg_ma = (monthly["sma50"] + monthly["sma100"] + monthly["sma200"]) / 3
+    ratio = monthly["close"] / avg_ma
+
+    # Below-MA months get a >1x tilt, above-MA months get <1x, clipped so no
+    # single month can swallow a huge share of the budget.
+    raw_multiplier = (2 - ratio).clip(lower=0.25, upper=2.0)
+
+    n = len(monthly)
+    total_budget = n * base_amount
+
+    # Baseline: fixed amount every month, regardless of price.
+    baseline_shares = (base_amount / monthly["close"]).sum()
+
+    # Tilted: identical total budget, redistributed across months by the multiplier.
+    normalized_amounts = raw_multiplier * (total_budget / raw_multiplier.sum())
+    tilted_shares = (normalized_amounts / monthly["close"]).sum()
+
+    final_price = df["close"].iloc[-1]
+    baseline_value = baseline_shares * final_price
+    tilted_value = tilted_shares * final_price
+
+    return {
+        "months": n,
+        "window": f"{monthly.index[0]} to {monthly.index[-1]}",
+        "total_invested": round(total_budget, 2),
+        "baseline_shares": round(baseline_shares, 3),
+        "baseline_final_value": round(baseline_value, 2),
+        "baseline_avg_cost_per_share": round(total_budget / baseline_shares, 2),
+        "tilted_shares": round(tilted_shares, 3),
+        "tilted_final_value": round(tilted_value, 2),
+        "tilted_avg_cost_per_share": round(total_budget / tilted_shares, 2),
+        "improvement_pct": round((tilted_value / baseline_value - 1) * 100, 2),
+    }
+
+
 def main():
     parser = argparse.ArgumentParser(description="MA(50/100/200) crossover analysis for SPY/OEF daily tables")
     parser.add_argument("--ticker", required=True, choices=["SPY", "OEF"])
+    parser.add_argument("--dca-amount", type=float, default=500.0, help="Fixed monthly DCA amount to compare against (default 500)")
     parser.add_argument("--save-csv", action="store_true", help="Save full daily series with MAs to tools/<ticker>_ma_analysis.csv")
     args = parser.parse_args()
 
@@ -127,7 +186,7 @@ def main():
         regime = "BULLISH (SMA50 > SMA200)" if latest["sma50"] > latest["sma200"] else "BEARISH (SMA50 < SMA200)"
         print(f"Current regime: {regime}")
 
-    print("\n--- Golden Cross / Death Cross history ---")
+    print("\n--- Golden Cross / Death Cross history (context only, not used below) ---")
     crosses = find_crossovers(df)
     if crosses.empty:
         print("No crossovers found in this history yet.")
@@ -135,10 +194,16 @@ def main():
         for dt, row in crosses.iterrows():
             print(f"{dt.date()}  {row['signal']:<22} close={row['close']:.2f}  sma50={row['sma50']:.2f}  sma200={row['sma200']:.2f}")
 
-    print("\n--- Backtest: SMA50/200 crossover regime vs Buy & Hold ($10,000 start) ---")
-    bt = backtest_ma_crossover(df)
-    for k, v in bt.items():
-        print(f"{k}: {v}")
+    print(f"\n--- MA-tilted DCA vs fixed ${args.dca_amount:.0f}/month DCA (same total $ invested) ---")
+    tilt = backtest_dca_tilt(df, base_amount=args.dca_amount)
+    if "error" in tilt:
+        print(tilt["error"])
+    else:
+        print(f"Window: {tilt['window']}  ({tilt['months']} months)")
+        print(f"Total invested (both):     ${tilt['total_invested']:,.2f}")
+        print(f"Fixed DCA  -> shares: {tilt['baseline_shares']:.3f}  final value: ${tilt['baseline_final_value']:,.2f}  avg cost/share: ${tilt['baseline_avg_cost_per_share']:.2f}")
+        print(f"MA-tilted  -> shares: {tilt['tilted_shares']:.3f}  final value: ${tilt['tilted_final_value']:,.2f}  avg cost/share: ${tilt['tilted_avg_cost_per_share']:.2f}")
+        print(f"Improvement vs fixed DCA: {tilt['improvement_pct']:+.2f}%")
 
     if args.save_csv:
         out_path = os.path.join(os.path.dirname(__file__), f"{args.ticker.lower()}_ma_analysis.csv")
