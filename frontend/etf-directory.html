@@ -35,8 +35,23 @@
     .status-line { font-size: 12px; color: var(--text3); font-family: 'JetBrains Mono', monospace; margin-bottom: 4px; }
 
     .etf-group { margin-bottom: 8px; }
-    .etf-group h2 { font-family: 'Space Grotesk', sans-serif; font-size: 16px; margin: 32px 0 12px; color: var(--text1); border-left: 3px solid var(--accent); padding-left: 10px; }
-    .etf-group:first-of-type h2 { margin-top: 8px; }
+    .etf-group summary {
+      font-family: 'Space Grotesk', sans-serif; font-size: 16px; margin: 32px 0 12px; color: var(--text1);
+      border-left: 3px solid var(--accent); padding-left: 10px; cursor: pointer; list-style: none;
+      display: flex; align-items: center; gap: 10px; user-select: none;
+    }
+    .etf-group summary::-webkit-details-marker { display: none; }
+    .etf-group summary::before { content: '▸'; color: var(--text3); font-size: 12px; transition: transform .15s; }
+    .etf-group[open] summary::before { transform: rotate(90deg); }
+    .etf-group:first-of-type summary { margin-top: 8px; }
+    .etf-count { font-size: 11px; font-weight: 400; color: var(--text3); font-family: 'JetBrains Mono', monospace; }
+
+    .group-controls { display: flex; gap: 8px; margin-top: 4px; }
+    .group-controls button {
+      font-size: 11px; font-family: 'JetBrains Mono', monospace; color: var(--text2); background: var(--card);
+      border: 1px solid var(--border); border-radius: 6px; padding: 5px 10px; cursor: pointer;
+    }
+    .group-controls button:hover { border-color: var(--accent); color: var(--text1); }
 
     .data-table th, .data-table td { text-align: left; }
     .data-table th.r, .data-table td.r { text-align: right; }
@@ -64,6 +79,10 @@
       A curated list of non-leveraged ETFs grouped by category — market cap &amp; style, global regions, U.S. sectors, subsectors/industries, commodities &amp; alternatives, and bonds. Price and 52-week range are live snapshots (cached 15 minutes). Click a fund name to visit the issuer's official page.
     </p>
     <div class="status-line" id="statusLine">Loading price data…</div>
+    <div class="group-controls">
+      <button onclick="setAllGroups(true)">Expand all</button>
+      <button onclick="setAllGroups(false)">Collapse all</button>
+    </div>
 
     <div id="groupsContainer"></div>
   </div>

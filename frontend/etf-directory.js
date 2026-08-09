@@ -10,6 +10,7 @@ const ETF_GROUPS = [
   {
     title: 'Market Cap & Style ETFs',
     rows: [
+      ['Total US Market', 'ITOT', 'iShares Core S&P Total U.S. Stock Market ETF', 'https://www.ishares.com/us/products/239724/ishares-core-sp-total-us-stock-market-etf'],
       ['Large-Cap Blend', 'VOO', 'Vanguard S&P 500 ETF', 'https://investor.vanguard.com/investment-products/etfs/profile/voo'],
       ['Large-Cap Growth', 'QQQ', 'Invesco QQQ Trust', 'https://www.invesco.com/us/en/financial-products/etfs/invesco-qqq-trust.html'],
       ['Large-Cap Value', 'VTV', 'Vanguard Value ETF', 'https://investor.vanguard.com/investment-products/etfs/profile/vtv'],
@@ -19,6 +20,15 @@ const ETF_GROUPS = [
       ['Small-Cap Blend', 'IWM', 'iShares Russell 2000 ETF', 'https://www.ishares.com/us/products/239710/ishares-russell-2000-etf'],
       ['Small-Cap Growth', 'VBK', 'Vanguard Small-Cap Growth ETF', 'https://investor.vanguard.com/investment-products/etfs/profile/vbk'],
       ['Small-Cap Value', 'VBR', 'Vanguard Small-Cap Value ETF', 'https://investor.vanguard.com/investment-products/etfs/profile/vbr'],
+    ],
+  },
+  {
+    title: 'Factor & Strategy ETFs',
+    rows: [
+      ['Momentum', 'MTUM', 'iShares MSCI USA Momentum Factor ETF', 'https://www.ishares.com/us/products/251614/ishares-msci-usa-momentum-factor-etf'],
+      ['Dividend Growth', 'DGRO', 'iShares Core Dividend Growth ETF', 'https://www.ishares.com/us/products/264623/ishares-core-dividend-growth-etf'],
+      ['High Dividend Yield', 'HDV', 'iShares Core High Dividend ETF', 'https://www.ishares.com/us/products/239563/ishares-core-high-dividend-etf'],
+      ['Dividend & Buybacks', 'DIVB', 'iShares Core Dividend ETF', 'https://www.blackrock.com/us/individual/products/291387/'],
     ],
   },
   {
@@ -36,6 +46,7 @@ const ETF_GROUPS = [
       ['Australia', 'EWA', 'iShares MSCI Australia ETF', 'https://www.ishares.com/us/products/239607/ishares-msci-australia-etf'],
       ['China', 'MCHI', 'iShares MSCI China ETF', 'https://www.ishares.com/us/products/239619/ishares-msci-china-etf'],
       ['India', 'INDA', 'iShares MSCI India ETF', 'https://www.ishares.com/us/products/239650/ishares-msci-india-etf'],
+      ['Global Mega-Cap', 'IOO', 'iShares Global 100 ETF', 'https://www.ishares.com/us/products/239737/ishares-global-100-etf'],
     ],
   },
   {
@@ -105,8 +116,8 @@ const ETF_GROUPS = [
 function renderGroups() {
   const container = $('groupsContainer');
   container.innerHTML = ETF_GROUPS.map(group => `
-    <div class="etf-group">
-      <h2>${group.title}</h2>
+    <details class="etf-group" open>
+      <summary>${group.title}<span class="etf-count">${group.rows.length}</span></summary>
       <div class="data-table-wrap">
         <table class="data-table">
           <thead>
@@ -129,8 +140,12 @@ function renderGroups() {
           </tbody>
         </table>
       </div>
-    </div>
+    </details>
   `).join('');
+}
+
+function setAllGroups(open) {
+  document.querySelectorAll('.etf-group').forEach(el => { el.open = open; });
 }
 
 function renderQuote(ticker, quote) {
