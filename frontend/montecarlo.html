@@ -92,16 +92,13 @@
   .ct-val{font-weight:600}
 
   /* ---- Percentile table ---- */
-  .table-wrap{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:28px}
+  /* Table itself is the shared .data-table (shared-analytics.css); this page's
+     only override is its alignment scheme -- first two columns (Year,
+     Deposited) left, the rest right -- and hiding two columns on mobile. */
   .table-header{padding:16px 20px;border-bottom:1px solid var(--border);font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;color:var(--text1);display:flex;align-items:center;gap:8px}
-  .pct-table{width:100%;border-collapse:collapse}
-  .pct-table th{font-size:10px;font-weight:600;color:var(--text3);font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.05em;padding:10px 16px;text-align:right;border-bottom:1px solid var(--border);background:var(--bg)}
-  .pct-table th:first-child,.pct-table th:nth-child(2){text-align:left}
-  .pct-table td{padding:9px 16px;font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--text2);text-align:right;border-bottom:1px solid rgba(255,255,255,0.04)}
-  html[data-theme="light"] .pct-table td{border-bottom-color:rgba(0,0,0,0.05)}
-  .pct-table td:first-child{text-align:left;font-weight:600;color:var(--text1)}
-  .pct-table td:nth-child(2){text-align:left;color:var(--text3)}
-  .pct-table tbody tr:hover{background:var(--bg)}
+  .data-table th,.data-table td{text-align:right}
+  .data-table th:first-child,.data-table td:first-child,
+  .data-table th:nth-child(2),.data-table td:nth-child(2){text-align:left}
   .pct-median{color:var(--accent)!important;font-weight:700!important}
   .pct-best{color:var(--accent)!important}
   .pct-worst{color:var(--red)!important}
@@ -123,8 +120,8 @@
     .controls-grid-3{grid-template-columns:1fr 1fr}
     .ctrl-run{grid-column:1/-1}
     .stat-strip{grid-template-columns:1fr 1fr}
-    .pct-table th:nth-child(4),.pct-table td:nth-child(4),
-    .pct-table th:nth-child(6),.pct-table td:nth-child(6){display:none}
+    .data-table th:nth-child(4),.data-table td:nth-child(4),
+    .data-table th:nth-child(6),.data-table td:nth-child(6){display:none}
   }
 </style>
 </head>
@@ -264,7 +261,7 @@
     <div class="chart-tooltip" id="chartTip"></div>
 
     <!-- Percentile table -->
-    <div class="table-wrap">
+    <div class="data-table-wrap">
       <div class="table-header">
         Year-by-Year Percentile Outcomes
         <span class="info-icon">?
@@ -278,7 +275,7 @@
           </span>
         </span>
       </div>
-      <table class="pct-table">
+      <table class="data-table">
         <thead>
           <tr>
             <th>Year</th>

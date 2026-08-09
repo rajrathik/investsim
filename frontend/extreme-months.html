@@ -137,25 +137,14 @@
     }
 
     /* ── table ── */
-    .ext-table { width: 100%; border-collapse: collapse; font-size: .82rem; }
-    .ext-table th {
-      padding: .4rem .8rem;
-      font-size: .68rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: .06em;
-      color: var(--text3);
-      border-bottom: 1px solid var(--border);
-      text-align: left;
-    }
-    .ext-table th.r { text-align: right; }
-    .ext-table td {
-      padding: .5rem .8rem;
-      border-bottom: 1px solid var(--border);
-      vertical-align: middle;
-    }
-    .ext-table tr:last-child td { border-bottom: none; }
-    .ext-table tbody tr:hover td { background: var(--bg); transition: background .1s; }
+    /* Overrides on top of the shared .data-table: nested inside .extremes-panel
+       (which already provides border/bg/radius), and this table is
+       left-by-default / right via .r (not .data-table's center-by-default). */
+    .extremes-panel .data-table-wrap { border: none; border-radius: 0; background: transparent; margin-bottom: 0; }
+    .extremes-panel .data-table { width: 100%; }
+    .extremes-panel .data-table th, .extremes-panel .data-table td { text-align: left; }
+    .extremes-panel .data-table th.r, .extremes-panel .data-table td.r { text-align: right; }
+    .extremes-panel .data-table tr:last-child td { border-bottom: none; }
 
     .td-rank { color: var(--text3); font-size: .72rem; font-family: monospace; width: 1.6rem; }
     .td-date { font-weight: 500; white-space: nowrap; }
@@ -242,8 +231,8 @@
               <div class="panel-sub" id="worstSub"></div>
             </div>
           </div>
-          <div class="table-wrap">
-            <table class="ext-table">
+          <div class="data-table-wrap">
+            <table class="data-table">
               <thead><tr>
                 <th></th>
                 <th>Month</th>
@@ -263,8 +252,8 @@
               <div class="panel-sub" id="bestSub"></div>
             </div>
           </div>
-          <div class="table-wrap">
-            <table class="ext-table">
+          <div class="data-table-wrap">
+            <table class="data-table">
               <thead><tr>
                 <th></th>
                 <th>Month</th>

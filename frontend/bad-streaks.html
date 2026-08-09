@@ -98,26 +98,15 @@
     .panel-sub   { font-size: .72rem; color: var(--text3); font-family: monospace; margin-top: .15rem; }
 
     /* ── table ── */
-    .streak-table { width: 100%; border-collapse: collapse; font-size: .81rem; }
-    .streak-table th {
-      padding: .45rem .85rem;
-      font-size: .67rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: .06em;
-      color: var(--text3);
-      border-bottom: 1px solid var(--border);
-      text-align: left;
-      white-space: nowrap;
-    }
-    .streak-table th.r { text-align: right; }
-    .streak-table td {
-      padding: .6rem .85rem;
-      border-bottom: 1px solid var(--border);
-      vertical-align: middle;
-    }
-    .streak-table tr:last-child td { border-bottom: none; }
-    .streak-table tbody tr:hover td { background: var(--bg); transition: background .1s; }
+    /* Overrides on top of the shared .data-table: nested inside .streaks-panel
+       (which already provides border/bg/radius, so neutralize the wrap's own),
+       and this table's alignment scheme is left-by-default / right via .r
+       (not .data-table's center-by-default). */
+    .streaks-panel .data-table-wrap { border: none; border-radius: 0; background: transparent; margin-bottom: 0; }
+    .streaks-panel .data-table { width: 100%; }
+    .streaks-panel .data-table th, .streaks-panel .data-table td { text-align: left; }
+    .streaks-panel .data-table th.r, .streaks-panel .data-table td.r { text-align: right; }
+    .streaks-panel .data-table tr:last-child td { border-bottom: none; }
 
     .td-rank   { color: var(--text3); font-size: .72rem; font-family: monospace; width: 1.6rem; }
     .td-period { font-weight: 600; font-size: .83rem; white-space: nowrap; }
@@ -229,8 +218,8 @@
             <div class="panel-sub" id="panelSub"></div>
           </div>
         </div>
-        <div class="table-wrap" style="overflow-x:auto;">
-          <table class="streak-table">
+        <div class="data-table-wrap">
+          <table class="data-table">
             <thead>
               <tr>
                 <th></th>

@@ -80,15 +80,12 @@
   .result-pill span{color:var(--text1);font-weight:600}
 
   /* ---- Year table ---- */
-  .table-wrap{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:28px}
+  /* Table itself is the shared .data-table (shared-analytics.css); this page's
+     only override is right-align-by-default (data-table centers) and hiding
+     two columns on mobile. */
   .table-header{padding:16px 20px;border-bottom:1px solid var(--border);font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;color:var(--text1)}
-  .year-table{width:100%;border-collapse:collapse}
-  .year-table th{font-size:10px;font-weight:600;color:var(--text3);font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.05em;padding:10px 16px;text-align:right;border-bottom:1px solid var(--border);background:var(--bg)}
-  .year-table th:first-child{text-align:left}
-  .year-table td{padding:9px 16px;font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--text2);text-align:right;border-bottom:1px solid rgba(255,255,255,0.04)}
-  html[data-theme="light"] .year-table td{border-bottom-color:rgba(0,0,0,0.05)}
-  .year-table td:first-child{text-align:left;font-weight:600;color:var(--text1)}
-  .year-table tbody tr:hover{background:var(--bg)}
+  .data-table th,.data-table td{text-align:right}
+  .data-table th:first-child,.data-table td:first-child{text-align:left}
   .earn-val{color:var(--accent)!important}
 
   /* ---- Error / loading ---- */
@@ -98,8 +95,8 @@
     .controls-grid{grid-template-columns:1fr 1fr}
     .ctrl-run{grid-column:1/-1}
     .result-amount{font-size:36px}
-    .year-table th:nth-child(3),.year-table td:nth-child(3),
-    .year-table th:nth-child(4),.year-table td:nth-child(4){display:none}
+    .data-table th:nth-child(3),.data-table td:nth-child(3),
+    .data-table th:nth-child(4),.data-table td:nth-child(4){display:none}
   }
 </style>
 </head>
@@ -155,9 +152,9 @@
 
     <div id="savingsResults" style="display:none">
       <div class="result-hero" id="savingsHero"></div>
-      <div class="table-wrap">
+      <div class="data-table-wrap">
         <div class="table-header">Year-by-Year Breakdown</div>
-        <table class="year-table">
+        <table class="data-table">
           <thead>
             <tr>
               <th>Year</th>
@@ -205,9 +202,9 @@
 
     <div id="goalResults" style="display:none">
       <div class="result-hero" id="goalHero"></div>
-      <div class="table-wrap">
+      <div class="data-table-wrap">
         <div class="table-header">Year-by-Year Breakdown</div>
-        <table class="year-table">
+        <table class="data-table">
           <thead>
             <tr>
               <th>Year</th>

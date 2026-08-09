@@ -36,16 +36,21 @@ body{min-height:100vh;background:var(--bg);color:var(--text1);font-family:'DM Sa
 .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px 20px;animation:fadeUp .5s both}
 
 /* Table base */
-/* ChartMill-style data table: plain background, bold header with border emphasis
-   (not a colored fill), text-only value coloring via .growth-pos/.growth-neg/.growth-gold */
+/* Single shared table style for every data table on the site (was 8 independent
+   per-page implementations -- consolidated so font-size/padding/header contrast
+   can never drift out of sync again). Strong-contrast header (inverted text1/bg,
+   so it's a dark navy bar in light theme, a bright bar in dark theme -- same
+   idea as a classic dark-header financial data table) instead of a same-size
+   plain header blending into the card background. Value coloring stays
+   text-only via .growth-pos/.growth-neg/.growth-gold. */
 .data-table-wrap{overflow-x:auto;margin-bottom:32px;border-radius:16px;border:1px solid var(--border);background:var(--card)}
-.data-table{border-collapse:collapse;width:100%;font-family:'JetBrains Mono',monospace;font-size:12px}
-.data-table th{padding:10px 8px;text-align:center;color:var(--text1);font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.06em;background:var(--card);border-bottom:2px solid var(--border);position:sticky;top:0;z-index:10}
-.data-table th:first-child{text-align:left;padding-left:14px;min-width:90px;position:sticky;left:0;z-index:20;background:var(--card)}
-.data-table td{padding:8px 6px;text-align:center;font-weight:600;font-size:12px;border-bottom:1px solid var(--border);position:relative;min-width:72px}
-.data-table td:first-child{text-align:left;padding-left:14px;font-weight:700;color:var(--text1);background:var(--card);position:sticky;left:0;z-index:5;min-width:90px}
+.data-table{border-collapse:collapse;width:100%;font-family:'JetBrains Mono',monospace;font-size:14px}
+.data-table th{padding:12px 10px;text-align:center;color:var(--bg);font-weight:700;font-size:14px;text-transform:uppercase;letter-spacing:.04em;background:var(--text1);border-bottom:2px solid var(--border);position:sticky;top:0;z-index:10}
+.data-table th:first-child{text-align:left;padding-left:16px;min-width:90px;position:sticky;left:0;z-index:20;background:var(--text1)}
+.data-table td{padding:10px 8px;text-align:center;font-weight:600;font-size:14px;border-bottom:1px solid var(--border);position:relative;min-width:72px}
+.data-table td:first-child{text-align:left;padding-left:16px;font-weight:700;color:var(--text1);background:var(--card);position:sticky;left:0;z-index:5;min-width:90px}
 .data-table tbody tr:hover td{background:var(--bg)}
-.data-table .ticker-name{display:block;font-size:9px;font-weight:400;color:var(--text3);margin-top:1px}
+.data-table .ticker-name{display:block;font-size:10px;font-weight:400;color:var(--text3);margin-top:1px}
 .data-table .val-self{color:var(--accent);font-weight:700}
 
 /* Growth colors */
@@ -53,10 +58,6 @@ body{min-height:100vh;background:var(--bg);color:var(--text1);font-family:'DM Sa
 .growth-neg{color:#ef4444}
 .growth-gold{color:#f59e0b}
 .growth-na{color:var(--text3);font-style:italic;font-weight:400}
-
-/* ChartMill-style data table header: plain background, bold text, thicker border-bottom
-   instead of a colored/dark header fill. Reusable across any page's own table CSS. */
-.cm-th{font-weight:700;background:var(--card);border-bottom:2px solid var(--border)}
 
 /* Chart container */
 .chart-wrap{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;margin-bottom:32px;position:relative}
@@ -99,8 +100,9 @@ body{min-height:100vh;background:var(--bg);color:var(--text1);font-family:'DM Sa
 /* Responsive */
 @media(max-width:900px){
   .cards-grid{grid-template-columns:repeat(2,1fr)}
-  .data-table{font-size:11px}
-  .data-table td{min-width:60px;padding:6px 4px}
+  .data-table{font-size:13px}
+  .data-table th{font-size:13px;padding:9px 6px}
+  .data-table td{min-width:60px;padding:8px 6px}
 }
 @media(max-width:600px){
   .cards-grid{grid-template-columns:1fr}
