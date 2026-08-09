@@ -44,6 +44,12 @@ Endpoints:
     POST   /api/batch/fred-incremental      - Incremental FRED rate load — last 3 months (async)
     GET    /api/batch/status                - Status of last batch run
 
+  Daily Price Tables (SPY / OEF):
+    POST   /api/batch/daily-prices/{ticker}/full         - One-time full history load (auth + write, async)
+    POST   /api/batch/daily-prices/{ticker}/incremental   - Append missing days only (auth + write, async)
+    GET    /api/batch/daily-prices/status                 - Status of last daily-price load
+    GET    /api/daily-prices/stats                        - Row count + date range per ticker (public)
+
   Rate Limits (per IP):
     Default:  60 requests/minute for all endpoints
     Reads:    30/minute for expensive sector-performance and sector-monthly queries
@@ -72,7 +78,7 @@ import time
 import logging
 import threading
 import traceback
-from datetime import datetime, timezone
+from datetime import datetime, date, timedelta, timezone
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Depends, HTTPException, Query, Request
@@ -102,7 +108,7 @@ if os.path.exists(env_path):
                 os.environ.setdefault(key.strip(), value.strip())
 
 from app.database import SessionLocal, init_db, engine
-from app.models import Ticker, MonthlyPrice, Dividend, UserLogin, UserAdmin, ApiRequestLog, SavedSimulation, StackEarnSavingsTier, StackEarnGoalTier
+from app.models import Ticker, MonthlyPrice, Dividend, UserLogin, UserAdmin, ApiRequestLog, SavedSimulation, StackEarnSavingsTier, StackEarnGoalTier, SpyDailyPrice, OefDailyPrice
 from app.config import MAX_TICKERS, ENABLE_WRITE_API, ALLOWED_ORIGINS
 from app.auth import get_current_user
 
@@ -289,6 +295,99 @@ def _update_batch_status(**kwargs):
 def _get_batch_status():
     with _batch_lock:
         return dict(_batch_status)
+
+
+# ===========================================
+# DAILY PRICE TABLES (SPY / OEF) — separate status tracker so a daily-price
+# load never clobbers the Yahoo/FRED batch status panel above.
+# ===========================================
+
+DAILY_PRICE_MODELS = {
+    "SPY": SpyDailyPrice,
+    "OEF": OefDailyPrice,
+}
+
+_daily_lock = threading.Lock()
+_daily_status = {
+    "ticker": None,
+    "mode": None,
+    "status": "idle",
+    "summary": None,
+    "started_at": None,
+    "completed_at": None,
+}
+
+
+def _update_daily_status(**kwargs):
+    with _daily_lock:
+        _daily_status.update(kwargs)
+
+
+def _get_daily_status():
+    with _daily_lock:
+        return dict(_daily_status)
+
+
+def _run_daily_load_in_background(ticker: str, mode: str):
+    """Fetch + append daily prices for one ticker in a background thread.
+
+    mode='full': everything Yahoo has (one-time initial load).
+    mode='incremental': only the days after whatever's already on file
+    (max(price_date) + 1 day through today) -- append-only, no updates.
+    """
+    _update_daily_status(
+        ticker=ticker,
+        mode=mode,
+        status="running",
+        started_at=datetime.now(timezone.utc).isoformat(),
+        completed_at=None,
+        summary=None,
+    )
+
+    try:
+        from app.fetcher import get_daily_prices
+        from app.loader import load_daily_prices, get_max_daily_date
+
+        model = DAILY_PRICE_MODELS[ticker]
+        db = SessionLocal()
+        try:
+            start_date = None
+            if mode == "incremental":
+                max_date = get_max_daily_date(db, model, ticker)
+                if max_date is None:
+                    # Nothing on file yet -- behave like a full load.
+                    start_date = None
+                else:
+                    next_day = max_date + timedelta(days=1)
+                    if next_day > date.today():
+                        summary = {"inserted": 0, "skipped": 0, "note": "Already up to date"}
+                        _update_daily_status(
+                            status="completed",
+                            summary=summary,
+                            completed_at=datetime.now(timezone.utc).isoformat(),
+                        )
+                        return
+                    start_date = next_day.isoformat()
+
+            prices_df = get_daily_prices(ticker, start_date=start_date, end_date=None)
+            summary = load_daily_prices(db, model, ticker, prices_df)
+        finally:
+            db.close()
+
+        _update_daily_status(
+            status="completed",
+            summary=summary,
+            completed_at=datetime.now(timezone.utc).isoformat(),
+        )
+        logger.info(f"Daily {mode} load completed for {ticker}: {summary}")
+
+    except Exception as e:
+        logger.error(f"Daily {mode} load failed for {ticker}: {traceback.format_exc()}")
+        _update_daily_status(
+            status="failed",
+            summary={"error": str(e)},
+            completed_at=datetime.now(timezone.utc).isoformat(),
+        )
 
 
 # --- Dependency ---
@@ -1226,6 +1325,84 @@ def run_batch_current_month(request: Request, user: dict = Depends(require_admin
 def get_batch_status():
     """Get the status of the last batch run."""
     return _get_batch_status()
+
+
+# ===========================================
+# DAILY PRICE TABLES (SPY / OEF)
+# ===========================================
+
+def _validate_daily_ticker(ticker: str) -> str:
+    ticker = ticker.upper().strip()
+    if ticker not in DAILY_PRICE_MODELS:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No daily-prices table for '{ticker}'. Available: {', '.join(DAILY_PRICE_MODELS)}",
+        )
+    return ticker
+
+
+@app.post("/api/batch/daily-prices/{ticker}/full", response_model=BatchResponse)
+@limiter.limit("5/minute")
+def run_daily_full(ticker: str, request: Request, user: dict = Depends(require_admin)):
+    """One-time full history load for a daily-prices table (SPY or OEF).
+
+    Fetches everything Yahoo has for the ticker and inserts every row;
+    existing dates are skipped, never overwritten. Runs in background.
+    """
+    ticker = _validate_daily_ticker(ticker)
+    require_write_enabled()
+    current = _get_daily_status()
+    if current["status"] == "running":
+        raise HTTPException(status_code=409, detail="A daily-price load is already running. Check /api/batch/daily-prices/status")
+
+    thread = threading.Thread(target=_run_daily_load_in_background, args=(ticker, "full"), daemon=True)
+    thread.start()
+
+    return BatchResponse(
+        status="started",
+        message=f"Full history load started for {ticker}. Check /api/batch/daily-prices/status for progress.",
+    )
+
+
+@app.post("/api/batch/daily-prices/{ticker}/incremental", response_model=BatchResponse)
+@limiter.limit("10/minute")
+def run_daily_incremental(ticker: str, request: Request, user: dict = Depends(require_admin)):
+    """Append missing days for a daily-prices table (SPY or OEF).
+
+    Looks at MAX(price_date) already on file and fetches only the days
+    after it, through today -- e.g. miss 6 days, running this loads
+    exactly those 6. Append-only: never updates an existing row. Runs
+    in background.
+    """
+    ticker = _validate_daily_ticker(ticker)
+    require_write_enabled()
+    current = _get_daily_status()
+    if current["status"] == "running":
+        raise HTTPException(status_code=409, detail="A daily-price load is already running. Check /api/batch/daily-prices/status")
+
+    thread = threading.Thread(target=_run_daily_load_in_background, args=(ticker, "incremental"), daemon=True)
+    thread.start()
+
+    return BatchResponse(
+        status="started",
+        message=f"Missing-days load started for {ticker}. Check /api/batch/daily-prices/status for progress.",
+    )
+
+
+@app.get("/api/batch/daily-prices/status")
+def get_daily_status():
+    """Get the status of the last daily-price load (SPY/OEF)."""
+    return _get_daily_status()
+
+
+@app.get("/api/daily-prices/stats")
+def get_daily_price_stats_all(db: Session = Depends(get_db)):
+    """Row count + date range on file for every daily-prices table."""
+    from app.loader import get_daily_price_stats
+    return {
+        ticker: get_daily_price_stats(db, model, ticker)
+        for ticker, model in DAILY_PRICE_MODELS.items()
+    }
 
 
 # ===========================================

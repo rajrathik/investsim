@@ -91,10 +91,11 @@ frontend/theme-toggle.js       ← Dark/light theme IIFE (no FOUC)
 | Admin Dashboard | `admin.html` (**Auth0 + user_admin table**) — tile on `index.html` visible only when `_admin_hint` localStorage flag set (cleared on admin logout) |
 | CD Portfolio Advisor (AI) | `CD-simulator.html` + `cdapp.js` + `cdstyles.css` |
 
-## Database (13 Tables)
+## Database (15 Tables)
 `tickers`, `monthly_prices`, `dividends`, `monthly_mm_rates`, `annual_mm_rates`,
 `user_logins`, `user_admin`, `api_request_logs`, `saved_simulations`, `shiller_market_data`,
-`stack_earn_savings_tiers`, `stack_earn_goal_tiers`, `damodaran_annual_returns`
+`stack_earn_savings_tiers`, `stack_earn_goal_tiers`, `damodaran_annual_returns`,
+`spy_daily_prices`, `oef_daily_prices`
 
 > `shiller_market_data` — 1,863 rows, Jan 1871–Mar 2026. Loaded once via `backend/onetime/load_shiller_data.py`.
 > 22 columns including `NominalTotalReturn` (calculated: monthly price return + dividend yield).
@@ -105,6 +106,15 @@ frontend/theme-toggle.js       ← Dark/light theme IIFE (no FOUC)
 > Columns: Year, SP500Return, SmallCapReturn, TBill3Month, TBond10Year, BaaCorporateBond, RealEstate, Gold
 > (all decimal fractions), Source, SourceUrl. Source: Aswath Damodaran / NYU Stern — "Historical Returns on
 > Stocks, Bonds and Bills." Powers `sp500-rolling-returns.html` via `GET /api/damodaran-forward-returns`.
+
+> `spy_daily_prices` / `oef_daily_prices` — standalone daily OHLCV tables, one per ticker (not the shared
+> `monthly_prices` structure). Each carries a `ticker` column despite holding only one symbol, so they can be
+> combined into a single shared daily-prices table later without a schema change; kept separate for now.
+> One-time full history loaded via admin.html's "Daily Price History — SPY / OEF" card
+> (`POST /api/batch/daily-prices/{ticker}/full`) — SPY back to 1993-01-29, OEF back to 2000-10-27 (Yahoo's max).
+> Ongoing catch-up via the same card's "Load Missing Days" button (`POST /api/batch/daily-prices/{ticker}/incremental`)
+> — looks at `MAX(price_date)` on file and appends only the days after it through today; never updates an
+> existing row. Stats (`GET /api/daily-prices/stats`) are public/read-only; both load endpoints are admin-gated.
 
 ## Untracked / In-Progress Files
 - `backend/app/backend.py` — Flask-based CD portfolio recommendation engine (separate prototype, not integrated into FastAPI yet)
@@ -144,6 +154,7 @@ cd backend && uvicorn app.api:app --reload
 - Default: 60/min | Heavy reads: 30/min | Writes: 10/min | Batch: 5/min
 
 ## Recent Commits
+- Added standalone daily-price tables `spy_daily_prices` / `oef_daily_prices` (one table per ticker, each carrying a redundant `ticker` column for a future combine): one-time full history load (SPY 1993–present, OEF 2000–present) + append-only "load missing days" catch-up routine (looks at `MAX(price_date)`, fetches only what's after it, never updates existing rows); new admin.html "Daily Price History — SPY / OEF" card with per-ticker Full History / Load Missing Days buttons and live row-count/date-range stats; new endpoints `POST /api/batch/daily-prices/{ticker}/full`, `POST /api/batch/daily-prices/{ticker}/incremental` (both admin-gated), `GET /api/batch/daily-prices/status`, `GET /api/daily-prices/stats` (public); `fetcher.get_daily_prices()` and `loader.load_daily_prices()`/`get_daily_price_stats()`/`get_max_daily_date()` added; both tables added to `tools/sync_sql_to_postgres.py`
 - Added **5-Year Crash Periods & Recovery** page (`bad-streaks.html/js`): standalone page, own tile on index.html; non-overlapping 5-year crash windows ranked by total loss; year-by-year pills per period; recovery Yr+1/Yr+2/combined columns; 3 summary stat cards; 5/10 period chip toggle; API: `GET /api/sp500-bad-streaks?n=10`
 - Stack & Earn moved to member content: removed from public tool grid; card now appears in Member Content section of index.html (sign-in required); simulation logic fixed to split interest by running balance buckets (not monthly deposit amount); Google Search Console HTML file verification added (`frontend/googlefb699e7455843495.html`); Admin tile auto-detected on index.html via `/api/admin/verify` — shown when signed-in member is in user_admin table, hidden otherwise; `_admin_hint` localStorage flag set on verify, cleared on logout
 - Stack & Earn: added `display_rate`, `display_upto`, `product_type` columns to both tier tables + migration script; `renderTiers()` respects flags; 6 new admin CRUD endpoints (`GET/PUT/POST /api/admin/stack-earn/savings-tiers` + goal-tiers); admin.html Rate Management card (editable table, Add New Tier form, product name display); Monte Carlo parameter guide added to `montecarlo.html`; renamed S&P 500 DCA Simulator → "S&P 500 Historical Simulator" across index.html and sp500-simulate.html; Stack & Earn card copy updated to remove tiered/split language

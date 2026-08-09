@@ -208,6 +208,26 @@ body{min-height:100vh;background:var(--bg);color:var(--text1);font-family:'DM Sa
     </div>
   </div>
 
+  <!-- Daily Price History (SPY / OEF) -->
+  <div class="card">
+    <h2>Daily Price History — SPY / OEF</h2>
+    <div id="dailyStatsArea" style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.8">Loading...</div>
+    <div class="btn-row" style="margin-bottom:10px">
+      <span class="label" style="margin-bottom:0;min-width:50px">SPY:</span>
+      <button id="btnSpyFull" class="btn" onclick="runDailyLoad('SPY','full')">📥 Full History (one-time)</button>
+      <button id="btnSpyIncr" class="btn btn-accent" onclick="runDailyLoad('SPY','incremental')">🔄 Load Missing Days</button>
+    </div>
+    <div class="btn-row" style="margin-bottom:14px">
+      <span class="label" style="margin-bottom:0;min-width:50px">OEF:</span>
+      <button id="btnOefFull" class="btn" onclick="runDailyLoad('OEF','full')">📥 Full History (one-time)</button>
+      <button id="btnOefIncr" class="btn btn-accent" onclick="runDailyLoad('OEF','incremental')">🔄 Load Missing Days</button>
+    </div>
+    <div style="font-size:12px;color:var(--text3);line-height:1.8">
+      <strong style="color:var(--accent)">Full History</strong> — one-time pull of everything Yahoo has for the ticker. Existing dates are skipped, never overwritten.<br>
+      <strong style="color:var(--gold)">Load Missing Days</strong> — looks at the latest date already on file and fetches only what's missing through today (e.g. miss 6 days, this loads exactly those 6). Safe to click anytime; append-only, never updates an existing row.
+    </div>
+  </div>
+
   <!-- FRED Rates -->
   <div class="card">
     <h2>FRED — Federal Funds Rate Data</h2>
@@ -392,6 +412,8 @@ async function adminInit() {
   await pollStatus();
   await loadStackEarnTiers();
   await loadDamodaranReturns();
+  await loadDailyStats();
+  await pollDailyStatus();
 }
 
 async function detectWriteApi() {
@@ -601,6 +623,82 @@ function updateStatusPanel(d) {
 // ---- Helpers ----
 function disableBatchButtons(disabled) {
   ['btnFullNew', 'btnFull', 'btnIncr', 'btnFredFull', 'btnFredIncr', 'btnCurMonth'].forEach(id => {
+    const el = document.getElementById(id);
+    if (writeEnabled) el.disabled = disabled;
+  });
+}
+
+// ---- Daily Price Tables (SPY / OEF) ----
+let dailyPollTimer = null;
+
+async function loadDailyStats() {
+  const el = document.getElementById('dailyStatsArea');
+  try {
+    const r = await fetch(API + '/api/daily-prices/stats');
+    const d = await r.json();
+    el.innerHTML = Object.entries(d).map(([ticker, s]) =>
+      `<strong style="color:var(--text2)">${ticker}</strong>: ${s.row_count.toLocaleString()} rows` +
+      (s.min_date ? ` &nbsp;(${s.min_date} &rarr; ${s.max_date})` : ' &nbsp;(no data yet)')
+    ).join('<br>');
+  } catch (e) {
+    el.textContent = 'Failed to load stats.';
+  }
+}
+
+async function runDailyLoad(ticker, mode) {
+  const label = mode === 'full' ? 'full history' : 'missing days';
+  try {
+    disableDailyButtons(true);
+    addLog(`Starting ${ticker} ${label} load...`, 'info');
+
+    const r = await adminFetch(API + `/api/batch/daily-prices/${ticker}/${mode}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const d = await r.json();
+
+    if (r.ok) {
+      addLog('✓ ' + d.message, 'ok');
+      startDailyPolling();
+    } else {
+      addLog('✗ ' + (d.detail || d.error || 'Failed'), 'err');
+      disableDailyButtons(false);
+    }
+  } catch (e) {
+    addLog('✗ Network error: ' + e.message, 'err');
+    disableDailyButtons(false);
+  }
+}
+
+async function pollDailyStatus() {
+  try {
+    const r = await fetch(API + '/api/batch/daily-prices/status');
+    const d = await r.json();
+
+    if (d.status === 'running') {
+      disableDailyButtons(true);
+    } else {
+      disableDailyButtons(false);
+      if (dailyPollTimer) { clearInterval(dailyPollTimer); dailyPollTimer = null; }
+      if (d.status === 'completed' && d.completed_at) {
+        addLog(`✓ ${d.ticker} ${d.mode} load completed: ` + JSON.stringify(d.summary), 'ok');
+        loadDailyStats();
+      } else if (d.status === 'failed') {
+        addLog(`✗ ${d.ticker} ${d.mode} load failed: ` + (d.summary?.error || 'Unknown error'), 'err');
+      }
+    }
+  } catch (e) {
+    // Ignore polling errors
+  }
+}
+
+function startDailyPolling() {
+  if (dailyPollTimer) clearInterval(dailyPollTimer);
+  dailyPollTimer = setInterval(pollDailyStatus, 2000);
+}
+
+function disableDailyButtons(disabled) {
+  ['btnSpyFull', 'btnSpyIncr', 'btnOefFull', 'btnOefIncr'].forEach(id => {
     const el = document.getElementById(id);
     if (writeEnabled) el.disabled = disabled;
   });

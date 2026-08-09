@@ -77,6 +77,56 @@ def get_monthly_prices(symbol: str, start_date: str = None, end_date: str = None
         raise FetcherError(f"Failed to fetch prices for {symbol}: {e}")
 
 
+def get_daily_prices(symbol: str, start_date: str = None, end_date: str = None) -> pd.DataFrame:
+    """Fetch daily OHLCV price data for a single ticker.
+
+    Args:
+        symbol: Ticker symbol (e.g. 'SPY')
+        start_date: Start date 'YYYY-MM-DD' (None + end_date None = max available history)
+        end_date: End date 'YYYY-MM-DD' (None = through today)
+
+    Returns:
+        DataFrame with columns: price_date, open, high, low, close, adj_close, volume
+        Empty DataFrame if no data found.
+    """
+    try:
+        ticker = yf.Ticker(symbol)
+
+        if start_date is None and end_date is None:
+            # One-time full load: everything Yahoo has for this ticker.
+            hist = ticker.history(period="max", interval="1d", auto_adjust=False)
+        else:
+            hist = ticker.history(start=start_date, end=end_date, interval="1d", auto_adjust=False)
+
+        if hist.empty:
+            logger.warning(f"No daily price data found for {symbol}")
+            return pd.DataFrame()
+
+        df = pd.DataFrame({
+            "price_date": hist.index.date,
+            "open": hist["Open"],
+            "high": hist["High"],
+            "low": hist["Low"],
+            "close": hist["Close"],
+            "adj_close": hist["Adj Close"] if "Adj Close" in hist.columns else hist["Close"],
+            "volume": hist["Volume"] if "Volume" in hist.columns else None,
+        })
+
+        # Drop rows where all price columns are NaN
+        df = df.dropna(subset=["open", "high", "low", "close"], how="all")
+
+        # Remove duplicates for same date (keep last)
+        df = df.drop_duplicates(subset=["price_date"], keep="last")
+
+        df = df.reset_index(drop=True)
+        logger.info(f"Fetched {len(df)} daily price records for {symbol}")
+        return df
+
+    except Exception as e:
+        logger.error(f"Error fetching daily prices for {symbol}: {e}")
+        raise FetcherError(f"Failed to fetch daily prices for {symbol}: {e}")
+
+
 def get_dividends(symbol: str, start_date: str = None, end_date: str = None) -> pd.DataFrame:
     """Fetch dividend history for a single ticker.
 

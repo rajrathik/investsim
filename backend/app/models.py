@@ -93,6 +93,63 @@ class Dividend(Base):
         )
 
 
+class SpyDailyPrice(Base):
+    """Daily OHLCV price data for SPY (SPDR S&P 500 ETF Trust).
+
+    Standalone table, not tied to the tickers/monthly_prices FK structure.
+    Carries its own `ticker` column (redundant while this table only ever
+    holds SPY) so it and OefDailyPrice can be combined into one shared
+    daily-prices table later without a schema change. For now they stay
+    separate, one table per ticker.
+    """
+    __tablename__ = "spy_daily_prices"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    ticker = Column(String(10), nullable=False, default="SPY", index=True)
+    price_date = Column(Date, nullable=False)
+    open = Column(Float, nullable=True)
+    high = Column(Float, nullable=True)
+    low = Column(Float, nullable=True)
+    close = Column(Float, nullable=True)
+    adj_close = Column(Float, nullable=True)
+    volume = Column(Integer, nullable=True)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("ticker", "price_date", name="uq_spy_daily_ticker_date"),
+    )
+
+    def __repr__(self):
+        return f"<SpyDailyPrice({self.ticker} {self.price_date}, close={self.close})>"
+
+
+class OefDailyPrice(Base):
+    """Daily OHLCV price data for OEF (iShares S&P 100 ETF).
+
+    Mirrors SpyDailyPrice's schema exactly — see its docstring for why the
+    two tables stay separate for now despite the shared `ticker` column.
+    """
+    __tablename__ = "oef_daily_prices"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    ticker = Column(String(10), nullable=False, default="OEF", index=True)
+    price_date = Column(Date, nullable=False)
+    open = Column(Float, nullable=True)
+    high = Column(Float, nullable=True)
+    low = Column(Float, nullable=True)
+    close = Column(Float, nullable=True)
+    adj_close = Column(Float, nullable=True)
+    volume = Column(Integer, nullable=True)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("ticker", "price_date", name="uq_oef_daily_ticker_date"),
+    )
+
+    def __repr__(self):
+        return f"<OefDailyPrice({self.ticker} {self.price_date}, close={self.close})>"
+
+
 class UserLogin(Base):
     """Track user login events from Auth0.
 

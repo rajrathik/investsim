@@ -246,6 +246,40 @@ class StackEarnGoalTier(Base):
     annual_rate = Column(Float, nullable=False)
 
 
+class SpyDailyPrice(Base):
+    __tablename__ = "spy_daily_prices"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    ticker = Column(String(10), nullable=False, default="SPY", index=True)
+    price_date = Column(Date, nullable=False)
+    open = Column(Float, nullable=True)
+    high = Column(Float, nullable=True)
+    low = Column(Float, nullable=True)
+    close = Column(Float, nullable=True)
+    adj_close = Column(Float, nullable=True)
+    volume = Column(Integer, nullable=True)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+    __table_args__ = (
+        UniqueConstraint("ticker", "price_date", name="uq_spy_daily_ticker_date"),
+    )
+
+
+class OefDailyPrice(Base):
+    __tablename__ = "oef_daily_prices"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    ticker = Column(String(10), nullable=False, default="OEF", index=True)
+    price_date = Column(Date, nullable=False)
+    open = Column(Float, nullable=True)
+    high = Column(Float, nullable=True)
+    low = Column(Float, nullable=True)
+    close = Column(Float, nullable=True)
+    adj_close = Column(Float, nullable=True)
+    volume = Column(Integer, nullable=True)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+    __table_args__ = (
+        UniqueConstraint("ticker", "price_date", name="uq_oef_daily_ticker_date"),
+    )
+
+
 # ---------------------------------------------------------------------------
 # Sync order: parent tables first (tickers before prices/dividends)
 # ---------------------------------------------------------------------------
@@ -260,6 +294,8 @@ DATA_TABLES = [
     ("user_admin",              UserAdmin),
     ("stack_earn_savings_tiers", StackEarnSavingsTier),
     ("stack_earn_goal_tiers",    StackEarnGoalTier),
+    ("spy_daily_prices",         SpyDailyPrice),
+    ("oef_daily_prices",         OefDailyPrice),
 ]
 
 # Tables that hold transactional/log data (optional, large, slow)
