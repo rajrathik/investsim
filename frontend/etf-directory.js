@@ -88,6 +88,10 @@ const ETF_GROUPS = [
       ['Aerospace & Defense', 'ITA', 'iShares U.S. Aerospace & Defense ETF', 'https://www.ishares.com/us/products/239502/ishares-us-aerospace-defense-etf'],
       ['Transportation', 'IYT', 'iShares U.S. Transportation ETF', 'https://www.ishares.com/us/products/239501/ishares-transportation-average-etf'],
       ['Gold Miners', 'GDX', 'VanEck Gold Miners ETF', 'https://www.vaneck.com/us/en/investments/gold-miners-etf-gdx/'],
+      ['Airlines', 'JETS', 'U.S. Global Jets ETF', 'https://usglobaletfs.com/fund/u-s-global-jets-etf/'],
+      ['Uranium & Nuclear', 'URA', 'Global X Uranium ETF', 'https://www.globalxetfs.com/funds/ura'],
+      ['Water', 'PHO', 'Invesco Water Resources ETF', 'https://www.invesco.com/us/en/financial-products/etfs/invesco-water-resources-etf.html'],
+      ['Agribusiness', 'MOO', 'VanEck Agribusiness ETF', 'https://www.vaneck.com/us/en/investments/agribusiness-etf-moo/'],
     ],
   },
   {
