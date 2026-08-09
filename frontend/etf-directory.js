@@ -1,0 +1,183 @@
+/* ==========================================
+   ETF DIRECTORY
+   Static curated list for now (category/fund/ticker/link) -- some of this
+   is expected to move into the database later. Price + 52-week range are
+   live, fetched from our own backend (GET /api/quotes), not a third-party
+   client-side proxy.
+   ========================================== */
+
+const ETF_GROUPS = [
+  {
+    title: 'Market Cap & Style ETFs',
+    rows: [
+      ['Large-Cap Blend', 'VOO', 'Vanguard S&P 500 ETF', 'https://investor.vanguard.com/investment-products/etfs/profile/voo'],
+      ['Large-Cap Growth', 'QQQ', 'Invesco QQQ Trust', 'https://www.invesco.com/us/en/financial-products/etfs/invesco-qqq-trust.html'],
+      ['Large-Cap Value', 'VTV', 'Vanguard Value ETF', 'https://investor.vanguard.com/investment-products/etfs/profile/vtv'],
+      ['Mid-Cap Blend', 'IJH', 'iShares Core S&P Mid-Cap ETF', 'https://www.ishares.com/us/products/239722/ishares-core-sp-midcap-etf'],
+      ['Mid-Cap Growth', 'VOT', 'Vanguard Mid-Cap Growth ETF', 'https://investor.vanguard.com/investment-products/etfs/profile/vot'],
+      ['Mid-Cap Value', 'VOE', 'Vanguard Mid-Cap Value ETF', 'https://investor.vanguard.com/investment-products/etfs/profile/voe'],
+      ['Small-Cap Blend', 'IWM', 'iShares Russell 2000 ETF', 'https://www.ishares.com/us/products/239710/ishares-russell-2000-etf'],
+      ['Small-Cap Growth', 'VBK', 'Vanguard Small-Cap Growth ETF', 'https://investor.vanguard.com/investment-products/etfs/profile/vbk'],
+      ['Small-Cap Value', 'VBR', 'Vanguard Small-Cap Value ETF', 'https://investor.vanguard.com/investment-products/etfs/profile/vbr'],
+    ],
+  },
+  {
+    title: 'Global & Country ETFs',
+    rows: [
+      ['Total Intl (Ex-US)', 'VXUS', 'Vanguard Total International Stock ETF', 'https://investor.vanguard.com/investment-products/etfs/profile/vxus'],
+      ['Developed Markets', 'VEA', 'Vanguard FTSE Developed Markets ETF', 'https://investor.vanguard.com/investment-products/etfs/profile/vea'],
+      ['Emerging Markets', 'VWO', 'Vanguard FTSE Emerging Markets ETF', 'https://investor.vanguard.com/investment-products/etfs/profile/vwo'],
+      ['Europe (Broad)', 'VGK', 'Vanguard FTSE Europe ETF', 'https://investor.vanguard.com/investment-products/etfs/profile/vgk'],
+      ['Japan', 'EWJ', 'iShares MSCI Japan ETF', 'https://www.ishares.com/us/products/239665/ishares-msci-japan-etf'],
+      ['Germany', 'EWG', 'iShares MSCI Germany ETF', 'https://www.ishares.com/us/products/239655/ishares-msci-germany-etf'],
+      ['France', 'EWQ', 'iShares MSCI France ETF', 'https://www.ishares.com/us/products/239649/ishares-msci-france-etf'],
+      ['United Kingdom', 'EWU', 'iShares MSCI United Kingdom ETF', 'https://www.ishares.com/us/products/239690/ishares-msci-united-kingdom-etf'],
+      ['Canada', 'EWC', 'iShares MSCI Canada ETF', 'https://www.ishares.com/us/products/239615/ishares-msci-canada-etf'],
+      ['Australia', 'EWA', 'iShares MSCI Australia ETF', 'https://www.ishares.com/us/products/239607/ishares-msci-australia-etf'],
+      ['China', 'MCHI', 'iShares MSCI China ETF', 'https://www.ishares.com/us/products/239619/ishares-msci-china-etf'],
+      ['India', 'INDA', 'iShares MSCI India ETF', 'https://www.ishares.com/us/products/239650/ishares-msci-india-etf'],
+    ],
+  },
+  {
+    title: 'Broad Sector ETFs (U.S.)',
+    rows: [
+      ['Technology', 'XLK', 'Technology Select Sector SPDR', 'https://www.ssga.com/us/en/intermediary/etfs/state-street-technology-select-sector-spdr-etf-xlk'],
+      ['Financials', 'XLF', 'Financial Select Sector SPDR', 'https://www.ssga.com/us/en/intermediary/etfs/the-financial-select-sector-spdr-fund-xlf'],
+      ['Healthcare', 'XLV', 'Health Care Select Sector SPDR', 'https://www.ssga.com/us/en/intermediary/etfs/the-health-care-select-sector-spdr-fund-xlv'],
+      ['Consumer Discretionary', 'XLY', 'Consumer Discretionary Select Sector SPDR', 'https://www.ssga.com/us/en/intermediary/etfs/the-consumer-discretionary-select-sector-spdr-fund-xly'],
+      ['Consumer Staples', 'XLP', 'Consumer Staples Select Sector SPDR', 'https://www.ssga.com/us/en/intermediary/etfs/the-consumer-staples-select-sector-spdr-fund-xlp'],
+      ['Energy', 'XLE', 'Energy Select Sector SPDR', 'https://www.ssga.com/us/en/intermediary/etfs/the-energy-select-sector-spdr-fund-xle'],
+      ['Industrials', 'XLI', 'Industrial Select Sector SPDR', 'https://www.ssga.com/us/en/intermediary/etfs/the-industrial-select-sector-spdr-fund-xli'],
+      ['Utilities', 'XLU', 'Utilities Select Sector SPDR', 'https://www.ssga.com/us/en/intermediary/etfs/the-utilities-select-sector-spdr-fund-xlu'],
+      ['Real Estate', 'XLRE', 'Real Estate Select Sector SPDR', 'https://www.ssga.com/us/en/intermediary/etfs/the-real-estate-select-sector-spdr-fund-xlre'],
+      ['Materials', 'XLB', 'Materials Select Sector SPDR', 'https://www.ssga.com/us/en/intermediary/etfs/the-materials-select-sector-spdr-fund-xlb'],
+      ['Communication Services', 'XLC', 'Communication Services Select Sector SPDR', 'https://www.ssga.com/us/en/intermediary/etfs/the-communication-services-select-sector-spdr-fund-xlc'],
+    ],
+  },
+  {
+    title: 'Subsector & Industry ETFs',
+    rows: [
+      ['Semiconductors', 'SMH', 'VanEck Semiconductor ETF', 'https://www.vaneck.com/us/en/investments/semiconductor-etf-smh/'],
+      ['Software', 'IGV', 'iShares Expanded Tech-Software Sector ETF', 'https://www.blackrock.com/us/individual/products/239771/ishares-north-american-techsoftware-etf'],
+      ['Robotics & AI', 'BOTZ', 'Global X Robotics & Artificial Intelligence ETF', 'https://www.globalxetfs.com/funds/botz/'],
+      ['Cloud Computing', 'SKYY', 'First Trust Cloud Computing ETF', 'https://www.ftportfolios.com/Retail/Etf/EtfSummary.aspx?Ticker=SKYY'],
+      ['Internet', 'FDN', 'First Trust Dow Jones Internet Index Fund', 'https://www.ftportfolios.com/Retail/Etf/EtfSummary.aspx?Ticker=FDN'],
+      ['Cybersecurity (Broad)', 'CIBR', 'First Trust NASDAQ Cybersecurity ETF', 'https://www.ftportfolios.com/Retail/Etf/EtfSummary.aspx?Ticker=CIBR'],
+      ['Cybersecurity (Pure-Play)', 'BUG', 'Global X Cybersecurity ETF', 'https://www.globalxetfs.com/funds/bug/'],
+      ['Fintech', 'FINX', 'Global X FinTech ETF', 'https://www.globalxetfs.com/funds/finx/'],
+      ['Biotechnology', 'XBI', 'SPDR S&P Biotech ETF', 'https://www.ssga.com/us/en/intermediary/etfs/spdr-sp-biotech-etf-xbi'],
+      ['Medical Devices', 'IHI', 'iShares U.S. Medical Devices ETF', 'https://www.ishares.com/us/products/239516/ishares-us-medical-devices-etf'],
+      ['Regional Banks', 'KRE', 'SPDR S&P Regional Banking ETF', 'https://www.ssga.com/us/en/intermediary/etfs/spdr-sp-regional-banking-etf-kre'],
+      ['Insurance', 'KIE', 'SPDR S&P Insurance ETF', 'https://www.ssga.com/us/en/intermediary/etfs/spdr-sp-insurance-etf-kie'],
+      ['Oil & Gas E&P', 'XOP', 'SPDR S&P Oil & Gas Exploration & Production ETF', 'https://www.ssga.com/us/en/intermediary/etfs/spdr-sp-oil-gas-exploration-production-etf-xop'],
+      ['Clean Energy', 'ICLN', 'iShares Global Clean Energy ETF', 'https://www.ishares.com/us/products/239738/ishares-global-clean-energy-etf'],
+      ['Retail', 'XRT', 'SPDR S&P Retail ETF', 'https://www.ssga.com/us/en/intermediary/etfs/spdr-sp-retail-etf-xrt'],
+      ['Homebuilders', 'XHB', 'SPDR S&P Homebuilders ETF', 'https://www.ssga.com/us/en/intermediary/etfs/spdr-sp-homebuilders-etf-xhb'],
+      ['Infrastructure', 'PAVE', 'Global X U.S. Infrastructure Development ETF', 'https://www.globalxetfs.com/funds/pave/'],
+      ['Aerospace & Defense', 'ITA', 'iShares U.S. Aerospace & Defense ETF', 'https://www.ishares.com/us/products/239502/ishares-us-aerospace-defense-etf'],
+      ['Transportation', 'IYT', 'iShares U.S. Transportation ETF', 'https://www.ishares.com/us/products/239501/ishares-transportation-average-etf'],
+      ['Gold Miners', 'GDX', 'VanEck Gold Miners ETF', 'https://www.vaneck.com/us/en/investments/gold-miners-etf-gdx/'],
+    ],
+  },
+  {
+    title: 'Commodities & Alternatives',
+    rows: [
+      ['Physical Gold', 'GLD', 'SPDR Gold Shares', 'https://www.ssga.com/us/en/intermediary/etfs/spdr-gold-shares-gld'],
+      ['Physical Silver', 'SLV', 'iShares Silver Trust', 'https://www.ishares.com/us/products/239855/ishares-silver-trust-fund'],
+      ['Broad Commodities', 'PDBC', 'Invesco Optimum Yield Diversified Commodity Strategy', 'https://www.invesco.com/us/en/financial-products/etfs/invesco-optimum-yield-diversified-commodity-strategy-no-k-1-etf.html'],
+      ['Real Estate (Broad)', 'VNQ', 'Vanguard Real Estate Index ETF', 'https://investor.vanguard.com/investment-products/etfs/profile/vnq'],
+      ['Long-Term Treasuries', 'TLT', 'iShares 20+ Year Treasury Bond ETF', 'https://www.ishares.com/us/products/239454/ishares-20-year-treasury-bond-etf'],
+      ['Bitcoin (Spot)', 'IBIT', 'iShares Bitcoin Trust', 'https://www.ishares.com/us/products/333011/ishares-bitcoin-trust'],
+    ],
+  },
+  {
+    title: 'Fixed Income & Bond ETFs',
+    rows: [
+      ['Broad U.S. Aggregate', 'AGG', 'iShares Core U.S. Aggregate Bond ETF', 'https://www.ishares.com/us/products/239458/ishares-core-us-aggregate-bond-etf'],
+      ['World Bond (Ex-US)', 'BNDX', 'Vanguard Total International Bond ETF', 'https://investor.vanguard.com/investment-products/etfs/profile/bndx'],
+      ['U.S. Government / Treasury', 'IEF', 'iShares 7-10 Year Treasury Bond ETF', 'https://www.ishares.com/us/products/239456/ishares-710-year-treasury-bond-etf'],
+      ['Inv. Grade Corporate', 'LQD', 'iShares iBoxx $ Inv Grade Corporate Bond ETF', 'https://www.ishares.com/us/products/239566/ishares-iboxx-investment-grade-corporate-bond-etf'],
+      ['High Yield Corporate', 'HYG', 'iShares iBoxx $ High Yield Corporate Bond ETF', 'https://www.ishares.com/us/products/239565/ishares-iboxx-high-yield-corporate-bond-etf'],
+    ],
+  },
+];
+
+function renderGroups() {
+  const container = $('groupsContainer');
+  container.innerHTML = ETF_GROUPS.map(group => `
+    <div class="etf-group">
+      <h2>${group.title}</h2>
+      <div class="data-table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Category</th>
+              <th>Fund</th>
+              <th class="r">Price</th>
+              <th>52W Range</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${group.rows.map(([category, ticker, name, url]) => `
+              <tr data-ticker="${ticker}">
+                <td>${category}</td>
+                <td class="fund-name"><a href="${url}" target="_blank" rel="noopener">${name}</a><span class="fund-ticker">${ticker}</span></td>
+                <td class="r price-cell" id="price-${ticker}"><span class="quote-na">…</span></td>
+                <td class="range-cell" id="range-${ticker}"></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderQuote(ticker, quote) {
+  const priceCell = $('price-' + ticker);
+  const rangeCell = $('range-' + ticker);
+  if (!priceCell || !rangeCell) return;
+
+  if (!quote) {
+    priceCell.innerHTML = '<span class="quote-na">n/a</span>';
+    rangeCell.innerHTML = '<span class="quote-na">n/a</span>';
+    return;
+  }
+
+  const { price, week52_low, week52_high } = quote;
+  priceCell.textContent = '$' + price.toFixed(2);
+
+  const pct = week52_high > week52_low
+    ? Math.max(0, Math.min(100, ((price - week52_low) / (week52_high - week52_low)) * 100))
+    : 50;
+
+  rangeCell.innerHTML = `
+    <div class="range-labels"><span>$${week52_low.toFixed(2)}</span><span>$${week52_high.toFixed(2)}</span></div>
+    <div class="range-track"><div class="range-marker" style="left:${pct}%"></div></div>
+  `;
+}
+
+async function loadQuotes() {
+  const allTickers = ETF_GROUPS.flatMap(g => g.rows.map(r => r[1]));
+  const statusEl = $('statusLine');
+
+  try {
+    const resp = await authFetch(API + '/quotes?symbols=' + allTickers.join(','));
+    if (!resp.ok) throw new Error('API returned ' + resp.status);
+    const quotes = await resp.json();
+
+    allTickers.forEach(ticker => renderQuote(ticker, quotes[ticker] || null));
+
+    const found = Object.keys(quotes).length;
+    statusEl.textContent = `Live price loaded for ${found} of ${allTickers.length} funds.`;
+  } catch (e) {
+    console.error('loadQuotes failed:', e);
+    allTickers.forEach(ticker => renderQuote(ticker, null));
+    statusEl.textContent = 'Could not load live price data.';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  renderGroups();
+  loadQuotes();
+});

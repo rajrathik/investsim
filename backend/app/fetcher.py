@@ -8,6 +8,7 @@ Two modes:
 import time
 import logging
 from datetime import datetime, date
+from concurrent.futures import ThreadPoolExecutor
 from dateutil.relativedelta import relativedelta
 import yfinance as yf
 import pandas as pd
@@ -255,4 +256,55 @@ def fetch_all_tickers(
     failed = len(results["errors"])
     logger.info(f"Fetch complete: {successful} succeeded, {failed} failed")
 
+    return results
+
+
+def _fetch_one_quote(symbol: str) -> tuple[str, dict | None]:
+    """Fetch current price + 52-week range for a single symbol via fast_info.
+
+    Returns (symbol, quote_dict) on success, (symbol, None) on failure --
+    never raises, so a bad ticker in a batch doesn't take down the batch.
+    """
+    try:
+        fi = yf.Ticker(symbol).fast_info
+        price = fi.get("lastPrice")
+        low = fi.get("yearLow")
+        high = fi.get("yearHigh")
+        if price is None or low is None or high is None:
+            return symbol, None
+        return symbol, {
+            "price": round(float(price), 2),
+            "week52_low": round(float(low), 2),
+            "week52_high": round(float(high), 2),
+        }
+    except Exception as e:
+        logger.warning(f"Quote fetch failed for {symbol}: {e}")
+        return symbol, None
+
+
+def get_current_quotes(symbols: list[str], max_workers: int = 15) -> dict:
+    """Fetch current price + 52-week high/low for a batch of tickers.
+
+    Not tied to the tickers/monthly_prices tables -- works for any valid
+    Yahoo symbol, historical data or not. Fetches in parallel (each ticker
+    is its own HTTP call under the hood); ~60 symbols takes a few seconds.
+
+    Args:
+        symbols: Ticker symbols (e.g. ['VOO', 'QQQ'])
+        max_workers: Thread pool size for parallel fetching
+
+    Returns:
+        Dict of {symbol: {"price": float, "week52_low": float, "week52_high": float}}
+        -- symbols that failed to resolve are simply omitted, not errored.
+    """
+    if not symbols:
+        return {}
+
+    results = {}
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        for symbol, quote in executor.map(_fetch_one_quote, symbols):
+            if quote is not None:
+                results[symbol] = quote
+
+    logger.info(f"Quotes fetched: {len(results)}/{len(symbols)} succeeded")
     return results

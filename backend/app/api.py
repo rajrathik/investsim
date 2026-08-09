@@ -24,6 +24,9 @@ Endpoints:
   Dividends:
     GET    /api/dividends/{symbol}          - Get dividends for a ticker (public)
 
+  Current Quotes:
+    GET    /api/quotes?symbols=A,B,C        - Current price + 52w range for any tickers (public, cached 15min)
+
   Simulation Data:
     GET    /api/simulation-data/{symbol}    - Combined prices + dividends for simulation (public)
 
@@ -866,6 +869,57 @@ def get_dividends(
         DividendResponse(pay_date=d.pay_date.isoformat(), amount=d.amount)
         for d in dividends
     ]
+
+
+# ===========================================
+# CURRENT QUOTES (price + 52-week range) — for ETF Directory and similar
+# pages that need a live snapshot for tickers outside the tickers/
+# monthly_prices system. Cached in-memory per-symbol so repeat page loads
+# don't re-hit Yahoo every time.
+# ===========================================
+
+_quote_cache_lock = threading.Lock()
+_quote_cache = {}  # symbol -> {"data": {...}, "fetched_at": datetime}
+QUOTE_CACHE_TTL_SECONDS = 900  # 15 minutes
+
+
+@app.get("/api/quotes")
+@limiter.limit("20/minute")
+def get_quotes(request: Request, symbols: str):
+    """Current price + 52-week range for a comma-separated list of tickers.
+
+    Public, read-only. Not tied to the tickers/monthly_prices tables --
+    works for any valid Yahoo symbol. Symbols that fail to resolve are
+    simply omitted from the response, not errored.
+    """
+    symbol_list = [s.strip().upper() for s in symbols.split(",") if s.strip()]
+    if not symbol_list:
+        raise HTTPException(status_code=400, detail="No symbols provided")
+    if len(symbol_list) > 100:
+        raise HTTPException(status_code=400, detail="Max 100 symbols per request")
+
+    from app.fetcher import get_current_quotes
+
+    now = datetime.now(timezone.utc)
+    results = {}
+    to_fetch = []
+
+    with _quote_cache_lock:
+        for sym in symbol_list:
+            cached = _quote_cache.get(sym)
+            if cached and (now - cached["fetched_at"]).total_seconds() < QUOTE_CACHE_TTL_SECONDS:
+                results[sym] = cached["data"]
+            else:
+                to_fetch.append(sym)
+
+    if to_fetch:
+        fresh = get_current_quotes(to_fetch)
+        with _quote_cache_lock:
+            for sym, data in fresh.items():
+                _quote_cache[sym] = {"data": data, "fetched_at": now}
+                results[sym] = data
+
+    return results
 
 
 # ===========================================
