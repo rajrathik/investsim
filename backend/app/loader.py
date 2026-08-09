@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import and_, func
 import pandas as pd
 
-from app.models import Ticker, MonthlyPrice, Dividend
+from app.models import Ticker, MonthlyPrice, Dividend, DailyQuote
 
 logger = logging.getLogger(__name__)
 
@@ -284,4 +284,57 @@ def load_daily_prices(db: Session, model, ticker: str, prices_df: pd.DataFrame) 
 
     db.commit()
     logger.info(f"{ticker} daily prices: {counts['inserted']} inserted, {counts['skipped']} skipped")
+    return counts
+
+
+# ===========================================
+# DAILY QUOTES (any ticker, price + 52w range snapshot per trading day)
+# ===========================================
+
+def save_daily_quotes(db: Session, quotes: dict) -> dict:
+    """Upsert one row per ticker into daily_quotes, keyed by (ticker, quote_date).
+
+    If a row already exists for that ticker+date, it's updated in place
+    (price/range overwritten); otherwise a new row is inserted. This is
+    the "if quote already written for that date, overwrite it" behavior --
+    quote_date comes from fetcher.get_current_quotes(), which reports the
+    actual trade date, not the server's calendar date, so repeated saves
+    before a new trading day naturally keep overwriting the same row.
+
+    Args:
+        db: Database session
+        quotes: {symbol: {"quote_date": "YYYY-MM-DD", "price": float,
+                 "week52_low": float, "week52_high": float}}
+
+    Returns:
+        Dict with counts: {"inserted": n, "updated": n}
+    """
+    if not quotes:
+        return {"inserted": 0, "updated": 0}
+
+    counts = {"inserted": 0, "updated": 0}
+    for symbol, q in quotes.items():
+        quote_date = q["quote_date"]
+        existing = db.query(DailyQuote).filter(
+            DailyQuote.ticker == symbol,
+            DailyQuote.quote_date == quote_date,
+        ).first()
+
+        if existing:
+            existing.price = q["price"]
+            existing.week52_low = q["week52_low"]
+            existing.week52_high = q["week52_high"]
+            counts["updated"] += 1
+        else:
+            db.add(DailyQuote(
+                ticker=symbol,
+                quote_date=quote_date,
+                price=q["price"],
+                week52_low=q["week52_low"],
+                week52_high=q["week52_high"],
+            ))
+            counts["inserted"] += 1
+
+    db.commit()
+    logger.info(f"Daily quotes saved: {counts['inserted']} inserted, {counts['updated']} updated")
     return counts

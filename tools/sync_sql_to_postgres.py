@@ -280,6 +280,21 @@ class OefDailyPrice(Base):
     )
 
 
+class DailyQuote(Base):
+    __tablename__ = "daily_quotes"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    ticker = Column(String(10), nullable=False, index=True)
+    quote_date = Column(Date, nullable=False)
+    price = Column(Float, nullable=True)
+    week52_low = Column(Float, nullable=True)
+    week52_high = Column(Float, nullable=True)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+    updated_at = Column(DateTime, default=_utcnow, nullable=False)
+    __table_args__ = (
+        UniqueConstraint("ticker", "quote_date", name="uq_daily_quote_ticker_date"),
+    )
+
+
 # ---------------------------------------------------------------------------
 # Sync order: parent tables first (tickers before prices/dividends)
 # ---------------------------------------------------------------------------
@@ -296,6 +311,7 @@ DATA_TABLES = [
     ("stack_earn_goal_tiers",    StackEarnGoalTier),
     ("spy_daily_prices",         SpyDailyPrice),
     ("oef_daily_prices",         OefDailyPrice),
+    ("daily_quotes",             DailyQuote),
 ]
 
 # Tables that hold transactional/log data (optional, large, slow)

@@ -260,19 +260,31 @@ def fetch_all_tickers(
 
 
 def _fetch_one_quote(symbol: str) -> tuple[str, dict | None]:
-    """Fetch current price + 52-week range for a single symbol via fast_info.
+    """Fetch current price + 52-week range for a single symbol, with the
+    ACTUAL trade date the price is from (not "today").
+
+    Uses history(period='1y') rather than fast_info: fast_info's lastPrice
+    has no self-reported date, so before market open there'd be no way to
+    tell it's still yesterday's close. The last row of a 1-year daily
+    history is unambiguous -- its own index IS the real trade date -- and
+    the same call gives the 52-week high/low too, at about the same speed
+    as fast_info.
 
     Returns (symbol, quote_dict) on success, (symbol, None) on failure --
     never raises, so a bad ticker in a batch doesn't take down the batch.
     """
     try:
-        fi = yf.Ticker(symbol).fast_info
-        price = fi.get("lastPrice")
-        low = fi.get("yearLow")
-        high = fi.get("yearHigh")
-        if price is None or low is None or high is None:
+        hist = yf.Ticker(symbol).history(period="1y")
+        if hist.empty:
+            return symbol, None
+        last = hist.iloc[-1]
+        price = last.get("Close")
+        low = hist["Low"].min()
+        high = hist["High"].max()
+        if price is None or pd.isna(price) or pd.isna(low) or pd.isna(high):
             return symbol, None
         return symbol, {
+            "quote_date": hist.index[-1].date().isoformat(),
             "price": round(float(price), 2),
             "week52_low": round(float(low), 2),
             "week52_high": round(float(high), 2),
@@ -283,7 +295,8 @@ def _fetch_one_quote(symbol: str) -> tuple[str, dict | None]:
 
 
 def get_current_quotes(symbols: list[str], max_workers: int = 15) -> dict:
-    """Fetch current price + 52-week high/low for a batch of tickers.
+    """Fetch current price + 52-week high/low for a batch of tickers, each
+    tagged with the actual trade date the price is from.
 
     Not tied to the tickers/monthly_prices tables -- works for any valid
     Yahoo symbol, historical data or not. Fetches in parallel (each ticker
@@ -294,8 +307,9 @@ def get_current_quotes(symbols: list[str], max_workers: int = 15) -> dict:
         max_workers: Thread pool size for parallel fetching
 
     Returns:
-        Dict of {symbol: {"price": float, "week52_low": float, "week52_high": float}}
-        -- symbols that failed to resolve are simply omitted, not errored.
+        Dict of {symbol: {"quote_date": "YYYY-MM-DD", "price": float,
+        "week52_low": float, "week52_high": float}} -- symbols that failed
+        to resolve are simply omitted, not errored.
     """
     if not symbols:
         return {}

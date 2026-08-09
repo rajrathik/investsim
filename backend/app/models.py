@@ -150,6 +150,35 @@ class OefDailyPrice(Base):
         return f"<OefDailyPrice({self.ticker} {self.price_date}, close={self.close})>"
 
 
+class DailyQuote(Base):
+    """One saved price + 52-week range snapshot per ticker per trading day.
+
+    Works for any ticker (not just tickers/monthly_prices ones) -- backs
+    GET /api/quotes, which saves a row here every time it fetches a fresh
+    (non-cached) quote. quote_date is the ACTUAL last trade date reported
+    by Yahoo, not the server's calendar date -- so running this before
+    market open just keeps re-saving (overwriting) the prior trading
+    day's row until a new day's trade actually posts.
+    """
+    __tablename__ = "daily_quotes"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    ticker = Column(String(10), nullable=False, index=True)
+    quote_date = Column(Date, nullable=False)
+    price = Column(Float, nullable=True)
+    week52_low = Column(Float, nullable=True)
+    week52_high = Column(Float, nullable=True)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+    updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow, nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("ticker", "quote_date", name="uq_daily_quote_ticker_date"),
+    )
+
+    def __repr__(self):
+        return f"<DailyQuote({self.ticker} {self.quote_date}, price={self.price})>"
+
+
 class UserLogin(Base):
     """Track user login events from Auth0.
 

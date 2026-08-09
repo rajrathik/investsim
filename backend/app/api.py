@@ -885,12 +885,17 @@ QUOTE_CACHE_TTL_SECONDS = 900  # 15 minutes
 
 @app.get("/api/quotes")
 @limiter.limit("20/minute")
-def get_quotes(request: Request, symbols: str):
+def get_quotes(request: Request, symbols: str, db: Session = Depends(get_db)):
     """Current price + 52-week range for a comma-separated list of tickers.
 
     Public, read-only. Not tied to the tickers/monthly_prices tables --
     works for any valid Yahoo symbol. Symbols that fail to resolve are
     simply omitted from the response, not errored.
+
+    Every fresh (non-cached) fetch is also saved to daily_quotes, keyed by
+    (ticker, actual trade date) -- see fetcher.get_current_quotes() for why
+    that's the real trade date and not the server's calendar date. Repeat
+    calls before a new trading day just overwrite the same saved row.
     """
     symbol_list = [s.strip().upper() for s in symbols.split(",") if s.strip()]
     if not symbol_list:
@@ -899,6 +904,7 @@ def get_quotes(request: Request, symbols: str):
         raise HTTPException(status_code=400, detail="Max 100 symbols per request")
 
     from app.fetcher import get_current_quotes
+    from app.loader import save_daily_quotes
 
     now = datetime.now(timezone.utc)
     results = {}
@@ -918,6 +924,8 @@ def get_quotes(request: Request, symbols: str):
             for sym, data in fresh.items():
                 _quote_cache[sym] = {"data": data, "fetched_at": now}
                 results[sym] = data
+        if fresh:
+            save_daily_quotes(db, fresh)
 
     return results
 
