@@ -73,6 +73,8 @@ const ETF_GROUPS = [
       ['Energy (Global)', 'IXC', 'iShares Global Energy ETF', 'https://www.ishares.com/us/products/239741/ishares-global-energy-etf'],
       ['Consumer Staples (Global)', 'KXI', 'iShares Global Consumer Staples ETF', 'https://www.ishares.com/us/products/239740/ishares-global-consumer-staples-etf'],
       ['Real Estate (Global)', 'REET', 'iShares Global REIT ETF', 'https://www.ishares.com/us/products/268752/ishares-global-reit-etf'],
+      ['Industrials (Global)', 'EXI', 'iShares Global Industrials ETF', 'https://www.ishares.com/us/products/239745/ishares-global-industrials-etf'],
+      ['Materials (Global)', 'MXI', 'iShares Global Materials ETF', 'https://www.ishares.com/us/products/239748/ishares-global-materials-etf'],
     ],
   },
   {
