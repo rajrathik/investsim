@@ -66,6 +66,16 @@ const ETF_GROUPS = [
     ],
   },
   {
+    title: 'Global Sector ETFs',
+    rows: [
+      ['Technology (Global)', 'IXN', 'iShares Global Tech ETF', 'https://www.ishares.com/us/products/239750/ishares-global-tech-etf'],
+      ['Healthcare (Global)', 'IXJ', 'iShares Global Healthcare ETF', 'https://www.ishares.com/us/products/239744/ishares-global-healthcare-etf'],
+      ['Energy (Global)', 'IXC', 'iShares Global Energy ETF', 'https://www.ishares.com/us/products/239741/ishares-global-energy-etf'],
+      ['Consumer Staples (Global)', 'KXI', 'iShares Global Consumer Staples ETF', 'https://www.ishares.com/us/products/239740/ishares-global-consumer-staples-etf'],
+      ['Real Estate (Global)', 'REET', 'iShares Global REIT ETF', 'https://www.ishares.com/us/products/268752/ishares-global-reit-etf'],
+    ],
+  },
+  {
     title: 'Subsector & Industry ETFs',
     rows: [
       ['Semiconductors', 'SMH', 'VanEck Semiconductor ETF', 'https://www.vaneck.com/us/en/investments/semiconductor-etf-smh/'],
