@@ -179,6 +179,36 @@ class DailyQuote(Base):
         return f"<DailyQuote({self.ticker} {self.quote_date}, price={self.price})>"
 
 
+class EtfDirectoryMonthlyHistory(Base):
+    """Monthly high/low/close/dividend history for ETF Directory tickers.
+
+    Standalone table, deliberately isolated from the tickers/monthly_prices/
+    dividends pipeline -- the ETF Directory's curated ticker list still
+    lives in frontend/etf-directory.js (not the tickers table), and this
+    table exists purely to back its 10-year range feature. One row per
+    ticker per closed calendar month; the in-progress current month is
+    never written here (see loader.get_etf_history_missing_months()).
+    """
+    __tablename__ = "etf_directory_monthly_history"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    ticker = Column(String(10), nullable=False, index=True)
+    year = Column(Integer, nullable=False)
+    month = Column(Integer, nullable=False)
+    high = Column(Float, nullable=True)
+    low = Column(Float, nullable=True)
+    close = Column(Float, nullable=True)
+    dividend = Column(Float, nullable=False, default=0)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("ticker", "year", "month", name="uq_etf_dir_hist_ticker_year_month"),
+    )
+
+    def __repr__(self):
+        return f"<EtfDirectoryMonthlyHistory({self.ticker} {self.year}-{self.month:02d}, close={self.close})>"
+
+
 class UserLogin(Base):
     """Track user login events from Auth0.
 

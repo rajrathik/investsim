@@ -143,6 +143,7 @@ function renderGroups() {
               <th>Fund</th>
               <th class="r">Price</th>
               <th>52W Range</th>
+              <th>10Y Range</th>
             </tr>
           </thead>
           <tbody>
@@ -152,6 +153,7 @@ function renderGroups() {
                 <td class="fund-name"><a href="${url}" target="_blank" rel="noopener">${name}</a><span class="fund-ticker">${ticker}</span></td>
                 <td class="r price-cell" id="price-${ticker}"><span class="quote-na">…</span></td>
                 <td class="range-cell" id="range-${ticker}"></td>
+                <td class="range-cell ten-yr-cell" id="tenyr-${ticker}"><span class="quote-na">—</span></td>
               </tr>
             `).join('')}
           </tbody>
@@ -164,6 +166,8 @@ function renderGroups() {
 function setAllGroups(open) {
   document.querySelectorAll('.etf-group').forEach(el => { el.open = open; });
 }
+
+let _latestQuotes = {};
 
 function renderQuote(ticker, quote) {
   const priceCell = $('price-' + ticker);
@@ -197,6 +201,7 @@ async function loadQuotes() {
     const resp = await authFetch(API + '/quotes?symbols=' + allTickers.join(','));
     if (!resp.ok) throw new Error('API returned ' + resp.status);
     const quotes = await resp.json();
+    _latestQuotes = quotes;
 
     allTickers.forEach(ticker => renderQuote(ticker, quotes[ticker] || null));
 
@@ -209,7 +214,50 @@ async function loadQuotes() {
   }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+function renderTenYear(ticker, tenYr) {
+  const cell = $('tenyr-' + ticker);
+  if (!cell) return;
+
+  if (!tenYr) {
+    cell.innerHTML = '<span class="quote-na">no history loaded</span>';
+    return;
+  }
+
+  const { ten_yr_low, ten_yr_high, oldest_month, price_then, change_pct, months_covered } = tenYr;
+  const livePrice = _latestQuotes[ticker]?.price;
+  const currentPrice = livePrice != null ? livePrice : tenYr.price_now;
+
+  const pct = ten_yr_high > ten_yr_low
+    ? Math.max(0, Math.min(100, ((currentPrice - ten_yr_low) / (ten_yr_high - ten_yr_low)) * 100))
+    : 50;
+
+  const spanLabel = months_covered < 120 ? `${months_covered}mo` : '10yr';
+  const changeSign = change_pct >= 0 ? '+' : '';
+
+  cell.innerHTML = `
+    <div class="range-labels"><span>$${ten_yr_low.toFixed(2)}</span><span>$${ten_yr_high.toFixed(2)}</span></div>
+    <div class="range-track"><div class="range-marker ten-yr-marker" style="left:${pct}%"></div></div>
+    <div class="ten-yr-compare">${spanLabel} since ${oldest_month}: $${price_then.toFixed(2)} &rarr; ${changeSign}${change_pct.toFixed(1)}%</div>
+  `;
+}
+
+async function loadTenYearRanges() {
+  const allTickers = ETF_GROUPS.flatMap(g => g.rows.map(r => r[1]));
+
+  try {
+    const resp = await authFetch(API + '/etf-directory/10yr-range?symbols=' + allTickers.join(','));
+    if (!resp.ok) throw new Error('API returned ' + resp.status);
+    const ranges = await resp.json();
+
+    allTickers.forEach(ticker => renderTenYear(ticker, ranges[ticker] || null));
+  } catch (e) {
+    console.error('loadTenYearRanges failed:', e);
+    allTickers.forEach(ticker => renderTenYear(ticker, null));
+  }
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
   renderGroups();
-  loadQuotes();
+  await loadQuotes();
+  loadTenYearRanges();
 });

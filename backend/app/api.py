@@ -53,6 +53,13 @@ Endpoints:
     GET    /api/batch/daily-prices/status                 - Status of last daily-price load
     GET    /api/daily-prices/stats                        - Row count + date range per ticker (public)
 
+  ETF Directory Monthly History (isolated table, one ticker at a time):
+    POST   /api/batch/etf-history/full           - One-time full history load, all 81 tickers (auth + write, async)
+    POST   /api/batch/etf-history/incremental     - Append missing closed months only (auth + write, async)
+    GET    /api/batch/etf-history/status          - Status of last ETF history load
+    GET    /api/etf-directory/history-stats       - Row count + ticker coverage + date range (public)
+    GET    /api/etf-directory/10yr-range          - 10yr high/low + price-then-vs-now per ticker (public)
+
   Rate Limits (per IP):
     Default:  60 requests/minute for all endpoints
     Reads:    30/minute for expensive sector-performance and sector-monthly queries
@@ -928,6 +935,178 @@ def get_quotes(request: Request, symbols: str, db: Session = Depends(get_db)):
             save_daily_quotes(db, fresh)
 
     return results
+
+
+# ===========================================
+# ETF DIRECTORY MONTHLY HISTORY (isolated from every other pipeline --
+# see EtfDirectoryMonthlyHistory's docstring in models.py). One admin
+# button walks the curated ticker list ONE SECURITY AT A TIME (not
+# parallel) for the initial full backfill; a separate button appends only
+# the closed months missing since each ticker's last load.
+# ===========================================
+
+_etf_history_lock = threading.Lock()
+_etf_history_status = {
+    "mode": None,
+    "status": "idle",
+    "summary": None,
+    "started_at": None,
+    "completed_at": None,
+    "current_ticker": None,
+    "progress": None,
+}
+
+
+def _update_etf_history_status(**kwargs):
+    with _etf_history_lock:
+        _etf_history_status.update(kwargs)
+
+
+def _get_etf_history_status():
+    with _etf_history_lock:
+        return dict(_etf_history_status)
+
+
+def _run_etf_history_in_background(mode: str):
+    """Full or incremental load of etf_directory_monthly_history, one
+    ticker at a time (sequential, 1s pause between each -- matches the
+    existing fetch_all_tickers rate-limiting convention).
+    """
+    from app.fetcher import get_monthly_prices, get_dividends
+    from app.loader import get_etf_directory_tickers, get_max_etf_month, load_etf_monthly_history
+
+    _update_etf_history_status(
+        mode=mode, status="running",
+        started_at=datetime.now(timezone.utc).isoformat(),
+        completed_at=None, summary=None, current_ticker=None, progress=None,
+    )
+
+    tickers = get_etf_directory_tickers()
+    today = date.today()
+    summary = {}
+
+    try:
+        db = SessionLocal()
+        try:
+            for i, ticker in enumerate(tickers):
+                _update_etf_history_status(current_ticker=ticker, progress=f"{i+1}/{len(tickers)}")
+
+                start_date = None
+                if mode == "incremental":
+                    last = get_max_etf_month(db, ticker)
+                    if last is not None:
+                        y, m = last
+                        next_month, next_year = (m + 1, y) if m < 12 else (1, y + 1)
+                        # If the next month we'd need is this calendar month or later,
+                        # there's nothing to fetch -- the current month is never brought
+                        # in, so >= (not >) is the correct "nothing missing" check.
+                        if (next_year, next_month) >= (today.year, today.month):
+                            summary[ticker] = {"inserted": 0, "skipped": 0, "note": "already up to date"}
+                            continue
+                        start_date = date(next_year, next_month, 1).isoformat()
+                    # last is None -> no history yet for this ticker; fall through
+                    # to a full fetch (start_date stays None) same as a first load.
+
+                try:
+                    prices_df = get_monthly_prices(ticker, start_date=start_date, end_date=None)
+                    divs_df = get_dividends(ticker, start_date=start_date, end_date=None)
+                except Exception as e:
+                    summary[ticker] = {"error": str(e)}
+                    logger.error(f"ETF history fetch failed for {ticker}: {e}")
+                    if i < len(tickers) - 1:
+                        time.sleep(1.0)
+                    continue
+
+                # Never write the current, still-in-progress calendar month.
+                if not prices_df.empty:
+                    prices_df = prices_df[
+                        ~((prices_df["year"] == today.year) & (prices_df["month"] == today.month))
+                    ]
+
+                summary[ticker] = load_etf_monthly_history(db, ticker, prices_df, divs_df)
+
+                if i < len(tickers) - 1:
+                    time.sleep(1.0)
+        finally:
+            db.close()
+
+        _update_etf_history_status(
+            status="completed", summary=summary, current_ticker=None, progress=None,
+            completed_at=datetime.now(timezone.utc).isoformat(),
+        )
+        logger.info(f"ETF directory history {mode} load completed for {len(tickers)} tickers")
+
+    except Exception as e:
+        logger.error(f"ETF directory history {mode} load failed: {traceback.format_exc()}")
+        _update_etf_history_status(
+            status="failed", summary={"error": str(e)}, current_ticker=None, progress=None,
+            completed_at=datetime.now(timezone.utc).isoformat(),
+        )
+
+
+@app.post("/api/batch/etf-history/full", response_model=BatchResponse)
+@limiter.limit("5/minute")
+def run_etf_history_full(request: Request, user: dict = Depends(require_admin)):
+    """One-time full history load for every ETF Directory ticker, one
+    security at a time. Runs in background; poll /api/batch/etf-history/status.
+    """
+    require_write_enabled()
+    current = _get_etf_history_status()
+    if current["status"] == "running":
+        raise HTTPException(status_code=409, detail="An ETF history load is already running. Check /api/batch/etf-history/status")
+
+    thread = threading.Thread(target=_run_etf_history_in_background, args=("full",), daemon=True)
+    thread.start()
+
+    return BatchResponse(status="started", message="Full ETF directory history load started. Check /api/batch/etf-history/status for progress.")
+
+
+@app.post("/api/batch/etf-history/incremental", response_model=BatchResponse)
+@limiter.limit("5/minute")
+def run_etf_history_incremental(request: Request, user: dict = Depends(require_admin)):
+    """Append missing closed months for every ETF Directory ticker, one
+    security at a time. Never writes the current in-progress month.
+    """
+    require_write_enabled()
+    current = _get_etf_history_status()
+    if current["status"] == "running":
+        raise HTTPException(status_code=409, detail="An ETF history load is already running. Check /api/batch/etf-history/status")
+
+    thread = threading.Thread(target=_run_etf_history_in_background, args=("incremental",), daemon=True)
+    thread.start()
+
+    return BatchResponse(status="started", message="Incremental ETF directory history load started. Check /api/batch/etf-history/status for progress.")
+
+
+@app.get("/api/batch/etf-history/status")
+def get_etf_history_status():
+    """Get the status of the last ETF directory history load."""
+    return _get_etf_history_status()
+
+
+@app.get("/api/etf-directory/history-stats")
+def get_etf_directory_history_stats(db: Session = Depends(get_db)):
+    """Row count, ticker coverage, and date range for etf_directory_monthly_history."""
+    from app.loader import get_etf_history_stats
+    return get_etf_history_stats(db)
+
+
+@app.get("/api/etf-directory/10yr-range")
+@limiter.limit("30/minute")
+def get_etf_directory_10yr_range(request: Request, symbols: str, db: Session = Depends(get_db)):
+    """10-year high/low range + price-then-vs-now comparison for a batch of
+    tickers, computed from etf_directory_monthly_history. Public, read-only.
+    Tickers with no history loaded yet are simply omitted from the response.
+    """
+    from app.loader import get_etf_10yr_range
+
+    symbol_list = [s.strip().upper() for s in symbols.split(",") if s.strip()]
+    if not symbol_list:
+        raise HTTPException(status_code=400, detail="No symbols provided")
+    if len(symbol_list) > 100:
+        raise HTTPException(status_code=400, detail="Max 100 symbols per request")
+
+    return get_etf_10yr_range(db, symbol_list)
 
 
 # ===========================================

@@ -295,6 +295,22 @@ class DailyQuote(Base):
     )
 
 
+class EtfDirectoryMonthlyHistory(Base):
+    __tablename__ = "etf_directory_monthly_history"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    ticker = Column(String(10), nullable=False, index=True)
+    year = Column(Integer, nullable=False)
+    month = Column(Integer, nullable=False)
+    high = Column(Float, nullable=True)
+    low = Column(Float, nullable=True)
+    close = Column(Float, nullable=True)
+    dividend = Column(Float, nullable=False, default=0)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+    __table_args__ = (
+        UniqueConstraint("ticker", "year", "month", name="uq_etf_dir_hist_ticker_year_month"),
+    )
+
+
 # ---------------------------------------------------------------------------
 # Sync order: parent tables first (tickers before prices/dividends)
 # ---------------------------------------------------------------------------
@@ -312,6 +328,7 @@ DATA_TABLES = [
     ("spy_daily_prices",         SpyDailyPrice),
     ("oef_daily_prices",         OefDailyPrice),
     ("daily_quotes",             DailyQuote),
+    ("etf_directory_monthly_history", EtfDirectoryMonthlyHistory),
 ]
 
 # Tables that hold transactional/log data (optional, large, slow)

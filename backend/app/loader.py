@@ -4,12 +4,14 @@ Supports two modes:
   - Full load: inserts all history (skips existing records)
   - Incremental: upserts last 2 months (updates if exists, inserts if new)
 """
+import re
 import logging
+import pathlib
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, func
 import pandas as pd
 
-from app.models import Ticker, MonthlyPrice, Dividend, DailyQuote
+from app.models import Ticker, MonthlyPrice, Dividend, DailyQuote, EtfDirectoryMonthlyHistory
 
 logger = logging.getLogger(__name__)
 
@@ -338,3 +340,159 @@ def save_daily_quotes(db: Session, quotes: dict) -> dict:
     db.commit()
     logger.info(f"Daily quotes saved: {counts['inserted']} inserted, {counts['updated']} updated")
     return counts
+
+
+# ===========================================
+# ETF DIRECTORY MONTHLY HISTORY (isolated -- see EtfDirectoryMonthlyHistory
+# docstring for why this stays separate from tickers/monthly_prices)
+# ===========================================
+
+def get_etf_directory_tickers() -> list[str]:
+    """Read the curated ticker list straight from frontend/etf-directory.js.
+
+    Single source of truth: the category/fund-name/link data lives only in
+    that JS file (not database-backed yet), so this parses it at call time
+    instead of keeping a second, driftable copy of the ticker list here.
+    """
+    js_path = pathlib.Path(__file__).resolve().parent.parent.parent / "frontend" / "etf-directory.js"
+    text = js_path.read_text(encoding="utf-8")
+    # Each curated row looks like: ['Category', 'TICKER', 'Fund Name', 'https://...'],
+    tickers = re.findall(r"\[\s*'[^']*',\s*'([A-Z0-9.]+)',\s*'[^']*',\s*'[^']*'\s*\]", text)
+    return sorted(set(tickers))
+
+
+def get_max_etf_month(db: Session, ticker: str):
+    """(year, month) of the most recent month on file for a ticker, or None if empty."""
+    row = (
+        db.query(EtfDirectoryMonthlyHistory.year, EtfDirectoryMonthlyHistory.month)
+        .filter(EtfDirectoryMonthlyHistory.ticker == ticker)
+        .order_by(EtfDirectoryMonthlyHistory.year.desc(), EtfDirectoryMonthlyHistory.month.desc())
+        .first()
+    )
+    return (row.year, row.month) if row else None
+
+
+def get_etf_history_stats(db: Session) -> dict:
+    """Row count, ticker coverage, and date range across the whole table."""
+    total = db.query(func.count(EtfDirectoryMonthlyHistory.id)).scalar() or 0
+    tickers_covered = db.query(func.count(func.distinct(EtfDirectoryMonthlyHistory.ticker))).scalar() or 0
+    oldest = (
+        db.query(EtfDirectoryMonthlyHistory.year, EtfDirectoryMonthlyHistory.month)
+        .order_by(EtfDirectoryMonthlyHistory.year.asc(), EtfDirectoryMonthlyHistory.month.asc())
+        .first()
+    )
+    newest = (
+        db.query(EtfDirectoryMonthlyHistory.year, EtfDirectoryMonthlyHistory.month)
+        .order_by(EtfDirectoryMonthlyHistory.year.desc(), EtfDirectoryMonthlyHistory.month.desc())
+        .first()
+    )
+    return {
+        "total_rows": total,
+        "tickers_covered": tickers_covered,
+        "tickers_expected": len(get_etf_directory_tickers()),
+        "oldest_month": f"{oldest.year}-{oldest.month:02d}" if oldest else None,
+        "newest_month": f"{newest.year}-{newest.month:02d}" if newest else None,
+    }
+
+
+def load_etf_monthly_history(db: Session, ticker: str, prices_df: pd.DataFrame, divs_df: pd.DataFrame) -> dict:
+    """Append monthly high/low/close/dividend rows for one ETF Directory ticker.
+
+    Insert-only, same discipline as the daily-price tables: skips any
+    (ticker, year, month) already on file, never updates one. The
+    in-progress current calendar month must already be filtered out of
+    prices_df before calling this (see the batch runner in api.py) --
+    this function has no opinion on "closed" vs "open" months, it just
+    inserts whatever rows it's handed and skips duplicates.
+
+    Args:
+        db: Database session
+        ticker: Ticker symbol
+        prices_df: DataFrame with year, month, high, low, close (from fetcher.get_monthly_prices)
+        divs_df: DataFrame with pay_date, amount (from fetcher.get_dividends)
+
+    Returns:
+        Dict with counts: {"inserted": n, "skipped": n}
+    """
+    if prices_df.empty:
+        return {"inserted": 0, "skipped": 0}
+
+    # Aggregate dividends paid within each (year, month) into one total.
+    monthly_divs = {}
+    if divs_df is not None and not divs_df.empty:
+        for _, row in divs_df.iterrows():
+            pay_date = row["pay_date"]
+            key = (pay_date.year, pay_date.month)
+            monthly_divs[key] = monthly_divs.get(key, 0.0) + (_to_float(row["amount"]) or 0.0)
+
+    existing = {
+        (r.year, r.month)
+        for r in db.query(EtfDirectoryMonthlyHistory.year, EtfDirectoryMonthlyHistory.month)
+        .filter(EtfDirectoryMonthlyHistory.ticker == ticker).all()
+    }
+
+    counts = {"inserted": 0, "skipped": 0}
+    for _, row in prices_df.iterrows():
+        year, month = int(row["year"]), int(row["month"])
+        if (year, month) in existing:
+            counts["skipped"] += 1
+            continue
+        rec = EtfDirectoryMonthlyHistory(
+            ticker=ticker, year=year, month=month,
+            high=_to_float(row.get("high")),
+            low=_to_float(row.get("low")),
+            close=_to_float(row.get("close")),
+            dividend=round(monthly_divs.get((year, month), 0.0), 6),
+        )
+        db.add(rec)
+        existing.add((year, month))
+        counts["inserted"] += 1
+
+    db.commit()
+    logger.info(f"{ticker} ETF directory history: {counts['inserted']} inserted, {counts['skipped']} skipped")
+    return counts
+
+
+def get_etf_10yr_range(db: Session, tickers: list[str]) -> dict:
+    """10-year high/low range, plus a price-then-vs-now comparison, per
+    ticker, from etf_directory_monthly_history. Uses the most recent 120
+    months on file (fewer if a ticker has less than 10 years of history
+    loaded yet).
+
+    Returns:
+        {ticker: {"ten_yr_low": float, "ten_yr_high": float,
+                   "months_covered": int, "oldest_month": "YYYY-MM",
+                   "price_then": float, "price_now": float,
+                   "change_pct": float}}
+        Tickers with no history on file are simply omitted.
+    """
+    results = {}
+    for ticker in tickers:
+        rows = (
+            db.query(EtfDirectoryMonthlyHistory)
+            .filter(EtfDirectoryMonthlyHistory.ticker == ticker)
+            .order_by(EtfDirectoryMonthlyHistory.year.desc(), EtfDirectoryMonthlyHistory.month.desc())
+            .limit(120)
+            .all()
+        )
+        if not rows:
+            continue
+        highs = [r.high for r in rows if r.high is not None]
+        lows = [r.low for r in rows if r.low is not None]
+        if not highs or not lows:
+            continue
+
+        newest, oldest = rows[0], rows[-1]  # query is newest-first
+        price_then, price_now = oldest.close, newest.close
+        change_pct = ((price_now / price_then) - 1) * 100 if price_then else None
+
+        results[ticker] = {
+            "ten_yr_low": round(min(lows), 2),
+            "ten_yr_high": round(max(highs), 2),
+            "months_covered": len(rows),
+            "oldest_month": f"{oldest.year}-{oldest.month:02d}",
+            "price_then": round(price_then, 2) if price_then is not None else None,
+            "price_now": round(price_now, 2) if price_now is not None else None,
+            "change_pct": round(change_pct, 1) if change_pct is not None else None,
+        }
+    return results

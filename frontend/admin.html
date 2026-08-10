@@ -228,6 +228,22 @@ body{min-height:100vh;background:var(--bg);color:var(--text1);font-family:'DM Sa
     </div>
   </div>
 
+  <!-- ETF Directory Monthly History -->
+  <div class="card">
+    <h2>ETF Directory — Monthly History</h2>
+    <div id="etfHistStatsArea" style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.8">Loading...</div>
+    <div class="btn-row" style="margin-bottom:10px">
+      <button id="btnEtfHistFull" class="btn" onclick="runEtfHistLoad('full')">📥 Full History (one-time)</button>
+      <button id="btnEtfHistIncr" class="btn btn-accent" onclick="runEtfHistLoad('incremental')">🔄 Load Missing Months</button>
+    </div>
+    <div id="etfHistProgress" style="font-size:12px;color:var(--text3);margin-bottom:10px;display:none"></div>
+    <div style="font-size:12px;color:var(--text3);line-height:1.8">
+      Isolated table, separate from every other pipeline — powers the <a href="/etf-directory.html" target="_blank" style="color:var(--text2)">ETF Directory</a>'s 10-year range. Walks all 81 curated tickers <strong style="color:var(--text2)">one at a time</strong> (not parallel) to stay easy on Yahoo.<br>
+      <strong style="color:var(--accent)">Full History</strong> — one-time pull of everything Yahoo has (monthly high/low/close + dividends) for every ticker. Existing months are skipped, never overwritten.<br>
+      <strong style="color:var(--gold)">Load Missing Months</strong> — for each ticker, starts from its last loaded month and appends only what's missing through the last <em>closed</em> calendar month. The current, still-in-progress month is never written.
+    </div>
+  </div>
+
   <!-- FRED Rates -->
   <div class="card">
     <h2>FRED — Federal Funds Rate Data</h2>
@@ -414,6 +430,8 @@ async function adminInit() {
   await loadDamodaranReturns();
   await loadDailyStats();
   await pollDailyStatus();
+  await loadEtfHistStats();
+  await pollEtfHistStatus();
 }
 
 async function detectWriteApi() {
@@ -699,6 +717,82 @@ function startDailyPolling() {
 
 function disableDailyButtons(disabled) {
   ['btnSpyFull', 'btnSpyIncr', 'btnOefFull', 'btnOefIncr'].forEach(id => {
+    const el = document.getElementById(id);
+    if (writeEnabled) el.disabled = disabled;
+  });
+}
+
+// ---- ETF Directory Monthly History ----
+let etfHistPollTimer = null;
+
+async function loadEtfHistStats() {
+  const el = document.getElementById('etfHistStatsArea');
+  try {
+    const r = await fetch(API + '/api/etf-directory/history-stats');
+    const d = await r.json();
+    el.innerHTML = `<strong style="color:var(--text2)">${d.tickers_covered}</strong> of <strong style="color:var(--text2)">${d.tickers_expected}</strong> tickers · ${d.total_rows.toLocaleString()} rows` +
+      (d.oldest_month ? ` &nbsp;(${d.oldest_month} &rarr; ${d.newest_month})` : ' &nbsp;(no data yet)');
+  } catch (e) {
+    el.textContent = 'Failed to load stats.';
+  }
+}
+
+async function runEtfHistLoad(mode) {
+  const label = mode === 'full' ? 'full history' : 'missing months';
+  try {
+    disableEtfHistButtons(true);
+    addLog(`Starting ETF directory ${label} load (81 tickers, one at a time)...`, 'info');
+
+    const r = await adminFetch(API + `/api/batch/etf-history/${mode}`, { method: 'POST' });
+    const d = await r.json();
+
+    if (r.ok) {
+      addLog('✓ ' + d.message, 'ok');
+      startEtfHistPolling();
+    } else {
+      addLog('✗ ' + (d.detail || d.error || 'Failed'), 'err');
+      disableEtfHistButtons(false);
+    }
+  } catch (e) {
+    addLog('✗ Network error: ' + e.message, 'err');
+    disableEtfHistButtons(false);
+  }
+}
+
+async function pollEtfHistStatus() {
+  try {
+    const r = await fetch(API + '/api/batch/etf-history/status');
+    const d = await r.json();
+    const progressEl = document.getElementById('etfHistProgress');
+
+    if (d.status === 'running') {
+      disableEtfHistButtons(true);
+      progressEl.style.display = 'block';
+      progressEl.textContent = `Working: ${d.current_ticker || '…'} (${d.progress || ''})`;
+    } else {
+      disableEtfHistButtons(false);
+      progressEl.style.display = 'none';
+      if (etfHistPollTimer) { clearInterval(etfHistPollTimer); etfHistPollTimer = null; }
+      if (d.status === 'completed' && d.completed_at) {
+        const inserted = d.summary ? Object.values(d.summary).reduce((s, v) => s + (v.inserted || 0), 0) : 0;
+        addLog(`✓ ETF history ${d.mode} load completed: ${inserted} rows inserted across ${d.summary ? Object.keys(d.summary).length : 0} tickers`, 'ok');
+        loadEtfHistStats();
+      } else if (d.status === 'failed') {
+        addLog('✗ ETF history load failed: ' + (d.summary?.error || 'Unknown error'), 'err');
+      }
+    }
+  } catch (e) {
+    // Ignore polling errors
+  }
+}
+
+function startEtfHistPolling() {
+  if (etfHistPollTimer) clearInterval(etfHistPollTimer);
+  etfHistPollTimer = setInterval(pollEtfHistStatus, 2000);
+}
+
+function disableEtfHistButtons(disabled) {
+  ['btnEtfHistFull', 'btnEtfHistIncr'].forEach(id => {
     const el = document.getElementById(id);
     if (writeEnabled) el.disabled = disabled;
   });
