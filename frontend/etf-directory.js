@@ -11,6 +11,7 @@ const ETF_GROUPS = [
     title: 'Market Cap & Style ETFs',
     rows: [
       ['Total US Market', 'ITOT', 'iShares Core S&P Total U.S. Stock Market ETF', 'https://www.ishares.com/us/products/239724/ishares-core-sp-total-us-stock-market-etf'],
+      ['Mega-Cap', 'OEF', 'iShares S&P 100 ETF', 'https://www.ishares.com/us/products/239723/ishares-sp-100-etf'],
       ['Large-Cap Blend', 'VOO', 'Vanguard S&P 500 ETF', 'https://investor.vanguard.com/investment-products/etfs/profile/voo'],
       ['Large-Cap Growth', 'QQQ', 'Invesco QQQ Trust', 'https://www.invesco.com/us/en/financial-products/etfs/invesco-qqq-trust.html'],
       ['Large-Cap Value', 'VTV', 'Vanguard Value ETF', 'https://investor.vanguard.com/investment-products/etfs/profile/vtv'],
