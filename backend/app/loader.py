@@ -395,6 +395,28 @@ def get_etf_history_stats(db: Session) -> dict:
     }
 
 
+def _sanitize_monthly_bar(ticker: str, year: int, month: int, high, low, close):
+    """Clamp an implausible high/low against that same month's close.
+
+    Found in the wild: Yahoo's monthly-interval endpoint occasionally
+    returns a garbage Open/High for one bar even though the daily bars
+    for that exact month are completely clean (HDV 2024-09 showed
+    high=$117.76 against a close of $23.52 -- daily data confirmed the
+    real high was $23.84). A single month's high/low shouldn't be able
+    to move >2.5x/<0.4x its own close, so clamp to close instead of
+    storing the bad value, and log it so it's visible.
+    """
+    if close is None or close <= 0:
+        return high, low, close
+    if high is not None and high > close * 2.5:
+        logger.warning(f"{ticker} {year}-{month:02d}: implausible high {high} vs close {close}, clamped to close")
+        high = close
+    if low is not None and low < close * 0.4:
+        logger.warning(f"{ticker} {year}-{month:02d}: implausible low {low} vs close {close}, clamped to close")
+        low = close
+    return high, low, close
+
+
 def load_etf_monthly_history(db: Session, ticker: str, prices_df: pd.DataFrame, divs_df: pd.DataFrame) -> dict:
     """Append monthly high/low/close/dividend rows for one ETF Directory ticker.
 
@@ -437,11 +459,13 @@ def load_etf_monthly_history(db: Session, ticker: str, prices_df: pd.DataFrame, 
         if (year, month) in existing:
             counts["skipped"] += 1
             continue
+        high, low, close = _sanitize_monthly_bar(
+            ticker, year, month,
+            _to_float(row.get("high")), _to_float(row.get("low")), _to_float(row.get("close")),
+        )
         rec = EtfDirectoryMonthlyHistory(
             ticker=ticker, year=year, month=month,
-            high=_to_float(row.get("high")),
-            low=_to_float(row.get("low")),
-            close=_to_float(row.get("close")),
+            high=high, low=low, close=close,
             dividend=round(monthly_divs.get((year, month), 0.0), 6),
         )
         db.add(rec)
