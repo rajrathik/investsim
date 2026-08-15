@@ -32,26 +32,14 @@
 <script src="theme-toggle.js?v=2"></script>
 <script src="https://cdn.auth0.com/js/auth0-spa-js/2.1/auth0-spa-js.production.js"></script>
 <style>
-/* Landing page only. Deliberately quiet: no gradients, no shadows, generous
-   whitespace, one accent. The tools are introduced before any data appears. */
-.hero{max-width:660px;margin:0 auto;padding:64px 24px 8px;text-align:center}
-.hero h2{font-size:34px;font-weight:600;letter-spacing:-.02em;line-height:1.25;margin-bottom:16px;color:var(--text1)}
-.hero p{font-size:17px;line-height:1.7;color:var(--text2)}
-
-.intro-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px;max-width:1000px;margin:48px auto 0;padding:0 24px}
-.intro-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:28px 26px 26px;text-decoration:none;color:inherit;display:flex;flex-direction:column;transition:border-color .2s}
-.intro-card:hover{border-color:var(--accent)}
-.intro-card h3{font-size:18px;font-weight:600;color:var(--text1);margin-bottom:10px;letter-spacing:-.01em}
-.intro-card p{font-size:15px;line-height:1.65;color:var(--text2);margin-bottom:20px;flex:1}
-.intro-card .go{font-size:15px;color:var(--accent);font-weight:500}
-
-.section-divider{max-width:1400px;margin:72px auto 0;padding:0 24px}
+/* Landing page only. The directory is the page -- it opens directly on the
+   heading, with no hero or intro cards above it. */
+.section-divider{max-width:1400px;margin:40px auto 0;padding:0 24px}
 .section-divider h2{font-size:22px;font-weight:600;color:var(--text1);letter-spacing:-.01em;margin-bottom:8px}
 .section-divider p{font-size:15px;color:var(--text2)}
 
 @media(max-width:600px){
-  .hero{padding-top:44px}
-  .hero h2{font-size:27px}
+  .section-divider{margin-top:28px}
 }
 </style>
 </head>
@@ -59,32 +47,9 @@
 
 <div id="siteNavRoot"></div>
 
-<div class="hero">
-  <h2>Explore investing through real market history</h2>
-  <p>Test a portfolio. Study past market downturns. Understand risk and diversification &mdash; using historical data rather than forecasts.</p>
-</div>
-
-<div class="intro-grid">
-  <a href="/portfolio-simulator.html" class="intro-card">
-    <h3>Build a portfolio</h3>
-    <p>See how an investment mix would have performed historically, month by month.</p>
-    <span class="go">Try Portfolio Simulator &rarr;</span>
-  </a>
-  <a href="/sp500-history.html" class="intro-card">
-    <h3>Explore market history</h3>
-    <p>Crashes, recoveries, best years and worst years &mdash; going back to 1871.</p>
-    <span class="go">Explore S&amp;P 500 History &rarr;</span>
-  </a>
-  <a href="/sector-performance.html" class="intro-card">
-    <h3>Understand diversification</h3>
-    <p>Compare sectors by return, risk, correlation and dividends over time.</p>
-    <span class="go">Explore sectors &rarr;</span>
-  </a>
-</div>
-
 <div class="section-divider" id="etf-directory">
   <h2>Browse ETFs and investments</h2>
-  <p>A curated list of non-leveraged ETFs by category, with live price and historical range. Use it to find a ticker for the simulators above.</p>
+  <p>A curated list of non-leveraged ETFs by category, with live price and historical range. Use it to find a ticker for the simulators in the menu above.</p>
 </div>
 
 <div class="container">
