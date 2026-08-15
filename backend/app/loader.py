@@ -348,13 +348,15 @@ def save_daily_quotes(db: Session, quotes: dict) -> dict:
 # ===========================================
 
 def get_etf_directory_tickers() -> list[str]:
-    """Read the curated ticker list straight from frontend/etf-directory.js.
+    """Read the curated ticker list straight from frontend/etf-groups.js.
 
     Single source of truth: the category/fund-name/link data lives only in
     that JS file (not database-backed yet), so this parses it at call time
     instead of keeping a second, driftable copy of the ticker list here.
+    Both frontend layouts (etf-home.js and etf-directory.js) read the same
+    file, so there is exactly one list to keep current.
     """
-    js_path = pathlib.Path(__file__).resolve().parent.parent.parent / "frontend" / "etf-directory.js"
+    js_path = pathlib.Path(__file__).resolve().parent.parent.parent / "frontend" / "etf-groups.js"
     text = js_path.read_text(encoding="utf-8")
     # Each curated row looks like: ['Category', 'TICKER', 'Fund Name', 'https://...'],
     tickers = re.findall(r"\[\s*'[^']*',\s*'([A-Z0-9.]+)',\s*'[^']*',\s*'[^']*'\s*\]", text)
@@ -475,6 +477,79 @@ def load_etf_monthly_history(db: Session, ticker: str, prices_df: pd.DataFrame, 
     db.commit()
     logger.info(f"{ticker} ETF directory history: {counts['inserted']} inserted, {counts['skipped']} skipped")
     return counts
+
+
+def _downsample(values: list, target: int = 32) -> list:
+    """Evenly pick ~target points from values, always keeping first and last.
+    Sparklines only need shape, not every month -- this keeps the payload
+    small enough to fetch once and cache client-side for the whole session.
+    """
+    n = len(values)
+    if n <= target:
+        return values
+    step = (n - 1) / (target - 1)
+    return [values[round(i * step)] for i in range(target)]
+
+
+# Periods offered by the range chips, in months. "max" (full loaded history)
+# is added on top of these at request time.
+ETF_RANGE_PERIODS = {"1y": 12, "5y": 60, "10y": 120}
+
+
+def get_etf_history_summary(db: Session, tickers: list[str]) -> dict:
+    """Per-ticker high/low/return + sparkline path for EVERY range period at
+    once (1y / 5y / 10y / max), from etf_directory_monthly_history.
+
+    Returned in a single call on purpose: this data is static between monthly
+    loads, so the frontend fetches it once, caches it for the session, and
+    switching range chips costs zero network.
+
+    Returns:
+        {ticker: {"periods": {"1y": {...}, "5y": {...}, "10y": {...}, "max": {...}}}}
+        where each period is {low, high, price_then, price_now, change_pct,
+        oldest_month, months_covered, path: [close, ...]}.
+        Tickers with no history on file are omitted.
+    """
+    results = {}
+    for ticker in tickers:
+        rows = (
+            db.query(EtfDirectoryMonthlyHistory)
+            .filter(EtfDirectoryMonthlyHistory.ticker == ticker)
+            .order_by(EtfDirectoryMonthlyHistory.year.asc(), EtfDirectoryMonthlyHistory.month.asc())
+            .all()
+        )
+        if not rows:
+            continue
+
+        periods = {}
+        for label, months in list(ETF_RANGE_PERIODS.items()) + [("max", None)]:
+            window = rows if months is None else rows[-months:]
+            if not window:
+                continue
+            highs = [r.high for r in window if r.high is not None]
+            lows = [r.low for r in window if r.low is not None]
+            closes = [r.close for r in window if r.close is not None]
+            if not highs or not lows or not closes:
+                continue
+
+            oldest, newest = window[0], window[-1]
+            price_then, price_now = oldest.close, newest.close
+            change_pct = ((price_now / price_then) - 1) * 100 if price_then else None
+
+            periods[label] = {
+                "low": round(min(lows), 2),
+                "high": round(max(highs), 2),
+                "price_then": round(price_then, 2) if price_then is not None else None,
+                "price_now": round(price_now, 2) if price_now is not None else None,
+                "change_pct": round(change_pct, 1) if change_pct is not None else None,
+                "oldest_month": f"{oldest.year}-{oldest.month:02d}",
+                "months_covered": len(window),
+                "path": [round(c, 2) for c in _downsample(closes)],
+            }
+
+        if periods:
+            results[ticker] = {"periods": periods}
+    return results
 
 
 def get_etf_10yr_range(db: Session, tickers: list[str]) -> dict:

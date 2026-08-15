@@ -1,29 +1,30 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Investment Tools — Help & Guide</title>
-<meta name="description" content="Free investment tools: portfolio simulator, sector analytics, correlation matrix, drawdown analysis, dividend growth tracking, and more.">
+<title>Investment Tools — ETF Directory & Market Analytics</title>
+<meta name="description" content="A curated ETF directory with live prices and 10-year history, plus free investment tools: historical simulators, sector analytics, correlation matrix, drawdown analysis, and more.">
 <link rel="canonical" href="https://investsim.claritycapitaltools.com/">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Investment Tools — Help & Guide">
-<meta property="og:description" content="Free investment tools: portfolio simulator, sector analytics, correlation matrix, drawdown analysis, dividend growth tracking, and more.">
+<meta property="og:title" content="Investment Tools — ETF Directory & Market Analytics">
+<meta property="og:description" content="A curated ETF directory with live prices and 10-year history, plus free investment tools: historical simulators, sector analytics, correlation matrix, drawdown analysis, and more.">
 <meta property="og:url" content="https://investsim.claritycapitaltools.com/">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Investment Tools — Help & Guide">
-<meta name="twitter:description" content="Free investment tools: portfolio simulator, sector analytics, correlation matrix, drawdown analysis, dividend growth tracking, and more.">
-
+<meta name="twitter:title" content="Investment Tools — ETF Directory & Market Analytics">
+<meta name="twitter:description" content="A curated ETF directory with live prices and 10-year history, plus historical simulators and sector analytics tools.">
 <meta property="og:site_name" content="Investment Tools">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="shared-analytics.css?v=3">
+<link rel="stylesheet" href="shared-analytics.css?v=5">
+<link rel="stylesheet" href="etf-directory.css?v=1">
+<link rel="stylesheet" href="etf-home.css?v=1">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "WebSite",
   "name": "Investment Tools",
   "url": "https://investsim.claritycapitaltools.com/",
-  "description": "Free investment tools: portfolio simulator, sector analytics, correlation matrix, drawdown analysis, dividend growth tracking, and more.",
+  "description": "A curated ETF directory with live prices and history, plus free investment tools: historical simulators, sector analytics, correlation matrix, drawdown analysis, and more.",
   "potentialAction": {
     "@type": "SearchAction",
     "target": "https://investsim.claritycapitaltools.com/?q={search_term_string}",
@@ -34,218 +35,34 @@
 <script src="theme-toggle.js?v=2"></script>
 <script src="https://cdn.auth0.com/js/auth0-spa-js/2.1/auth0-spa-js.production.js"></script>
 <style>
-/* index.html — page-specific styles only */
-/* Shared base: :root, reset, body, fonts all come from shared-analytics.css */
-
-.container{max-width:880px;margin:0 auto;padding:40px 24px}
-
-.hero{text-align:center;margin-bottom:52px;position:relative}
-.hero-icon{font-size:52px;margin-bottom:16px}
-.hero h2{font-size:28px;font-weight:700;font-family:'Space Grotesk',sans-serif;margin-bottom:10px}
-.hero p{color:var(--text2);font-size:15px;max-width:560px;margin:0 auto;line-height:1.7}
-
-/* Tool cards grid */
-.tools-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin-bottom:48px}
-.tool-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;text-decoration:none;color:inherit;transition:border-color .2s,box-shadow .2s;display:block}
-.tool-card:hover{border-color:var(--accent);box-shadow:0 0 20px rgba(16,185,129,0.1)}
-.tool-card-plain{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;color:inherit;transition:border-color .2s,box-shadow .2s}
-.tool-card-plain:hover{border-color:var(--accent);box-shadow:0 0 20px rgba(16,185,129,0.1)}
-.tool-icon{font-size:28px;margin-bottom:12px}
-.tool-name{font-size:15px;font-weight:700;font-family:'Space Grotesk',sans-serif;margin-bottom:6px;color:var(--text1)}
-.tool-desc{font-size:13px;color:var(--text2);line-height:1.6}
-.card-actions{display:flex;gap:8px;margin-top:14px}
-.btn-card{padding:7px 14px;border-radius:8px;font-size:12px;font-weight:600;font-family:'JetBrains Mono',monospace;text-decoration:none;border:none;cursor:pointer;transition:opacity .15s}
-.btn-card:hover{opacity:.85}
-.btn-launch{background:var(--accent-dim);color:var(--accent);border:1px solid rgba(16,185,129,.25)}
-.btn-guide{background:var(--accent-dim);color:var(--accent);border:1px solid rgba(16,185,129,.25)}
-
-/* Member section — visible only after sign-in */
-.member-section{display:none;margin-bottom:48px}
-.member-section.show{display:block}
-.member-title{font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;margin-bottom:16px;color:var(--text1)}
-.member-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;color:inherit}
-.member-card .tool-icon{opacity:.5}
-.member-card .tool-name{color:var(--text3)}
-.member-card .tool-desc{color:var(--text3);font-style:italic}
-
-@media(max-width:600px){
-  .tools-grid{grid-template-columns:1fr}
-  .hero h2{font-size:22px}
-}
+.landing-intro{max-width:750px;margin:0 auto 4px}
+.landing-intro p{color:var(--text2);font-size:14px;line-height:1.7}
 </style>
 </head>
 <body>
 
+<div id="siteNavRoot"></div>
+
 <div class="container">
-
-  <div class="hero">
-    <div class="hero-icon">📊</div>
-    <h2>Investment Analysis Tools</h2>
-    <p>A suite of tools to explore historical market data, analyze sector performance, and simulate investment strategies.</p>
+  <div class="landing-intro">
+    <p>Free investment tools for historical backtesting and sector analytics. Browse ETFs by category below, or use the menu above to jump to a simulator or analysis tool.</p>
   </div>
 
-  <!-- Tool cards -->
-  <div class="tools-grid">
-<a href="/sp500-simulate.html" class="tool-card">
-      <div class="tool-icon">🧮</div>
-      <div class="tool-name">S&amp;P 500 Historical Simulator</div>
-      <div class="tool-desc"><em style="color:var(--text3)">"What if you had started back then?"</em><br>Pick any era, a starting amount, and a monthly contribution. See your final balance and year-by-year growth using real Shiller return data.</div>
-    </a>
-    <a href="/sp500-history.html" class="tool-card">
-      <div class="tool-icon">📅</div>
-      <div class="tool-name">S&amp;P 500 History</div>
-      <div class="tool-desc"><em style="color:var(--text3)">"155 years of annual returns at a glance."</em><br>Decade-by-decade heatmap of S&amp;P 500 annual returns from 1871 to today, with full return methodology.</div>
-    </a>
-    <a href="/extreme-years.html" class="tool-card">
-      <div class="tool-icon">📅</div>
-      <div class="tool-name">Annual Market Extremes</div>
-      <div class="tool-desc"><em style="color:var(--text3)">"What's the worst — and best — a single year can do?"</em><br>Ranked best and worst full calendar years in S&amp;P 500 history since 1871. See exactly what each extreme year would have done to a $10,000 investment.</div>
-    </a>
-    <a href="/bad-streaks.html" class="tool-card">
-      <div class="tool-icon">🔻</div>
-      <div class="tool-name">5-Year Crash Periods &amp; Recovery</div>
-      <div class="tool-desc"><em style="color:var(--text3)">"How bad can 5 years get — and what happens next?"</em><br>The worst 5-year crash periods in S&amp;P 500 history since 1871, with year-by-year breakdown and what the market returned in the 2 years of recovery that followed.</div>
-    </a>
-    <a href="/sp500-rolling-returns.html" class="tool-card">
-      <div class="tool-icon">📈</div>
-      <div class="tool-name">S&amp;P 500 Rolling Returns</div>
-      <div class="tool-desc"><em style="color:var(--text3)">"Does holding longer actually smooth things out?"</em><br>1/3/5/7/10-year forward rolling returns for every year since 1928, sourced from the Damodaran (NYU Stern) dataset.</div>
-    </a>
-    <a href="/extreme-months.html" class="tool-card">
-      <div class="tool-icon">⚡</div>
-      <div class="tool-name">Monthly Market Extremes</div>
-      <div class="tool-desc"><em style="color:var(--text3)">"What's the worst — and best — a single month can do?"</em><br>Ranked best and worst single months in S&amp;P 500 history since 1871. See exactly what each extreme month would have done to a $10,000 investment.</div>
-    </a>
-    <a href="/montecarlo.html" class="tool-card">
-      <div class="tool-icon">🎲</div>
-      <div class="tool-name">Monte Carlo Simulator</div>
-      <div class="tool-desc"><em style="color:var(--text3)">"What's the range of where I could end up?"</em><br>Runs 1,000 simulated futures using 150+ years of real S&amp;P 500 history. See best-case, median, and worst-case portfolio paths — not just one outcome.</div>
-    </a>
-    <a href="/growth-chart.html" class="tool-card">
-      <div class="tool-icon">📊</div>
-      <div class="tool-name">$10K Growth Chart</div>
-      <div class="tool-desc"><em style="color:var(--text3)">"What if you invested $10,000 back then?"</em><br>Compare how a one-time investment would have grown across sectors over any time range you choose.</div>
-    </a>
-    <div class="tool-card-plain">
-      <div class="tool-icon">💼</div>
-      <div class="tool-name">Asset Allocation Simulator</div>
-      <div class="tool-desc"><em style="color:var(--text3)">"Test a portfolio mix before you invest."</em><br>Pick ETFs, set a monthly contribution, and see how your balance and dividends could have grown over time.</div>
-      <div class="card-actions">
-        <a href="/portfolio-simulator.html" class="btn-card btn-launch">Launch Simulator</a>
-        <a href="/simulator-guide.html" class="btn-card btn-guide">How It Works</a>
-      </div>
-    </div>
-    <a href="/drawdown.html" class="tool-card">
-      <div class="tool-icon">📉</div>
-      <div class="tool-name">Drawdown Analysis</div>
-      <div class="tool-desc"><em style="color:var(--text3)">"How bad did it get—and how long to recover?"</em><br>View each sector's worst historical drops and the time it took to climb back, so you understand real downside risk.</div>
-    </a>
-    <a href="/risk-return.html" class="tool-card">
-      <div class="tool-icon">⚖️</div>
-      <div class="tool-name">Risk vs Return</div>
-      <div class="tool-desc"><em style="color:var(--text3)">"Spot the best tradeoff between risk and reward."</em><br>A quick chart showing return versus volatility—helpful for finding options that historically delivered more return for less bounce.</div>
-    </a>
-    <a href="/sector-performance.html" class="tool-card">
-      <div class="tool-icon">📈</div>
-      <div class="tool-name">Sector Performance</div>
-      <div class="tool-desc"><em style="color:var(--text3)">"See which sectors won each year."</em><br>Compare yearly returns (including dividends) across all S&P 500 sector ETFs so you can spot strong and weak periods fast.</div>
-    </a>
-    <a href="/sector-rotation.html" class="tool-card">
-      <div class="tool-icon">🔄</div>
-      <div class="tool-name">Sector Rotation</div>
-      <div class="tool-desc"><em style="color:var(--text3)">"Watch leadership change year to year."</em><br>Rank sectors by performance for each year and see how often today's winner becomes next year's laggard.</div>
-    </a>
-    <a href="/correlation.html" class="tool-card">
-      <div class="tool-icon">🔗</div>
-      <div class="tool-name">Correlation Matrix</div>
-      <div class="tool-desc"><em style="color:var(--text3)">"Find what moves together (and what doesn't)."</em><br>A simple map of how sectors track each other—use it to build a mix that's less "all up or all down" at once.</div>
-    </a>
-    <a href="/dividend-growth.html" class="tool-card">
-      <div class="tool-icon">💰</div>
-      <div class="tool-name">Dividend Growth</div>
-      <div class="tool-desc"><em style="color:var(--text3)">"Which sectors grow dividends consistently?"</em><br>Track dividend growth over time and identify steady payers versus sectors that raise, pause, or cut payouts.</div>
-    </a>
-    <a href="/etf-directory.html" class="tool-card">
-      <div class="tool-icon">🗂️</div>
-      <div class="tool-name">ETF Directory</div>
-      <div class="tool-desc"><em style="color:var(--text3)">"Not sure which ticker to use?"</em><br>A curated list of non-leveraged ETFs by category — market cap, region, sector, subsector, commodities, and bonds — with live price and 52-week range.</div>
-    </a>
+  <div class="status-line" id="statusLine">Loading price data…</div>
+  <div class="range-chips" id="rangeChips"></div>
+  <div class="group-controls">
+    <button onclick="setAllGroups(true)">Expand all</button>
+    <button onclick="setAllGroups(false)">Collapse all</button>
   </div>
 
-  <!-- Member-only section — shown after sign-in -->
-  <div id="memberSection" class="member-section">
-    <div class="member-title">Member Content</div>
-    <div class="tools-grid">
-      <div class="member-card">
-        <div class="tool-icon">📬</div>
-        <div class="tool-name">Newsletters & Alerts</div>
-        <div class="tool-desc">Personalized market insights and sector alerts delivered to your inbox. Coming soon.</div>
-      </div>
-      <a href="/saved-simulations.html" class="tool-card">
-        <div class="tool-icon">💼</div>
-        <div class="tool-name">Simulated Portfolio Results</div>
-        <div class="tool-desc">View, compare, and manage your saved portfolio simulations.</div>
-      </a>
-      <div class="member-card">
-        <div class="tool-icon">📊</div>
-        <div class="tool-name">Custom Watchlists</div>
-        <div class="tool-desc">Build and track your own sector watchlists. Under construction.</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Admin section — only rendered when _admin_hint is set -->
-  <div id="adminSection" style="display:none;margin-bottom:48px">
-    <div class="member-title">Admin</div>
-    <div class="tools-grid">
-      <a href="/admin.html" class="tool-card">
-        <div class="tool-icon">⚙️</div>
-        <div class="tool-name">Admin Dashboard</div>
-        <div class="tool-desc">Manage tickers, data sync, interest rates, and platform settings.</div>
-      </a>
-    </div>
-  </div>
-
+  <div id="groupsContainer"></div>
 </div>
 
+<script src="shared-analytics.js?v=1"></script>
+<script src="site-nav.js?v=2"></script>
 <script src="shared-auth.js"></script>
-<script>
-/* Show member section when user is signed in */
-(function() {
-  function showMember() {
-    try {
-      var u = JSON.parse(localStorage.getItem('pub_auth_user'));
-      if (u && u.email) document.getElementById('memberSection').classList.add('show');
-      else document.getElementById('memberSection').classList.remove('show');
-    } catch(e) {}
-  }
-  function checkAdmin() {
-    var u = JSON.parse(localStorage.getItem('pub_auth_user') || 'null');
-    if (!u || !u.email) {
-      document.getElementById('adminSection').style.display = 'none';
-      localStorage.removeItem('_admin_hint');
-      return;
-    }
-    if (localStorage.getItem('_admin_hint') === '1') {
-      document.getElementById('adminSection').style.display = '';
-      return;
-    }
-    // Ask the backend — reuses existing admin verify endpoint
-    if (window._pubAuthFetch) {
-      window._pubAuthFetch('/api/admin/verify').then(function(r) {
-        if (r.ok) {
-          localStorage.setItem('_admin_hint', '1');
-          document.getElementById('adminSection').style.display = '';
-        }
-      }).catch(function(){});
-    }
-  }
-
-  showMember();
-  checkAdmin();
-  window.addEventListener('pubauth', function() { showMember(); checkAdmin(); });
-})();
-</script>
+<script src="etf-groups.js?v=1"></script>
+<script src="etf-home.js?v=2"></script>
 <script>try{navigator.sendBeacon('/api/track/pageview',JSON.stringify({page:location.pathname,referrer:document.referrer}))}catch(e){}</script>
 </body>
 </html>

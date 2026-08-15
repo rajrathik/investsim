@@ -138,6 +138,33 @@ html[data-theme="light"] .scatter-dot:hover{box-shadow:0 0 12px rgba(5,150,105,0
 html[data-theme="light"] .theme-toggle-btn{box-shadow:0 4px 16px rgba(0,0,0,.1)}
 
 /* ==========================================
+   SITE NAV — top bar + category submenus (see site-nav.js for content)
+   ========================================== */
+.site-nav.header{flex-direction:row;align-items:center;text-align:left;max-width:1400px;margin:0 auto;width:100%;padding:14px 24px;gap:20px;position:relative}
+.site-nav-brand{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:16px;color:var(--text1);text-decoration:none;white-space:nowrap}
+.site-nav-toggle{display:none;background:none;border:1px solid var(--border);border-radius:8px;color:var(--text1);font-size:16px;padding:6px 10px;cursor:pointer}
+.site-nav-menu{display:flex;align-items:center;gap:2px}
+.site-nav-group{position:relative}
+.site-nav-top{font-family:'JetBrains Mono',monospace;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--text2);background:none;border:none;cursor:pointer;padding:8px 10px;border-radius:8px;text-decoration:none;display:inline-flex;align-items:center;gap:4px;transition:color .15s,background .15s}
+.site-nav-top .chev{font-size:8px;color:var(--text3)}
+.site-nav-top:hover,.site-nav-group.open .site-nav-top,.site-nav-top.active{color:var(--text1);background:var(--bg)}
+.site-nav-home.active{color:var(--accent)}
+.site-nav-drop{position:absolute;top:100%;left:0;margin-top:4px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:6px;min-width:230px;box-shadow:0 8px 24px rgba(0,0,0,.16);display:none;flex-direction:column;z-index:200}
+.site-nav-group:hover .site-nav-drop,.site-nav-group.open .site-nav-drop{display:flex}
+.site-nav-drop a{padding:8px 10px;border-radius:6px;font-size:13px;color:var(--text1);text-decoration:none}
+.site-nav-drop a:hover,.site-nav-drop a.active{background:var(--bg);color:var(--accent)}
+.site-nav-admin{margin-left:4px}
+.site-nav .pub-signin-link,.site-nav .pub-header-auth{position:static;margin-left:auto;order:2}
+.site-nav-toggle{order:3}
+@media(max-width:860px){
+  .site-nav-toggle{display:block}
+  .site-nav-menu{display:none;position:absolute;top:100%;left:0;right:0;flex-direction:column;align-items:stretch;background:var(--card);border-bottom:1px solid var(--border);padding:8px 16px 16px;gap:2px;max-height:80vh;overflow-y:auto;z-index:150}
+  .site-nav-menu.show{display:flex}
+  .site-nav-drop{position:static;display:block!important;box-shadow:none;border:none;padding-left:14px;margin-top:0;min-width:0}
+  .site-nav.header{flex-wrap:wrap}
+}
+
+/* ==========================================
    PUBLIC AUTH — header sign-in / sign-out
    ========================================== */
 .pub-signin-link{position:absolute;right:24px;top:20px;color:var(--text3);font-size:12px;font-family:'JetBrains Mono',monospace;text-decoration:none;transition:color .2s;cursor:pointer}

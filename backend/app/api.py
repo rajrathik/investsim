@@ -59,6 +59,7 @@ Endpoints:
     GET    /api/batch/etf-history/status          - Status of last ETF history load
     GET    /api/etf-directory/history-stats       - Row count + ticker coverage + date range (public)
     GET    /api/etf-directory/10yr-range          - 10yr high/low + price-then-vs-now per ticker (public)
+    GET    /api/etf-directory/history-summary     - All range periods (1y/5y/10y/max) + sparkline paths (public)
 
   Rate Limits (per IP):
     Default:  60 requests/minute for all endpoints
@@ -1089,6 +1090,27 @@ def get_etf_directory_history_stats(db: Session = Depends(get_db)):
     """Row count, ticker coverage, and date range for etf_directory_monthly_history."""
     from app.loader import get_etf_history_stats
     return get_etf_history_stats(db)
+
+
+@app.get("/api/etf-directory/history-summary")
+@limiter.limit("30/minute")
+def get_etf_directory_history_summary(request: Request, symbols: str, db: Session = Depends(get_db)):
+    """High/low/return + sparkline path for every range period (1y/5y/10y/max)
+    in one call, from etf_directory_monthly_history. Public, read-only.
+
+    Deliberately returns all periods at once: the underlying data only changes
+    when the monthly history load runs, so the frontend caches this for the
+    session and range-chip switching costs no network.
+    """
+    from app.loader import get_etf_history_summary
+
+    symbol_list = [s.strip().upper() for s in symbols.split(",") if s.strip()]
+    if not symbol_list:
+        raise HTTPException(status_code=400, detail="No symbols provided")
+    if len(symbol_list) > 100:
+        raise HTTPException(status_code=400, detail="Max 100 symbols per request")
+
+    return get_etf_history_summary(db, symbol_list)
 
 
 @app.get("/api/etf-directory/10yr-range")
