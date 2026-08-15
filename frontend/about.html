@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>About These Tools</title>
+<meta name="description" content="Where the data comes from, the assumptions each simulation makes, and what these tools are and are not.">
+<link rel="canonical" href="https://investsim.claritycapitaltools.com/about.html">
+<meta property="og:type" content="website">
+<meta property="og:title" content="About These Tools">
+<meta property="og:description" content="Where the data comes from, the assumptions each simulation makes, and what these tools are and are not.">
+<meta property="og:url" content="https://investsim.claritycapitaltools.com/about.html">
+<meta property="og:site_name" content="Investment Tools">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="About These Tools">
+<meta name="twitter:description" content="Where the data comes from, the assumptions each simulation makes, and what these tools are and are not.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared-analytics.css?v=9">
+<script src="theme-toggle.js?v=2"></script>
+<script src="https://cdn.auth0.com/js/auth0-spa-js/2.1/auth0-spa-js.production.js"></script>
+<style>
+.container{max-width:860px;padding:40px 24px 60px}
+.about-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:24px 26px;margin-bottom:16px}
+.about-card h2{font-size:17px;font-weight:600;color:var(--text1);margin-bottom:14px;letter-spacing:-.01em}
+.about-card p{font-size:15px;line-height:1.75;color:var(--text2);margin-bottom:12px}
+.about-card p:last-child{margin-bottom:0}
+.about-card a{color:var(--accent);text-decoration:none}
+.about-card a:hover{text-decoration:underline}
+
+.src-list{list-style:none;padding:0;margin:0}
+.src-list li{padding:14px 0;border-bottom:1px solid var(--border)}
+.src-list li:last-child{border-bottom:none;padding-bottom:0}
+.src-name{font-size:15px;font-weight:600;color:var(--text1);margin-bottom:3px}
+.src-meta{font-size:13px;color:var(--text3);font-family:'JetBrains Mono',monospace;margin-bottom:5px}
+.src-desc{font-size:14px;line-height:1.65;color:var(--text2)}
+
+.assume-list{list-style:none;padding:0;margin:0}
+.assume-list li{font-size:15px;line-height:1.7;color:var(--text2);padding-left:18px;position:relative;margin-bottom:10px}
+.assume-list li:last-child{margin-bottom:0}
+.assume-list li::before{content:"\203A";position:absolute;left:0;color:var(--accent)}
+.assume-list strong{color:var(--text1);font-weight:600}
+
+.notice{border-left:3px solid var(--border);padding:2px 0 2px 16px;margin-top:4px}
+.notice p{font-size:14px;line-height:1.7;color:var(--text2);margin-bottom:10px}
+.notice p:last-child{margin-bottom:0}
+</style>
+</head>
+<body>
+
+<div id="siteNavRoot"></div>
+
+<div class="header">
+  <h1 class="space">About These Tools</h1>
+</div>
+
+<div class="container">
+
+  <p class="page-desc">
+    A set of free tools for looking at how investments have actually behaved, using real historical market data rather than projections. This page covers where that data comes from and what each simulation assumes.
+  </p>
+
+  <div class="about-card">
+    <h2>Where the data comes from</h2>
+    <ul class="src-list">
+      <li>
+        <div class="src-name">Robert Shiller &mdash; S&amp;P 500 monthly series</div>
+        <div class="src-meta">monthly, from January 1871</div>
+        <div class="src-desc">Monthly index price and dividend data, published at <a href="https://shillerdata.com/" target="_blank" rel="noopener">shillerdata.com</a>. This is the basis for the S&amp;P 500 history, extremes, downturn and Monte Carlo pages &mdash; currently <strong>154 complete calendar years</strong>, 1872 through 2025.</div>
+      </li>
+      <li>
+        <div class="src-name">Aswath Damodaran, NYU Stern &mdash; annual asset class returns</div>
+        <div class="src-meta">annual, 1928&ndash;2025</div>
+        <div class="src-desc">Historical returns on stocks, bonds and bills. Used for the rolling-returns page, which shows forward 1, 3, 5, 7 and 10-year returns from each starting year.</div>
+      </li>
+      <li>
+        <div class="src-name">Yahoo Finance &mdash; ETF prices and dividends</div>
+        <div class="src-meta">monthly high, low and close; dividend distributions</div>
+        <div class="src-desc">Powers the portfolio simulator, the sector pages and the ETF directory, which currently covers <strong>81 non-leveraged ETFs</strong> across 8 categories.</div>
+      </li>
+      <li>
+        <div class="src-name">FRED &mdash; federal funds rate</div>
+        <div class="src-meta">monthly</div>
+        <div class="src-desc">Used as the interest rate on uninvested cash, and as the money market benchmark the portfolio simulator compares against.</div>
+      </li>
+    </ul>
+  </div>
+
+  <div class="about-card">
+    <h2>What the simulations assume</h2>
+    <p>The assumptions below are deliberately conservative. Where a choice could flatter the result, the less favourable option is taken.</p>
+    <ul class="assume-list">
+      <li><strong>Purchases happen at each month's high price</strong>, not an average or a low &mdash; the worst entry price available that month.</li>
+      <li><strong>Whole shares only.</strong> Cash that isn't enough for a full share stays in that holding's own bucket until it is.</li>
+      <li><strong>Dividends are treated as cash received and are not reinvested.</strong> Reinvesting would produce higher figures; this shows the more modest path.</li>
+      <li><strong>That cash earns the historical federal funds rate</strong>, compounded monthly, rather than sitting idle.</li>
+      <li><strong>Simulations end in December of the last complete calendar year</strong>, so no result depends on a partial year.</li>
+      <li><strong>If a holding wasn't tradeable in a given month</strong>, its share of that month's contribution is redistributed across the others and resumes when it becomes available.</li>
+    </ul>
+    <p style="margin-top:16px">The portfolio simulator's mechanics are covered in more detail in <a href="/simulator-guide.html">How the Simulator Works</a>.</p>
+  </div>
+
+  <div class="about-card">
+    <h2>What these tools are, and are not</h2>
+    <div class="notice">
+      <p>These are educational tools for exploring historical data. They describe what happened in the past over the periods you select.</p>
+      <p>They are <strong>not investment advice</strong>, and nothing here is a recommendation to buy or sell any security. No result produced here is a forecast.</p>
+      <p>Historical returns do not predict future returns. The Monte Carlo page in particular resamples real historical sequences to show a range of outcomes &mdash; that range reflects how markets have behaved before, not the full set of things that could happen next.</p>
+      <p>Figures are drawn from third-party data sources and may contain errors or revisions. Verify anything you intend to act on against the fund issuer's own published data.</p>
+    </div>
+  </div>
+
+</div>
+
+<script src="site-nav.js?v=6"></script>
+<script src="shared-auth.js"></script>
+<script>try{navigator.sendBeacon('/api/track/pageview',JSON.stringify({page:location.pathname,referrer:document.referrer}))}catch(e){}</script>
+</body>
+</html>

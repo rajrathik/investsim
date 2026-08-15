@@ -99,7 +99,7 @@ var SITE_HOME = { label: 'Browse ETFs', href: '/#etf-directory' };
     root.innerHTML =
       '<a href="/" class="site-nav-brand">Clarity Capital Tools</a>' +
       '<nav class="site-nav-menu" id="siteNavMenu">' + renderMenu() + '</nav>' +
-      '<a href="https://claritycapitaltools.com/about.html" class="site-nav-top site-nav-about">About</a>' +
+      '<a href="/about.html" class="site-nav-top site-nav-about' + (isActive('/about.html') ? ' active' : '') + '">About</a>' +
       '<button type="button" class="site-nav-toggle" id="siteNavToggle" aria-label="Menu">&#9776;</button>';
 
     /* Mobile hamburger */
