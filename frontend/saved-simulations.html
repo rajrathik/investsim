@@ -122,7 +122,7 @@ function ti(key){return '<span class="stile-info" onclick="event.stopPropagation
 function renderSims(sims){
   var el=document.getElementById('simList');
   if(!sims.length){
-    el.innerHTML='<div class="empty-state"><div class="em-icon">📋</div><p>No saved simulations yet.<br>Go to the <a href="/portfolio-simulator.html">Asset Allocation Simulator</a>, run a simulation, and click <strong>Save</strong>.</p></div>';
+    el.innerHTML='<div class="empty-state"><p>No saved simulations yet.<br>Go to the <a href="/portfolio-simulator.html">Portfolio Simulator</a>, run a simulation, and click <strong>Save</strong>.</p></div>';
     return;
   }
   var h='';

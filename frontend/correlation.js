@@ -1,4 +1,4 @@
-/* Sector Correlation Matrix */
+/* Sector Correlation */
 let data = null;
 let yearStart = 2005, yearEnd = 2025;
 

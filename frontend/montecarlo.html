@@ -7,11 +7,11 @@
 <meta name="description" content="Run 1,000 simulated futures for your portfolio using 150+ years of real S&P 500 return history. See the range of possible outcomes with a fan chart showing best, median, and worst-case paths.">
 <link rel="canonical" href="https://investsim.claritycapitaltools.com/montecarlo.html">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Monte Carlo Portfolio Simulator">
+<meta property="og:title" content="Monte Carlo Simulator">
 <meta property="og:description" content="Run 1,000 simulated futures using 150+ years of real S&P 500 return history. See your range of outcomes — not just one path.">
 <meta property="og:url" content="https://investsim.claritycapitaltools.com/montecarlo.html">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Monte Carlo Portfolio Simulator">
+<meta name="twitter:title" content="Monte Carlo Simulator">
 <meta name="twitter:description" content="1,000 simulated futures from real S&P 500 history — see best, median, and worst-case portfolio paths.">
 
 <meta property="og:site_name" content="Investment Tools">
@@ -19,7 +19,7 @@
 {
   "@context": "https://schema.org",
   "@type": "WebApplication",
-  "name": "Monte Carlo Portfolio Simulator",
+  "name": "Monte Carlo Simulator",
   "description": "Run 1,000 simulated futures using 150+ years of real S&P 500 return history. See your range of outcomes.",
   "url": "https://investsim.claritycapitaltools.com/montecarlo.html",
   "applicationCategory": "FinanceApplication",
@@ -53,6 +53,13 @@
   .flow-choice label{display:flex;align-items:center;gap:6px;cursor:pointer}
   .flow-choice input{cursor:pointer;accent-color:var(--accent)}
   .cycle-desc{font-size:13px;color:var(--text2);margin-top:10px}
+  .adv-options{margin-top:18px;border-top:1px solid var(--border);padding-top:14px}
+  .adv-options>summary{cursor:pointer;list-style:none;font-size:14px;font-weight:500;color:var(--text2);display:flex;align-items:center;gap:8px;user-select:none}
+  .adv-options>summary::-webkit-details-marker{display:none}
+  .adv-options>summary::before{content:'›';color:var(--text3);font-size:16px;transition:transform .15s}
+  .adv-options[open]>summary::before{transform:rotate(90deg)}
+  .adv-options>summary:hover{color:var(--accent)}
+  .adv-body{padding-top:18px}
   .ctrl-run{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:12px 30px;font-size:15px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;transition:opacity .15s;white-space:nowrap;margin-top:24px}
   .ctrl-run:hover{opacity:.88}
   .ctrl-run:disabled{opacity:.45;cursor:default}
@@ -174,34 +181,38 @@
       </div>
     </div>
 
-    <hr class="ctrl-divider">
+    <!-- Everything below is optional. Nobody needs to touch it for a first
+         run, so it stays closed by default. -->
+    <details class="adv-options">
+      <summary>Advanced options</summary>
+      <div class="adv-body">
+        <div class="ctrl-group" style="max-width:420px">
+          <div class="ctrl-section-label">Historical pattern</div>
+          <div class="chip-row" id="cycleChips">
+            <span class="ctrl-chip" data-val="1" onclick="selectChip('cycle',1)">Short</span>
+            <span class="ctrl-chip active" data-val="3" onclick="selectChip('cycle',3)">Typical</span>
+            <span class="ctrl-chip" data-val="5" onclick="selectChip('cycle',5)">Long cycles</span>
+          </div>
+          <div class="cycle-desc" id="cycleDesc">Preserves typical multi-year market cycles. Typical is the default.</div>
+        </div>
 
-    <div class="ctrl-section">
-      <div class="ctrl-group" style="max-width:420px">
-        <div class="ctrl-section-label">Historical pattern</div>
-        <div class="chip-row" id="cycleChips">
-          <span class="ctrl-chip" data-val="1" onclick="selectChip('cycle',1)">Short</span>
-          <span class="ctrl-chip active" data-val="3" onclick="selectChip('cycle',3)">Typical</span>
-          <span class="ctrl-chip" data-val="5" onclick="selectChip('cycle',5)">Long cycles</span>
-        </div>
-        <div class="cycle-desc" id="cycleDesc">Preserves typical multi-year market cycles.</div>
-      </div>
-    </div>
+        <hr class="ctrl-divider">
 
-    <hr class="ctrl-divider">
-    <span class="event-toggle" onclick="toggleEvent()" id="eventToggle">＋ Add one-time cash event (bonus, inheritance, large withdrawal…)</span>
-    <div class="event-panel" id="eventPanel">
-      <div class="controls-grid" style="max-width:400px">
-        <div class="ctrl-group">
-          <label class="ctrl-label" for="ctrlLumpSum">Amount ($) <small>negative = take out</small></label>
-          <input class="ctrl-input" id="ctrlLumpSum" type="number" min="-10000000" max="10000000" step="1000" value="50000">
-        </div>
-        <div class="ctrl-group">
-          <label class="ctrl-label" for="ctrlLumpYear">At Year</label>
-          <input class="ctrl-input" id="ctrlLumpYear" type="number" min="1" max="30" step="1" value="5">
+        <span class="event-toggle" onclick="toggleEvent()" id="eventToggle">＋ Add one-time cash event (bonus, inheritance, large withdrawal…)</span>
+        <div class="event-panel" id="eventPanel">
+          <div class="controls-grid" style="max-width:400px">
+            <div class="ctrl-group">
+              <label class="ctrl-label" for="ctrlLumpSum">Amount ($) <small>negative = take out</small></label>
+              <input class="ctrl-input" id="ctrlLumpSum" type="number" min="-10000000" max="10000000" step="1000" value="50000">
+            </div>
+            <div class="ctrl-group">
+              <label class="ctrl-label" for="ctrlLumpYear">At Year</label>
+              <input class="ctrl-input" id="ctrlLumpYear" type="number" min="1" max="30" step="1" value="5">
+            </div>
+          </div>
         </div>
       </div>
-    </div>
+    </details>
 
     <button class="ctrl-run" id="btnRun" onclick="runMC()">Run simulation</button>
   </div>
@@ -264,7 +275,7 @@
             <div class="it-row"><strong>Worst 10%</strong> — only 1 in 10 simulations ended up this low or worse. Most paths did better.</div>
             <div class="it-row"><strong>Median</strong> — the middle result across all 1,000 simulations. Half finished above this, half below.</div>
             <div class="it-row"><strong>Best 10%</strong> — only 1 in 10 simulations reached this high. This is the optimistic end.</div>
-            <div class="it-row" style="margin-top:8px;color:var(--text3)">Each simulation draws a different sequence of real historical market years — so the spread shows genuine uncertainty, not a formula.</div>
+            <div class="it-row" style="margin-top:8px;color:var(--text3)">Each simulation draws a different sequence of real historical market years, so the spread shows a range based on historical return sequences rather than a formula. It does not capture every form of future uncertainty.</div>
           </span>
         </span>
       </div>
@@ -291,7 +302,7 @@
 </div>
 
 <script src="shared-analytics.js?v=1"></script>
-<script src="montecarlo.js?v=9"></script>
+<script src="montecarlo.js?v=10"></script>
 <script src="site-nav.js?v=5"></script>
 <script src="shared-auth.js"></script>
 </body>
