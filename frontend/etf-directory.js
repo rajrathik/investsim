@@ -225,7 +225,7 @@ function renderTenYear(ticker, tenYr) {
     return;
   }
 
-  const { ten_yr_low, ten_yr_high, oldest_month, price_then, change_pct, months_covered } = tenYr;
+  const { ten_yr_low, ten_yr_high, oldest_month, price_then, months_covered } = tenYr;
   const livePrice = _latestQuotes[ticker]?.price;
   const currentPrice = livePrice != null ? livePrice : tenYr.price_now;
 
@@ -234,12 +234,11 @@ function renderTenYear(ticker, tenYr) {
     : 50;
 
   const spanLabel = months_covered < 120 ? `${months_covered}mo` : '10yr';
-  const changeSign = change_pct >= 0 ? '+' : '';
 
   cell.innerHTML = `
     <div class="range-labels"><span>$${ten_yr_low.toFixed(2)}</span><span>$${ten_yr_high.toFixed(2)}</span></div>
     <div class="range-track"><div class="range-marker ten-yr-marker" style="left:${pct}%"></div></div>
-    <div class="ten-yr-compare">${spanLabel} since ${oldest_month}: $${price_then.toFixed(2)} &rarr; ${changeSign}${change_pct.toFixed(1)}%</div>
+    <div class="ten-yr-compare">${spanLabel} ago (${oldest_month}): $${price_then.toFixed(2)}</div>
   `;
 }
 
