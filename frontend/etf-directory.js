@@ -114,7 +114,6 @@ const ETF_GROUPS = [
       ['Physical Silver', 'SLV', 'iShares Silver Trust', 'https://www.ishares.com/us/products/239855/ishares-silver-trust-fund'],
       ['Broad Commodities', 'PDBC', 'Invesco Optimum Yield Diversified Commodity Strategy', 'https://www.invesco.com/us/en/financial-products/etfs/invesco-optimum-yield-diversified-commodity-strategy-no-k-1-etf.html'],
       ['Real Estate (Broad)', 'VNQ', 'Vanguard Real Estate Index ETF', 'https://investor.vanguard.com/investment-products/etfs/profile/vnq'],
-      ['Long-Term Treasuries', 'TLT', 'iShares 20+ Year Treasury Bond ETF', 'https://www.ishares.com/us/products/239454/ishares-20-year-treasury-bond-etf'],
       ['Bitcoin (Spot)', 'IBIT', 'iShares Bitcoin Trust', 'https://www.ishares.com/us/products/333011/ishares-bitcoin-trust'],
     ],
   },
@@ -123,7 +122,8 @@ const ETF_GROUPS = [
     rows: [
       ['Broad U.S. Aggregate', 'AGG', 'iShares Core U.S. Aggregate Bond ETF', 'https://www.ishares.com/us/products/239458/ishares-core-us-aggregate-bond-etf'],
       ['World Bond (Ex-US)', 'BNDX', 'Vanguard Total International Bond ETF', 'https://investor.vanguard.com/investment-products/etfs/profile/bndx'],
-      ['U.S. Government / Treasury', 'IEF', 'iShares 7-10 Year Treasury Bond ETF', 'https://www.ishares.com/us/products/239456/ishares-710-year-treasury-bond-etf'],
+      ['U.S. Government / Treasury (7-10Y)', 'IEF', 'iShares 7-10 Year Treasury Bond ETF', 'https://www.ishares.com/us/products/239456/ishares-710-year-treasury-bond-etf'],
+      ['U.S. Government / Treasury (20Y+)', 'TLT', 'iShares 20+ Year Treasury Bond ETF', 'https://www.ishares.com/us/products/239454/ishares-20-year-treasury-bond-etf'],
       ['Inv. Grade Corporate', 'LQD', 'iShares iBoxx $ Inv Grade Corporate Bond ETF', 'https://www.ishares.com/us/products/239566/ishares-iboxx-investment-grade-corporate-bond-etf'],
       ['High Yield Corporate', 'HYG', 'iShares iBoxx $ High Yield Corporate Bond ETF', 'https://www.ishares.com/us/products/239565/ishares-iboxx-high-yield-corporate-bond-etf'],
     ],
