@@ -3,10 +3,12 @@
    Common styles for all analytics pages
    ========================================== */
 
-:root{--bg:#0a0e17;--card:#111827;--border:#1e293b;--accent:#10b981;--accent-dim:rgba(16,185,129,0.15);--accent-glow:rgba(16,185,129,0.4);--red:#ef4444;--red-dim:rgba(239,68,68,0.15);--gold:#f59e0b;--gold-dim:rgba(245,158,11,0.15);--blue:#3b82f6;--blue-dim:rgba(59,130,246,0.15);--text1:#f1f5f9;--text2:#94a3b8;--text3:#64748b}
+/* Calm palette. Muted teal accent, desaturated data colors, warm neutrals.
+   Deliberately not a trading-terminal look: no saturated red/green, no glow. */
+:root{--bg:#12161a;--card:#1a2025;--border:#2a333a;--accent:#7fb3b6;--accent-dim:rgba(127,179,182,0.14);--accent-glow:rgba(127,179,182,0.22);--red:#c98a84;--red-dim:rgba(201,138,132,0.14);--gold:#c9a45f;--gold-dim:rgba(201,164,95,0.14);--blue:#8aa8c9;--blue-dim:rgba(138,168,201,0.14);--sage:#8fae95;--text1:#e9ecea;--text2:#a3aeb6;--text3:#a3aeb6;--radius:12px}
 
 *{box-sizing:border-box;margin:0;padding:0}
-body{min-height:100vh;background:var(--bg);color:var(--text1);font-family:'DM Sans',sans-serif}
+body{min-height:100vh;background:var(--bg);color:var(--text1);font-family:'DM Sans',sans-serif;font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}
 
 @keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
 .fade-up{animation:fadeUp .5s both}
@@ -14,16 +16,42 @@ body{min-height:100vh;background:var(--bg);color:var(--text1);font-family:'DM Sa
 .space{font-family:'Space Grotesk',sans-serif}
 
 /* Header */
-.header{border-bottom:1px solid var(--border);padding:20px 32px 16px;display:flex;flex-direction:column;align-items:center;text-align:center;position:relative}
-.header h1{font-size:24px;font-weight:700;padding-bottom:0}
+.header{border-bottom:1px solid var(--border);padding:28px 32px 24px;display:flex;flex-direction:column;align-items:center;text-align:center;position:relative}
+.header h1{font-size:26px;font-weight:600;padding-bottom:0;letter-spacing:-.01em}
 .back-home{position:absolute;top:20px;left:24px;font-size:12px;color:var(--text3);text-decoration:none;font-family:'JetBrains Mono',monospace;transition:color .2s;letter-spacing:.02em}
 .back-home:hover{color:var(--accent)}
 
 /* Container */
-.container{max-width:1400px;margin:0 auto;padding:32px 24px}
+.container{max-width:1400px;margin:0 auto;padding:40px 24px}
 
 /* Description */
-.page-desc{color:var(--text2);margin-bottom:24px;font-size:14px;max-width:750px}
+.page-desc{color:var(--text2);margin-bottom:32px;font-size:16px;line-height:1.7;max-width:680px}
+
+/* Collapsible methodology / details panel. Used to push formulas and
+   explanations below the data on the explainer-heavy pages, so the
+   visualization leads and the trust-building detail stays one click away. */
+.detail-panel{border:1px solid var(--border);border-radius:var(--radius);background:var(--card);margin:32px 0}
+.detail-panel>summary{cursor:pointer;list-style:none;padding:16px 20px;font-size:15px;font-weight:600;color:var(--text1);display:flex;align-items:center;gap:10px;user-select:none}
+.detail-panel>summary::-webkit-details-marker{display:none}
+.detail-panel>summary::after{content:'›';margin-left:auto;color:var(--text3);font-size:18px;transition:transform .15s}
+.detail-panel[open]>summary::after{transform:rotate(90deg)}
+.detail-panel>summary:hover{color:var(--accent)}
+.detail-panel .detail-body{padding:0 20px 20px;font-size:15px;line-height:1.75;color:var(--text2);border-top:1px solid var(--border);padding-top:18px}
+.detail-panel .detail-body h3{font-size:15px;color:var(--text1);margin:18px 0 6px;font-weight:600}
+.detail-panel .detail-body h3:first-child{margin-top:0}
+.detail-panel .detail-body ul{margin:8px 0 8px 20px}
+.detail-panel .detail-body li{margin-bottom:6px}
+.detail-panel .detail-body code{font-family:'JetBrains Mono',monospace;font-size:13px;background:var(--bg);padding:2px 6px;border-radius:4px}
+
+/* Summary stat cards -- calm, label above, number below, no border. */
+.stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:32px}
+.stat-box{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px}
+.stat-box .stat-label{font-size:13px;color:var(--text2);margin-bottom:6px}
+.stat-box .stat-value{font-size:26px;font-weight:600;color:var(--text1);font-family:'JetBrains Mono',monospace;letter-spacing:-.02em}
+.stat-box .stat-note{font-size:12px;color:var(--text3);margin-top:4px}
+
+/* Empty state shown before a simulation has been run, instead of cards of dashes. */
+.empty-state{text-align:center;padding:56px 24px;color:var(--text2);font-size:16px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:32px}
 
 /* Controls */
 .controls{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-bottom:24px}
@@ -32,8 +60,8 @@ body{min-height:100vh;background:var(--bg);color:var(--text1);font-family:'DM Sa
 .controls select:focus{border-color:var(--accent)}
 
 /* Cards grid */
-.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;margin-bottom:32px}
-.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px 20px;animation:fadeUp .5s both}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;margin-bottom:36px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px;animation:fadeUp .5s both}
 
 /* Table base */
 /* Single shared table style for every data table on the site (was 8 independent
@@ -43,7 +71,7 @@ body{min-height:100vh;background:var(--bg);color:var(--text1);font-family:'DM Sa
    idea as a classic dark-header financial data table) instead of a same-size
    plain header blending into the card background. Value coloring stays
    text-only via .growth-pos/.growth-neg/.growth-gold. */
-.data-table-wrap{overflow-x:auto;margin-bottom:32px;border-radius:16px;border:1px solid var(--border);background:var(--card)}
+.data-table-wrap{overflow-x:auto;margin-bottom:32px;border-radius:var(--radius);border:1px solid var(--border);background:var(--card)}
 .data-table{border-collapse:collapse;width:100%;font-family:'JetBrains Mono',monospace;font-size:14px}
 .data-table th{padding:12px 10px;text-align:center;color:var(--bg);font-weight:700;font-size:14px;text-transform:uppercase;letter-spacing:.04em;background:var(--text1);border-bottom:2px solid var(--border);position:sticky;top:0;z-index:10}
 .data-table th:first-child{text-align:left;padding-left:16px;min-width:90px;position:sticky;left:0;z-index:20;background:var(--text1)}
@@ -63,11 +91,11 @@ body{min-height:100vh;background:var(--bg);color:var(--text1);font-family:'DM Sa
 .growth-na{color:var(--text3);font-style:italic;font-weight:400}
 
 /* Chart container */
-.chart-wrap{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;margin-bottom:32px;position:relative}
+.chart-wrap{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:32px;position:relative}
 .chart-canvas{width:100%;height:400px}
 
 /* Tooltip */
-.cell-tooltip{position:fixed;pointer-events:none;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px;font-size:12px;line-height:1.7;color:var(--text1);box-shadow:0 8px 32px rgba(0,0,0,.6);z-index:1000;white-space:nowrap;opacity:0;transition:opacity .12s}
+.cell-tooltip{position:fixed;pointer-events:none;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;font-size:12px;line-height:1.7;color:var(--text1);box-shadow:0 4px 16px rgba(0,0,0,.28);z-index:1000;white-space:nowrap;opacity:0;transition:opacity .12s}
 .cell-tooltip.show{opacity:1}
 .cell-tooltip .tt-sym{font-weight:700;color:var(--accent);font-size:14px;font-family:'Space Grotesk',sans-serif}
 .cell-tooltip .tt-year{color:var(--text3);font-size:11px;margin-left:6px}
@@ -138,14 +166,18 @@ body{min-height:100vh;background:var(--bg);color:var(--text1);font-family:'DM Sa
    Activated via html[data-theme="light"]
    ========================================== */
 
-html[data-theme="light"]{--bg:#f8fafc;--card:#ffffff;--border:#e2e8f0;--accent:#059669;--accent-dim:rgba(5,150,105,0.1);--accent-glow:rgba(5,150,105,0.3);--red:#dc2626;--red-dim:rgba(220,38,38,0.1);--gold:#d97706;--gold-dim:rgba(217,119,6,0.1);--blue:#2563eb;--blue-dim:rgba(37,99,235,0.1);--text1:#0f172a;--text2:#475569;--text3:#475569}
+/* Light theme. Warm off-white page, white cards, charcoal text -- all
+   verified >=4.5:1 against both --bg and --card. --text2 sits at 5.98:1
+   rather than a lighter "soft gray" on purpose: lighter secondary text was
+   measurably hard to read on this site's white cards. */
+html[data-theme="light"]{--bg:#f7f8f6;--card:#ffffff;--border:#e4e7e3;--accent:#456f73;--accent-dim:rgba(69,111,115,0.09);--accent-glow:rgba(69,111,115,0.18);--red:#a8524b;--red-dim:rgba(168,82,75,0.08);--gold:#8a6a2f;--gold-dim:rgba(138,106,47,0.08);--blue:#4a6b8a;--blue-dim:rgba(74,107,138,0.08);--sage:#4f7a5c;--text1:#25313c;--text2:#52616e;--text3:#52616e}
 
 /* .data-table, rank/correlation values now built entirely from theme-aware CSS vars
    and shared .growth-pos/.growth-neg/.growth-gold text classes (all just
    var(--text1) now — no color-coding, no per-page light-theme overrides needed). */
 
 /* Tooltip — light mode */
-html[data-theme="light"] .cell-tooltip{box-shadow:0 8px 32px rgba(0,0,0,.15)}
+html[data-theme="light"] .cell-tooltip{box-shadow:0 4px 16px rgba(37,49,60,.10)}
 
 /* Scatter — light mode */
 html[data-theme="light"] .scatter-dot{border-color:#ffffff}
@@ -154,28 +186,29 @@ html[data-theme="light"] .scatter-dot:hover{box-shadow:0 0 12px rgba(5,150,105,0
 /* ==========================================
    THEME TOGGLE BUTTON
    ========================================== */
-.theme-toggle-btn{position:fixed;bottom:24px;right:24px;width:48px;height:48px;border-radius:50%;border:1px solid var(--border);background:var(--card);color:var(--text1);font-size:22px;cursor:pointer;z-index:900;box-shadow:0 4px 16px rgba(0,0,0,.3);transition:background .2s,border-color .2s,box-shadow .2s;display:flex;align-items:center;justify-content:center;padding:0;line-height:1}
-.theme-toggle-btn:hover{border-color:var(--accent);box-shadow:0 4px 20px var(--accent-glow)}
-html[data-theme="light"] .theme-toggle-btn{box-shadow:0 4px 16px rgba(0,0,0,.1)}
+.theme-toggle-btn{position:fixed;bottom:24px;right:24px;width:44px;height:44px;border-radius:50%;border:1px solid var(--border);background:var(--card);color:var(--text2);font-size:18px;cursor:pointer;z-index:900;box-shadow:0 2px 10px rgba(0,0,0,.2);transition:background .2s,border-color .2s,color .2s;display:flex;align-items:center;justify-content:center;padding:0;line-height:1}
+.theme-toggle-btn:hover{border-color:var(--accent);color:var(--accent)}
+html[data-theme="light"] .theme-toggle-btn{box-shadow:0 2px 10px rgba(37,49,60,.07)}
 
 /* ==========================================
    SITE NAV — top bar + category submenus (see site-nav.js for content)
    ========================================== */
-.site-nav.header{flex-direction:row;align-items:center;text-align:left;max-width:1400px;margin:0 auto;width:100%;padding:14px 24px;gap:20px;position:relative}
-.site-nav-brand{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:16px;color:var(--text1);text-decoration:none;white-space:nowrap}
-.site-nav-toggle{display:none;background:none;border:1px solid var(--border);border-radius:8px;color:var(--text1);font-size:16px;padding:6px 10px;cursor:pointer}
-.site-nav-menu{display:flex;align-items:center;gap:2px}
+.site-nav.header{flex-direction:row;align-items:center;text-align:left;max-width:1400px;margin:0 auto;width:100%;padding:16px 24px;gap:24px;position:relative}
+.site-nav-brand{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:16px;color:var(--text1);text-decoration:none;white-space:nowrap;letter-spacing:-.01em}
+.site-nav-toggle{display:none;background:none;border:1px solid var(--border);border-radius:8px;color:var(--text2);font-size:16px;padding:6px 10px;cursor:pointer}
+.site-nav-menu{display:flex;align-items:center;gap:4px}
+.site-nav-about{margin-left:auto}
 .site-nav-group{position:relative}
-.site-nav-top{font-family:'JetBrains Mono',monospace;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--text2);background:none;border:none;cursor:pointer;padding:8px 10px;border-radius:8px;text-decoration:none;display:inline-flex;align-items:center;gap:4px;transition:color .15s,background .15s}
+.site-nav-top{font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text2);background:none;border:none;cursor:pointer;padding:8px 12px;border-radius:8px;text-decoration:none;display:inline-flex;align-items:center;gap:5px;transition:color .15s,background .15s}
 .site-nav-top .chev{font-size:8px;color:var(--text3)}
 .site-nav-top:hover,.site-nav-group.open .site-nav-top,.site-nav-top.active{color:var(--text1);background:var(--bg)}
 .site-nav-home.active{color:var(--accent)}
-.site-nav-drop{position:absolute;top:100%;left:0;margin-top:4px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:6px;min-width:230px;box-shadow:0 8px 24px rgba(0,0,0,.16);display:none;flex-direction:column;z-index:200}
+.site-nav-drop{position:absolute;top:100%;left:0;margin-top:6px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:8px;min-width:240px;box-shadow:0 4px 20px rgba(37,49,60,.10);display:none;flex-direction:column;z-index:200}
 .site-nav-group:hover .site-nav-drop,.site-nav-group.open .site-nav-drop{display:flex}
-.site-nav-drop a{padding:8px 10px;border-radius:6px;font-size:13px;color:var(--text1);text-decoration:none}
+.site-nav-drop a{padding:9px 12px;border-radius:8px;font-size:14px;color:var(--text1);text-decoration:none}
 .site-nav-drop a:hover,.site-nav-drop a.active{background:var(--bg);color:var(--accent)}
 .site-nav-admin{margin-left:4px}
-.site-nav .pub-signin-link,.site-nav .pub-header-auth{position:static;margin-left:auto;order:2}
+.site-nav .pub-signin-link,.site-nav .pub-header-auth{position:static;margin-left:16px;order:2;font-family:'DM Sans',sans-serif;font-size:14px}
 .site-nav-toggle{order:3}
 @media(max-width:860px){
   .site-nav-toggle{display:block}

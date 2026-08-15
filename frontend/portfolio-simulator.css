@@ -55,15 +55,26 @@
 @media(max-width:900px){.grid-2,.grid-4,.grid-5,.grid-6{grid-template-columns:1fr}}
 
 /* Cards */
-.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:28px}
 .card h2{font-size:18px;font-weight:600;margin-bottom:24px}
 
+/* Three-step setup. Each step is its own card with a numbered heading, so the
+   page reads as a short sequence rather than one dense control panel. */
+.step-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:26px 28px;margin-bottom:20px}
+.step-head{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+.step-num{width:28px;height:28px;border-radius:50%;background:var(--accent-dim);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;flex-shrink:0}
+.step-head h2{font-size:19px;font-weight:600;margin:0;color:var(--text1);letter-spacing:-.01em}
+.alloc-foot{display:flex;align-items:center;gap:16px;margin-top:16px;flex-wrap:wrap}
+.alloc-foot .budget{flex:1;margin-bottom:0;min-width:200px}
+.alloc-actions{display:flex;gap:8px}
+
 /* Form elements */
-.label{font-size:12px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;font-family:'JetBrains Mono',monospace}
+.label{font-size:13px;color:var(--text2);margin-bottom:8px;font-weight:500}
 .btn-row{display:flex;gap:6px;flex-wrap:wrap}
 .btn{padding:10px 16px;border:1px solid var(--border);border-radius:10px;cursor:pointer;font-size:14px;font-weight:600;background:var(--bg);color:var(--text2);transition:all .2s;font-family:'JetBrains Mono',monospace}
 .btn.on{background:var(--accent);color:var(--bg);border-color:var(--accent)}.btn.f1{flex:1}
-.btn-sm{padding:6px 12px;border:none;border-radius:8px;cursor:pointer;font-size:11px;font-weight:600;font-family:'JetBrains Mono',monospace}
+.btn-sm{padding:7px 14px;border:1px solid var(--border);background:var(--bg);color:var(--text2);border-radius:8px;cursor:pointer;font-size:13px;font-weight:500;font-family:'DM Sans',sans-serif;transition:border-color .15s,color .15s}
+.btn-sm:hover{border-color:var(--accent);color:var(--accent)}
 .yr-btn{padding:6px 8px;font-size:11px;min-width:0;flex:none}
 .yr-select{padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text1);font-size:14px;font-family:'JetBrains Mono',monospace;outline:none;cursor:pointer;min-width:160px}.yr-select:focus{border-color:var(--accent)}.yr-select option{background:var(--card);color:var(--text1)}
 .inp{width:100%;margin-top:8px;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text1);font-size:16px;outline:none;font-family:'JetBrains Mono',monospace}.inp:focus{border-color:var(--accent)}
@@ -85,8 +96,8 @@
 .alloc-list{display:flex;flex-direction:column;gap:8px;max-height:400px;overflow-y:auto;padding-right:4px}
 .ar{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 16px;border-radius:12px;border:1px solid var(--border);background:var(--accent-dim)}
 .ar .sym{font-size:15px;font-weight:700;color:var(--accent)}.ar .nm{font-size:10px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:90px}
-.budget{padding:12px 16px;border-radius:10px;display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;font-family:'JetBrains Mono',monospace}
-.run{display:block;margin:0 auto 32px;padding:16px 48px;border:none;border-radius:14px;font-size:16px;font-weight:700;font-family:'Space Grotesk',sans-serif;letter-spacing:.02em;transition:all .3s;cursor:pointer}.run:disabled{cursor:not-allowed;opacity:.7}
+.budget{padding:12px 16px;border-radius:10px;display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;font-family:'DM Sans',sans-serif}
+.run{display:block;margin:8px auto 32px;padding:14px 40px;border:none;border-radius:10px;font-size:16px;font-weight:600;font-family:'DM Sans',sans-serif;transition:opacity .2s,background .2s;cursor:pointer}.run:disabled{cursor:not-allowed}
 
 /* Summary cards */
 .sc{position:relative;overflow:visible;padding:24px 28px;z-index:1}

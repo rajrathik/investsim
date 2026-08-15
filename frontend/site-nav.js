@@ -8,36 +8,46 @@
    automatically on next load.
    ========================================== */
 
+/* Page names here are the canonical ones -- every page <title>, <h1>, and
+   any link elsewhere should match these exactly. Names used to drift
+   between the directory and the pages themselves (Sector Returns Quilt vs
+   Sector Performance, $10K Growth Chart vs $10,000 Growth). */
 var SITE_NAV = [
   {
-    label: 'Simulators',
+    label: 'Portfolio',
     items: [
+      { label: 'Portfolio Simulator', href: '/portfolio-simulator.html' },
       { label: 'S&P 500 Historical Simulator', href: '/sp500-simulate.html' },
       { label: 'Monte Carlo Simulator', href: '/montecarlo.html' },
-      { label: 'Asset Allocation Simulator', href: '/portfolio-simulator.html' },
     ],
   },
   {
-    label: 'Historical analysis',
+    label: 'Market History',
     items: [
       { label: 'S&P 500 History', href: '/sp500-history.html' },
-      { label: 'S&P 500 Rolling Returns', href: '/sp500-rolling-returns.html' },
-      { label: 'Annual Market Extremes', href: '/extreme-years.html' },
-      { label: 'Monthly Market Extremes', href: '/extreme-months.html' },
-      { label: '5-Year Crash Periods & Recovery', href: '/bad-streaks.html' },
-      { label: '$10K Growth Chart', href: '/growth-chart.html' },
+      { label: 'Rolling Returns', href: '/sp500-rolling-returns.html' },
+      { label: 'Best & Worst Years', href: '/extreme-years.html' },
+      { label: 'Best & Worst Months', href: '/extreme-months.html' },
+      { label: 'Market Downturns & Recovery', href: '/bad-streaks.html' },
     ],
   },
   {
-    label: 'Sector tools',
+    label: 'Sectors',
     items: [
-      { label: 'Sector Returns Quilt', href: '/sector-performance.html' },
-      { label: 'Sector Rotation Rankings', href: '/sector-rotation.html' },
-      { label: 'Correlation Matrix', href: '/correlation.html' },
-      { label: 'Drawdown Analysis', href: '/drawdown.html' },
-      { label: 'Risk vs Return', href: '/risk-return.html' },
+      { label: 'Sector Performance', href: '/sector-performance.html' },
+      { label: 'Sector Rotation', href: '/sector-rotation.html' },
+      { label: 'Sector Correlation', href: '/correlation.html' },
       { label: 'Dividend Growth', href: '/dividend-growth.html' },
+      { label: '$10,000 Growth', href: '/growth-chart.html' },
+      { label: 'Risk vs Return', href: '/risk-return.html' },
+      { label: 'Drawdown Analysis', href: '/drawdown.html' },
       { label: 'ETF Directory (classic table)', href: '/etf-directory.html' },
+    ],
+  },
+  {
+    label: 'Learn',
+    items: [
+      { label: 'How the Simulator Works', href: '/simulator-guide.html' },
     ],
   },
   {
@@ -50,7 +60,7 @@ var SITE_NAV = [
   },
 ];
 
-var SITE_HOME = { label: 'ETF Directory', href: '/' };
+var SITE_HOME = { label: 'Browse ETFs', href: '/#etf-directory' };
 
 (function () {
   'use strict';
@@ -78,7 +88,7 @@ var SITE_HOME = { label: 'ETF Directory', href: '/' };
         }).join('') +
         '</div></div>';
     });
-    html += '<a href="' + SITE_HOME.href + '" class="site-nav-top site-nav-home' + (isActive(SITE_HOME.href) ? ' active' : '') + '">' + esc(SITE_HOME.label) + '</a>';
+    html += '<a href="' + SITE_HOME.href + '" class="site-nav-top site-nav-home">' + esc(SITE_HOME.label) + '</a>';
     html += '<a href="/admin.html" class="site-nav-top site-nav-admin" id="siteNavAdmin" style="display:none">Admin</a>';
     return html;
   }
@@ -88,8 +98,9 @@ var SITE_HOME = { label: 'ETF Directory', href: '/' };
     if (!root) return;
     root.className = 'header site-nav';
     root.innerHTML =
-      '<a href="/" class="site-nav-brand">Investment Tools</a>' +
+      '<a href="/" class="site-nav-brand">Clarity Capital Tools</a>' +
       '<nav class="site-nav-menu" id="siteNavMenu">' + renderMenu() + '</nav>' +
+      '<a href="https://claritycapitaltools.com/about.html" class="site-nav-top site-nav-about">About</a>' +
       '<button type="button" class="site-nav-toggle" id="siteNavToggle" aria-label="Menu">&#9776;</button>';
 
     /* Mobile hamburger */

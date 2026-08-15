@@ -29,7 +29,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="shared-analytics.css?v=6">
+<link rel="stylesheet" href="shared-analytics.css?v=8">
 <script src="theme-toggle.js?v=2"></script>
 <script src="https://cdn.auth0.com/js/auth0-spa-js/2.1/auth0-spa-js.production.js"></script>
 <style>
@@ -41,11 +41,11 @@
   .data-note a:hover{text-decoration:underline}
   .ctrl-section{margin-bottom:16px}
   .ctrl-section:last-of-type{margin-bottom:0}
-  .ctrl-section-label{font-size:10px;font-weight:600;color:var(--text3);font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px}
+  .ctrl-section-label{font-size:13px;font-weight:600;color:var(--text3);font-family:'DM Sans',sans-serif;margin-bottom:10px}
   .controls-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px 20px;align-items:end}
   .controls-grid-2{grid-template-columns:repeat(2,minmax(140px,200px))}
   .ctrl-group{display:flex;flex-direction:column;gap:6px}
-  .ctrl-label{font-size:10px;font-weight:600;color:var(--text2);font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.05em}
+  .ctrl-label{font-size:13px;font-weight:600;color:var(--text2);font-family:'DM Sans',sans-serif;}
   .ctrl-input{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;font-family:'JetBrains Mono',monospace;color:var(--text1);outline:none;width:100%;box-sizing:border-box;transition:border-color .15s}
   .ctrl-input:focus{border-color:var(--accent)}
   .ctrl-run{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px 28px;font-size:13px;font-weight:700;font-family:'Space Grotesk',sans-serif;cursor:pointer;transition:opacity .15s;white-space:nowrap;align-self:flex-end}
@@ -60,7 +60,7 @@
   /* ---- Summary stat strip ---- */
   .stat-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:24px}
   .stat-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 18px}
-  .stat-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;margin-bottom:6px}
+  .stat-label{font-size:13px;color:var(--text3);font-family:'DM Sans',sans-serif;margin-bottom:6px}
   .stat-value{font-size:22px;font-weight:700;color:var(--text1);font-family:'Space Grotesk',sans-serif;line-height:1.1}
   .stat-sub{font-size:10px;color:var(--text3);margin-top:3px;font-family:'JetBrains Mono',monospace}
 
@@ -120,7 +120,7 @@
 <div id="siteNavRoot"></div>
 
 <div class="header">
-  <h1 class="space"><span style="color:var(--accent)">◆</span> S&amp;P 500 Historical Simulator</h1>
+  <h1 class="space">S&amp;P 500 Historical Simulator</h1>
 </div>
 
 <div class="container">
@@ -254,7 +254,7 @@
 
 <script src="shared-analytics.js?v=1"></script>
 <script src="sp500-simulate.js?v=3"></script>
-<script src="site-nav.js?v=3"></script>
+<script src="site-nav.js?v=4"></script>
 <script src="shared-auth.js"></script>
 </body>
 </html>

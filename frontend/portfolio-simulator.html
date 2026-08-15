@@ -3,28 +3,28 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Asset Allocation Simulator</title>
+<title>Portfolio Simulator</title>
 <meta name="description" content="Backtest a dollar-cost averaging portfolio with real historical prices, dividends, and money market rates over 1-20 years.">
 <link rel="canonical" href="https://investsim.claritycapitaltools.com/portfolio-simulator.html">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Asset Allocation Simulator">
+<meta property="og:title" content="Portfolio Simulator">
 <meta property="og:description" content="Backtest a dollar-cost averaging portfolio with real historical prices, dividends, and money market rates over 1-20 years.">
 <meta property="og:url" content="https://investsim.claritycapitaltools.com/portfolio-simulator.html">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Asset Allocation Simulator">
+<meta name="twitter:title" content="Portfolio Simulator">
 <meta name="twitter:description" content="Backtest a dollar-cost averaging portfolio with real historical prices, dividends, and money market rates over 1-20 years.">
 
 <meta property="og:site_name" content="Investment Tools">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="shared-analytics.css?v=6">
-<link rel="stylesheet" href="portfolio-simulator.css">
+<link rel="stylesheet" href="shared-analytics.css?v=8">
+<link rel="stylesheet" href="portfolio-simulator.css?v=2">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "WebApplication",
-  "name": "Asset Allocation Simulator",
+  "name": "Portfolio Simulator",
   "url": "https://investsim.claritycapitaltools.com/portfolio-simulator.html",
   "description": "Backtest a dollar-cost averaging portfolio with real historical prices, dividends, and money market rates over 1-20 years.",
   "applicationCategory": "FinanceApplication",
@@ -44,37 +44,59 @@
 <div id="siteNavRoot"></div>
 
 <div class="header" id="mainHeader">
-  <h1 class="space"><span style="color:var(--accent)">◆</span> Asset Allocation Simulator</h1>
-  <div class="header-sub"><a href="/simulator-guide.html">? How It Works</a></div>
+  <h1 class="space">Portfolio Simulator</h1>
+  <div class="header-sub"><a href="/simulator-guide.html">How it works</a></div>
 </div>
 <div class="container" id="mainContainer">
-  <div class="grid-2">
-    <div class="card fade-up">
-      <h2 class="space">💰 Investment Parameters</h2>
-      <div style="margin-bottom:24px"><div class="label">Monthly Investment</div><div class="btn-row" id="amtBtns"></div><input type="number" id="amt" class="inp" value="1000" min="1" placeholder="Or enter custom amount..."></div>
-      <div style="margin-bottom:24px"><div class="label">Annual Deposit Growth</div><input type="number" id="growthInp" class="inp" value="0" min="0" step="50" placeholder="$ increase per year (0 = flat)"><div style="font-size:11px;color:var(--text3);margin-top:4px;font-family:'JetBrains Mono',monospace">Year 1: base amount, Year 2: +growth, Year 3: +2&times;growth...</div></div>
-      <div><div class="label">Investment Period (Years)</div><div class="btn-row" id="yrBtns"></div><input type="number" id="yrInp" class="inp" value="10" min="1" max="20" placeholder="Or enter years..."></div>
-    </div>
-    <div class="card fade-up" style="animation-delay:.1s">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-        <h2 class="space" style="margin:0">📊 Select &amp; Allocate</h2>
-        <div style="display:flex;gap:8px"><button class="btn-sm" style="background:var(--blue-dim);color:var(--blue)" onclick="eqSplit()">Equal Split</button><button class="btn-sm" style="background:var(--red-dim);color:var(--red)" onclick="resetA()">Reset All</button></div>
-      </div>
-      <div class="search-wrap"><input type="text" id="searchInp" class="search-inp" placeholder="🔍 Click to browse tickers or type to search..." autocomplete="off"><div id="dropdown" class="dropdown"></div></div>
-      <div id="chips" class="chips"></div>
+  <p class="page-desc">
+    See how an investment mix would have performed against real historical prices, dividends and interest rates.
+  </p>
+
+  <!-- Three steps, stacked. Everything not needed on a first run lives under
+       Advanced options so the initial screen stays short. -->
+  <div class="step-card fade-up">
+    <div class="step-head"><span class="step-num">1</span><h2>How much will you invest?</h2></div>
+    <div class="label">Per month</div>
+    <div class="btn-row" id="amtBtns"></div>
+    <input type="number" id="amt" class="inp" value="1000" min="1" placeholder="Or enter a custom amount">
+  </div>
+
+  <div class="step-card fade-up" style="animation-delay:.06s">
+    <div class="step-head"><span class="step-num">2</span><h2>How long?</h2></div>
+    <div class="label">Years</div>
+    <div class="btn-row" id="yrBtns"></div>
+    <input type="number" id="yrInp" class="inp" value="10" min="1" max="20" placeholder="Or enter a number of years">
+  </div>
+
+  <div class="step-card fade-up" style="animation-delay:.12s">
+    <div class="step-head"><span class="step-num">3</span><h2>What would you like to own?</h2></div>
+    <div class="search-wrap"><input type="text" id="searchInp" class="search-inp" placeholder="Search or browse tickers" autocomplete="off"><div id="dropdown" class="dropdown"></div></div>
+    <div id="chips" class="chips"></div>
+    <div id="allocList" class="alloc-list"></div>
+    <div class="alloc-foot">
       <div id="budgetBar" class="budget"></div>
-      <div id="allocList" class="alloc-list"></div>
+      <div class="alloc-actions"><button class="btn-sm" onclick="eqSplit()">Equal split</button><button class="btn-sm" onclick="resetA()">Reset</button></div>
     </div>
   </div>
-  <button id="runBtn" class="run" onclick="simulate()" disabled>▶ Run Simulation</button>
+
+  <details class="detail-panel" id="advPanel">
+    <summary>Advanced options</summary>
+    <div class="detail-body">
+      <div class="label">Annual deposit growth</div>
+      <input type="number" id="growthInp" class="inp" value="0" min="0" step="50" placeholder="$ increase per year (0 = flat)" style="max-width:320px">
+      <p style="margin-top:8px;font-size:14px">Increases your monthly contribution each year. Year 1 uses the base amount, year 2 adds the growth figure, year 3 adds twice it, and so on. Leave at 0 for a flat contribution.</p>
+    </div>
+  </details>
+
+  <button id="runBtn" class="run" onclick="simulate()" disabled>Run historical simulation</button>
   <div id="err" class="err"></div>
   <div id="results"></div>
 </div>
 <div id="modalOverlay" class="modal-overlay" onclick="if(event.target===this)closeModal()">
   <div class="modal"><h3 class="space"><span id="modalTitle">Portfolio Breakdown</span><button class="close-btn" onclick="closeModal()">✕</button></h3><div id="modalSub" class="modal-sub"></div><div id="modalBody"></div></div>
 </div>
-<script src="portfolio-simulator.js?v=13"></script>
-<script src="site-nav.js?v=3"></script>
+<script src="portfolio-simulator.js?v=14"></script>
+<script src="site-nav.js?v=4"></script>
 <script src="shared-auth.js"></script>
 <script>try{navigator.sendBeacon('/api/track/pageview',JSON.stringify({page:location.pathname,referrer:document.referrer}))}catch(e){}</script>
 </body>

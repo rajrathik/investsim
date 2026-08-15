@@ -3,23 +3,23 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Worst 5-Year Crash Periods — S&amp;P 500 Recovery Analysis</title>
-  <meta name="description" content="The worst 5-year crash periods in S&P 500 history since 1871, and what the market returned in the 2 years that followed each crash." />
+  <title>Market Downturns &amp; Recovery</title>
+  <meta name="description" content="The most difficult five-year periods in market history since 1871, and the returns that followed each one." />
   <link rel="canonical" href="https://investsim.claritycapitaltools.com/bad-streaks.html" />
   <meta property="og:type" content="website" />
-  <meta property="og:title" content="Worst 5-Year Crash Periods — S&amp;P 500" />
-  <meta property="og:description" content="The worst 5-year stretches in S&P 500 history and what happened in the 2 years of recovery that followed." />
+  <meta property="og:title" content="Market Downturns &amp; Recovery — S&amp;P 500" />
+  <meta property="og:description" content="The most difficult five-year periods in market history, and the returns that followed." />
   <meta property="og:url" content="https://investsim.claritycapitaltools.com/bad-streaks.html" />
   <meta property="og:site_name" content="Investment Tools" />
   <meta name="twitter:card" content="summary" />
-  <meta name="twitter:title" content="Worst 5-Year Crash Periods — S&amp;P 500" />
-  <meta name="twitter:description" content="The worst 5-year stretches in S&P 500 history since 1871 and what the market did in the 2 years that followed." />
+  <meta name="twitter:title" content="Market Downturns &amp; Recovery — S&amp;P 500" />
+  <meta name="twitter:description" content="The most difficult five-year periods in market history, and the returns that followed." />
   <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "WebApplication",
-  "name": "Worst 5-Year Crash Periods & Recovery",
-  "description": "The worst 5-year crash periods in S&P 500 history since 1871, and what the market returned in the 2 years that followed each crash.",
+  "name": "Worst Market Downturns &amp; Recovery",
+  "description": "The most difficult five-year periods in market history since 1871, and the returns that followed each one.",
   "url": "https://investsim.claritycapitaltools.com/bad-streaks.html",
   "applicationCategory": "FinanceApplication",
   "isPartOf": {"@type": "WebSite", "name": "Investment Tools", "url": "https://investsim.claritycapitaltools.com/"}
@@ -28,7 +28,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="shared-analytics.css?v=6" />
+  <link rel="stylesheet" href="shared-analytics.css?v=8" />
   <script src="theme-toggle.js?v=2"></script>
   <script src="https://cdn.auth0.com/js/auth0-spa-js/2.1/auth0-spa-js.production.js"></script>
   <style>
@@ -54,7 +54,7 @@
     /* No color-coding by stat type -- plain card, matches the reference sites' restraint. */
 
     .sc-icon { font-size: 1.25rem; line-height: 1; margin-bottom: .15rem; }
-    .sc-lbl  { font-size: .68rem; font-weight: 600; text-transform: uppercase; letter-spacing: .07em; color: var(--text3); }
+    .sc-lbl  { font-size:13px; font-weight: 600;   color: var(--text3); }
     .sc-val  { font-size: 1.35rem; font-weight: 700; line-height: 1.1; }
     .sc-sub  { font-size: .74rem; color: var(--text3); margin-top: .1rem; }
 
@@ -88,7 +88,7 @@
       color: var(--text1);
     }
     .panel-title { font-size: 1rem; font-weight: 700; }
-    .panel-sub   { font-size: .72rem; color: var(--text3); font-family: 'JetBrains Mono', monospace; margin-top: .15rem; }
+    .panel-sub   { font-size:13px; color: var(--text3); font-family: 'DM Sans',sans-serif; margin-top: .15rem; }
 
     /* ── table ── */
     /* Overrides on top of the shared .data-table: nested inside .streaks-panel
@@ -138,10 +138,10 @@
     /* ── misc ── */
     .chip-row  { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
     .chip-label {
-      font-size: .72rem;
+      font-size:13px;
       font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: .06em;
+      
+      
       color: var(--text3);
     }
     .context-note {
@@ -161,18 +161,20 @@
 
   <div class="header">
     <div style="display:flex;align-items:center;gap:.5rem;">
-      <h1>📉 5-Year Crash Periods &amp; Recovery</h1>
+      <h1>Market Downturns &amp; Recovery</h1>
     </div>
   </div>
 
   <div class="container">
 
+    <p class="page-desc">Explore the most difficult five-year periods in market history &mdash; and the returns that followed.</p>
+
     <!-- controls -->
     <div class="controls-card">
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem;">
         <div>
-          <div style="font-size:.88rem;font-weight:600;margin-bottom:.15rem;">Worst 5-Year Crash Periods &amp; What Followed</div>
-          <div style="font-size:.74rem;color:var(--text3);">Non-overlapping 5-year windows ranked by total loss · Right columns show the 2 calendar years that followed each crash</div>
+          <div style="font-size:.88rem;font-weight:600;margin-bottom:.15rem;">Market downturns and what followed</div>
+          <div style="font-size:.74rem;color:var(--text3);">Non-overlapping 5-year windows ranked by total loss · Right columns show the two calendar years that followed each period</div>
         </div>
         <div class="chip-row">
           <span class="chip-label">Show</span>
@@ -198,7 +200,7 @@
         <div class="panel-head">
           <div class="panel-icon">▼</div>
           <div>
-            <div class="panel-title">Worst 5-Year Periods</div>
+            <div class="panel-title">Most difficult five-year periods</div>
             <div class="panel-sub" id="panelSub"></div>
           </div>
         </div>
@@ -239,7 +241,7 @@
 
   <script src="shared-analytics.js?v=1"></script>
   <script src="bad-streaks.js?v=1"></script>
-  <script src="site-nav.js?v=3"></script>
+  <script src="site-nav.js?v=4"></script>
   <script src="shared-auth.js"></script>
 </body>
 </html>

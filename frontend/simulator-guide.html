@@ -3,22 +3,22 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Simulator Guide — Asset Allocation Simulator</title>
-<meta name="description" content="How the Asset Allocation Simulator works: DCA investing, worst-case pricing, dividend tracking, and money market comparison explained.">
+<title>How the Simulator Works — Portfolio Simulator</title>
+<meta name="description" content="How the Portfolio Simulator works: DCA investing, worst-case pricing, dividend tracking, and money market comparison explained.">
 <link rel="canonical" href="https://investsim.claritycapitaltools.com/simulator-guide.html">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Simulator Guide — Asset Allocation Simulator">
-<meta property="og:description" content="How the Asset Allocation Simulator works: DCA investing, worst-case pricing, dividend tracking, and money market comparison explained.">
+<meta property="og:title" content="How the Simulator Works — Portfolio Simulator">
+<meta property="og:description" content="How the Portfolio Simulator works: DCA investing, worst-case pricing, dividend tracking, and money market comparison explained.">
 <meta property="og:url" content="https://investsim.claritycapitaltools.com/simulator-guide.html">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Simulator Guide — Asset Allocation Simulator">
-<meta name="twitter:description" content="How the Asset Allocation Simulator works: DCA investing, worst-case pricing, dividend tracking, and money market comparison explained.">
+<meta name="twitter:title" content="How the Simulator Works — Portfolio Simulator">
+<meta name="twitter:description" content="How the Portfolio Simulator works: DCA investing, worst-case pricing, dividend tracking, and money market comparison explained.">
 
 <meta property="og:site_name" content="Investment Tools">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="shared-analytics.css?v=6">
+<link rel="stylesheet" href="shared-analytics.css?v=8">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -36,15 +36,19 @@
 /* Page-specific styles */
 .container{max-width:860px;padding:40px 24px 60px}
 .guide-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:12px}
-.guide-card h4{font-size:12px;font-weight:600;color:var(--accent);font-family:'JetBrains Mono',monospace;margin-bottom:12px;text-transform:uppercase;letter-spacing:.06em}
+.guide-card h4{font-size:13px;font-weight:600;color:var(--accent);font-family:'DM Sans',sans-serif;margin-bottom:12px;}
 .guide-list{list-style:none;padding:0}
 .guide-list li{font-size:14px;color:var(--text2);line-height:1.8;padding-left:16px;position:relative}
 .guide-list li::before{content:"›";position:absolute;left:0;color:var(--accent)}
 .guide-list li strong{color:var(--text1)}
-.guide-list-num{list-style:none;padding:0}
-.guide-list-num li{font-size:14px;color:var(--text2);line-height:1.8;padding-left:24px;position:relative;margin-bottom:4px}
-.guide-list-num li .num{position:absolute;left:0;color:var(--accent);font-weight:700;font-family:'JetBrains Mono',monospace}
-.guide-list-num li strong{color:var(--text1)}
+/* Four-step overview. Numbers come from real markup, not a hand-typed
+   "1." inside an <ol> -- that produced a duplicated "1. 1." for anything
+   reading the text rather than the rendered page. */
+.guide-steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px;margin-bottom:28px}
+.guide-step{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;display:flex;gap:12px;align-items:flex-start}
+.gs-num{width:26px;height:26px;border-radius:50%;background:var(--accent-dim);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;flex-shrink:0}
+.guide-step strong{display:block;font-size:15px;color:var(--text1);margin-bottom:4px;font-weight:600}
+.guide-step p{font-size:14px;color:var(--text2);line-height:1.6}
 .example-box{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:16px;font-size:13px;color:var(--text2);line-height:1.9;font-family:'JetBrains Mono',monospace}
 .example-box strong{color:var(--text1)}
 .launch-bar{margin-top:36px;text-align:center}
@@ -59,73 +63,78 @@
 <div id="siteNavRoot"></div>
 
 <div class="header">
-  <h1 class="space"><span style="color:var(--accent)">◆</span> Simulator Guide</h1>
+  <h1 class="space">How the Simulator Works</h1>
 </div>
 
 <div class="container">
 
-  <div class="page-title">Asset Allocation Simulator</div>
-  <div class="page-sub">How it works — read this before your first run, or jump straight in.</div>
+  <p class="page-desc">The Portfolio Simulator invests a monthly amount across the mix you choose, using real historical prices, and shows what would have happened.</p>
+
+  <!-- Four steps at a glance. Everything mechanical now lives in the
+       collapsible methodology below, so this page reassures first and
+       documents second. -->
+  <div class="guide-steps">
+    <div class="guide-step"><span class="gs-num">1</span><div><strong>Choose an amount</strong><p>How much per month, and for how many years.</p></div></div>
+    <div class="guide-step"><span class="gs-num">2</span><div><strong>Build your mix</strong><p>Pick tickers and set what share of each purchase goes to each one.</p></div></div>
+    <div class="guide-step"><span class="gs-num">3</span><div><strong>Run against history</strong><p>The simulation replays real monthly prices and dividends.</p></div></div>
+    <div class="guide-step"><span class="gs-num">4</span><div><strong>Explore the result</strong><p>Summary figures, charts, a month-by-month table, and tax impact.</p></div></div>
+  </div>
 
   <div class="guide-card">
-    <h4>What It Does</h4>
+    <h4>A few things worth knowing</h4>
     <ul class="guide-list">
-      <li>Invests a <strong>monthly amount</strong> (optionally growing each year) across your chosen asset mix</li>
-      <li>Uses <strong>actual historical prices</strong> from Yahoo Finance — not projections or averages</li>
-      <li>Buys <strong>whole shares only</strong> at the monthly high price (conservative, worst-case entry)</li>
-      <li>Unspent cash <strong>accumulates per-ticker</strong> in its own bucket until enough to buy the next whole share</li>
-      <li>Dividends are <strong>tracked as cash received</strong> — not reinvested back into equities</li>
-      <li>Cash dividends earn <strong>money market interest</strong> at the historical FRED federal funds rate</li>
+      <li>We deliberately use conservative assumptions &mdash; including buying at each month's <strong>high</strong> price rather than an average.</li>
+      <li>Prices are <strong>actual historical prices</strong>, not projections or averages.</li>
+      <li>Dividends are treated as <strong>cash received</strong>, not reinvested.</li>
+      <li>Results are compared against a <strong>money market benchmark</strong>, so you can see whether the risk paid off.</li>
     </ul>
   </div>
 
-  <div class="guide-card">
-    <h4>Steps to Run</h4>
-    <ol class="guide-list-num">
-      <li><span class="num">1.</span><strong>Set monthly amount</strong>, optional annual deposit growth, and investment period (1–20 years)</li>
-      <li><span class="num">2.</span><strong>Pick tickers</strong> from the dropdown — search by symbol or name, or browse the list</li>
-      <li><span class="num">3.</span><strong>Set allocation %</strong> using sliders — total must equal 100%</li>
-      <li><span class="num">4.</span>Click <strong>▶ Run Simulation</strong> to see results</li>
-    </ol>
-  </div>
+  <details class="detail-panel">
+    <summary>See detailed methodology</summary>
+    <div class="detail-body">
+      <h3>How purchases are made</h3>
+      <ul>
+        <li>Buys <strong>whole shares only</strong>, at the monthly high price &mdash; a deliberately conservative entry assumption.</li>
+        <li>Unspent cash <strong>accumulates per ticker</strong> in its own bucket until there is enough to buy the next whole share.</li>
+        <li>If an asset wasn't tradeable in a given month, its share of that month's budget <strong>flows to the other assets</strong> and resumes the following month.</li>
+      </ul>
 
-  <div class="guide-card">
-    <h4>What You'll See</h4>
-    <ul class="guide-list">
-      <li><strong>6 summary tiles</strong> — Total Invested, Equity Value, Dividends Received, Cash Accrual, Portfolio Balance, MMF Benchmark — all clickable for drill-down</li>
-      <li><strong>Interactive charts</strong> — hover for month-by-month growth and dividend details</li>
-      <li><strong>Monthly breakdown table</strong> — click any highlighted cell for per-ticker detail</li>
-      <li><strong>Tax impact section</strong> — adjust your tax rate to see yearly liability on dividends and interest</li>
-      <li><strong>Annual returns</strong> — pre-tax performance per calendar year with clickable detail modals</li>
-    </ul>
-  </div>
+      <h3>Share accumulation &mdash; worked example</h3>
+      <p><strong>Setup:</strong> $1,000/month &mdash; 60% Holding A ($250/share), 40% Holding B ($800/share).</p>
+      <ul>
+        <li><strong>Month 1:</strong> $600 to A &rarr; buys 2 shares ($500), carries $100. $400 to B &mdash; not enough for a share yet.</li>
+        <li><strong>Month 2:</strong> $700 available for A &rarr; buys 2 shares, carries $200. $800 for B &rarr; buys 1 share, carries $0.</li>
+      </ul>
 
-  <div class="guide-card">
-    <h4>Key Things to Know</h4>
-    <ul class="guide-list">
-      <li>If an asset wasn't tradeable in a given month, its budget share <strong>automatically flows to the other assets</strong> that month</li>
-      <li>The <strong>MMF column</strong> shows what the same total invested would have earned in a money market fund — a risk-free benchmark</li>
-      <li>The <strong>Annual Deposit Growth</strong> field adds a flat dollar amount each year: Year 1 = base, Year 2 = base + growth, Year 3 = base + 2× growth, etc.</li>
-    </ul>
-  </div>
+      <h3>Dividends and interest</h3>
+      <ul>
+        <li>Dividends are <strong>tracked as cash received</strong> and are not reinvested back into equities.</li>
+        <li>That cash earns <strong>money market interest</strong> at the historical FRED federal funds rate, compounded monthly.</li>
+        <li>The <strong>MMF benchmark</strong> shows what the same total invested would have earned in a money market fund alone.</li>
+      </ul>
 
-  <div class="guide-card">
-    <h4>Share Accumulation — Example</h4>
-    <div class="example-box">
-      <strong>Setup:</strong> $1,000/month — 60% Holding A ($250/share), 40% Holding B ($800/share)<br><br>
-      <strong>Month 1:</strong> $600 → A bucket → buy 2 shares ($500), carry $100 &nbsp;|&nbsp; $400 → B bucket, not enough yet<br>
-      <strong>Month 2:</strong> $700 for A → buy 2 shares, carry $200 &nbsp;|&nbsp; $800 for B → buy 1 share, carry $0<br><br>
-      <strong>Unavailable ticker:</strong> its budget shifts to the others that month, resumes next month.
+      <h3>Deposit growth</h3>
+      <p>The optional annual deposit growth field adds a flat dollar amount each year: year 1 uses the base amount, year 2 adds the growth figure, year 3 adds twice it, and so on.</p>
+
+      <h3>What the results show</h3>
+      <ul>
+        <li><strong>Six summary figures</strong> &mdash; total invested, equity value, dividends received, cash accrual, portfolio balance, and the money market benchmark. Each is clickable for detail.</li>
+        <li><strong>Charts</strong> &mdash; hover for month-by-month growth and dividend detail.</li>
+        <li><strong>Monthly breakdown table</strong> &mdash; click any highlighted cell for per-ticker detail.</li>
+        <li><strong>Tax impact</strong> &mdash; adjust your tax rate to see yearly liability on dividends and interest.</li>
+        <li><strong>Annual returns</strong> &mdash; pre-tax performance per calendar year.</li>
+      </ul>
     </div>
-  </div>
+  </details>
 
   <div class="launch-bar">
-    <a href="/portfolio-simulator.html" class="launch-btn">▶ Launch Simulator</a>
+    <a href="/portfolio-simulator.html" class="launch-btn">Open the Portfolio Simulator</a>
   </div>
 
 </div>
 
-<script src="site-nav.js?v=3"></script>
+<script src="site-nav.js?v=4"></script>
 <script src="shared-auth.js"></script>
 <script>try{navigator.sendBeacon('/api/track/pageview',JSON.stringify({page:location.pathname,referrer:document.referrer}))}catch(e){}</script>
 </body>

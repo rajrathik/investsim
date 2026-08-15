@@ -96,16 +96,17 @@ function renderChips(){$('chips').innerHTML=selected.map(s=>{const t=getTk(s);re
 
 function updBudget(){
   const t=tot(),bar=$('budgetBar'),btn=$('runBtn');let bg,c,txt;
-  if(!selected.length){bg='var(--border)';c='var(--text3)';txt='Select tickers above to begin'}
-  else if(t===100){bg='var(--accent-dim)';c='var(--accent)';txt='✓ Fully allocated'}
-  else if(t>100){bg='var(--red-dim)';c='var(--red)';txt='Over allocated! Reduce to 100%'}
-  else{bg='var(--gold-dim)';c='var(--gold)';txt=(100-t)+'% remaining'}
-  bar.style.background=bg;bar.innerHTML='<span style="font-size:13px;font-weight:600;color:'+c+'">'+txt+'</span><span style="font-size:22px;font-weight:700;color:'+(t===100?'var(--accent)':t>100?'var(--red)':'var(--text1)')+'">'+t+'%</span>';
+  if(!selected.length){bg='var(--bg)';c='var(--text2)';txt='Choose one or more tickers to begin'}
+  else if(t===100){bg='var(--accent-dim)';c='var(--accent)';txt='Allocated: 100% ✓'}
+  else if(t>100){bg='var(--red-dim)';c='var(--red)';txt='Over allocated — reduce to 100%'}
+  else{bg='var(--gold-dim)';c='var(--gold)';txt='Allocated: '+t+'% · '+(100-t)+'% remaining'}
+  bar.style.background=bg;bar.innerHTML='<span style="font-size:14px;font-weight:500;color:'+c+'">'+txt+'</span>';
   const ok=t===100&&selected.length>0&&selAmt>0;btn.disabled=!ok;
-  btn.style.background=ok?'linear-gradient(135deg,var(--accent),#059669)':'var(--border)';btn.style.color=ok?'#fff':'var(--text3)';btn.style.boxShadow=ok?'0 4px 24px var(--accent-glow)':'none';
+  /* Flat fill, no gradient or glow. */
+  btn.style.background=ok?'var(--accent)':'var(--border)';btn.style.color=ok?'#fff':'var(--text3)';
 }
 function renderAlloc(){
-  if(!selected.length){$('allocList').innerHTML='<div class="empty-state"><div class="em-icon">🎯</div>Click the search box above to browse<br>all available tickers and select them</div>';return}
+  if(!selected.length){$('allocList').innerHTML='<div class="empty-state">Use the search box above to browse and select tickers.</div>';return}
   $('allocList').innerHTML=selected.map(s=>{const t=getTk(s),p=alloc[s]||0;return'<div class="ar"><div style="min-width:90px"><div class="sym">'+s+'</div><div class="nm">'+(t?.name||'')+'</div></div><div class="stepper"><button class="step-btn step-minus'+(p<=0?' disabled':'')+'" onclick="stepA(\''+s+'\',-5)"'+(p<=0?' disabled':'')+'>−</button><span class="step-val">'+p+'%</span><button class="step-btn step-plus'+(p>=100?' disabled':'')+'" onclick="stepA(\''+s+'\',5)"'+(p>=100?' disabled':'')+'>+</button></div></div>'}).join('');
 }
 function stepA(s,delta){const cur=alloc[s]||0;const nv=Math.max(0,Math.min(100,cur+delta));alloc[s]=nv;renderAlloc();updBudget()}
@@ -429,7 +430,9 @@ function showResults(r){
     {l:'Portfolio Balance',v:'$'+fmtW(r.pv+r.divBal),s:((((r.pv+r.divBal)-r.tInv)/r.tInv)*100).toFixed(1)+'% total return',c:'var(--blue)',i:'∑',ck:' clickable-val" onclick="showTotalSummary()" title="Click for breakdown',t:'portfolio'},
     {l:'MMF Value',v:'$'+fmtW(r.mmOnlyBal),s:'+'+mmOnlyRetP+'% return',c:'var(--text2)',i:'⊞',ck:' clickable-val" onclick="showMMOnlySummary()" title="Click for details',t:'mmf'},
   ];
-  let h='<div class="grid-6">';cards.forEach((c,i)=>h+='<div class="card sc fade-up" style="animation-delay:'+i*.1+'s"><div class="icon">'+c.i+'</div><div class="sl">'+c.l+'<span class="tile-info" onclick="event.stopPropagation()">?<span class="tile-tooltip">'+TILE_INFO[c.t]+'</span></span></div><div class="sv'+c.ck+'" style="color:'+c.c+'">'+c.v+'</div><div class="ss">'+c.s+'</div></div>');h+='</div>';
+  /* No decorative glyph watermark on the stat cards -- the label and value
+     carry the meaning on their own. */
+  let h='<div class="grid-6">';cards.forEach((c,i)=>h+='<div class="card sc fade-up" style="animation-delay:'+i*.1+'s"><div class="sl">'+c.l+'<span class="tile-info" onclick="event.stopPropagation()">?<span class="tile-tooltip">'+TILE_INFO[c.t]+'</span></span></div><div class="sv'+c.ck+'" style="color:'+c.c+'">'+c.v+'</div><div class="ss">'+c.s+'</div></div>');h+='</div>';
   /* Save simulation button — only when signed in */
   if(window._pubIsSignedIn&&window._pubIsSignedIn()){h+='<div class="fade-up" style="animation-delay:.15s;text-align:right;margin-bottom:12px"><button id="saveSimBtn" class="btn-sm" style="background:var(--accent-dim);color:var(--accent);padding:10px 24px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid rgba(16,185,129,.25);font-family:JetBrains Mono,monospace" onclick="saveSimulation()">💾 Save Simulation</button><span id="saveSimMsg" style="margin-left:12px;font-size:13px;color:var(--text3)"></span></div>';}
   h+='<div class="card fade-up" style="animation-delay:.2s;padding:24px;margin-bottom:24px"><h3 class="space" style="font-size:16px;font-weight:600;margin-bottom:16px">Your Allocation</h3><div class="tags">';r.active.forEach(([s,p])=>h+='<div class="tag">'+s+' '+p+'%</div>');h+='</div></div>';

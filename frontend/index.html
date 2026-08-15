@@ -3,54 +3,92 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Investment Tools — ETF Directory & Market Analytics</title>
-<meta name="description" content="A curated ETF directory with live prices and 10-year history, plus free investment tools: historical simulators, sector analytics, correlation matrix, drawdown analysis, and more.">
+<title>Explore investing through real market history</title>
+<meta name="description" content="Test a portfolio, study past market downturns, and understand risk and diversification using real historical data rather than forecasts.">
 <link rel="canonical" href="https://investsim.claritycapitaltools.com/">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Investment Tools — ETF Directory & Market Analytics">
-<meta property="og:description" content="A curated ETF directory with live prices and 10-year history, plus free investment tools: historical simulators, sector analytics, correlation matrix, drawdown analysis, and more.">
+<meta property="og:title" content="Explore investing through real market history">
+<meta property="og:description" content="Test a portfolio, study past market downturns, and understand risk and diversification using real historical data rather than forecasts.">
 <meta property="og:url" content="https://investsim.claritycapitaltools.com/">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Investment Tools — ETF Directory & Market Analytics">
-<meta name="twitter:description" content="A curated ETF directory with live prices and 10-year history, plus historical simulators and sector analytics tools.">
-<meta property="og:site_name" content="Investment Tools">
+<meta name="twitter:title" content="Explore investing through real market history">
+<meta name="twitter:description" content="Test a portfolio, study past market downturns, and understand risk and diversification using real historical data.">
+<meta property="og:site_name" content="Clarity Capital Tools">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="shared-analytics.css?v=6">
+<link rel="stylesheet" href="shared-analytics.css?v=8">
 <link rel="stylesheet" href="etf-directory.css?v=1">
-<link rel="stylesheet" href="etf-home.css?v=1">
+<link rel="stylesheet" href="etf-home.css?v=2">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "WebSite",
-  "name": "Investment Tools",
+  "name": "Clarity Capital Tools",
   "url": "https://investsim.claritycapitaltools.com/",
-  "description": "A curated ETF directory with live prices and history, plus free investment tools: historical simulators, sector analytics, correlation matrix, drawdown analysis, and more.",
-  "potentialAction": {
-    "@type": "SearchAction",
-    "target": "https://investsim.claritycapitaltools.com/?q={search_term_string}",
-    "query-input": "required name=search_term_string"
-  }
+  "description": "Test a portfolio, study past market downturns, and understand risk and diversification using real historical data rather than forecasts."
 }
 </script>
 <script src="theme-toggle.js?v=2"></script>
 <script src="https://cdn.auth0.com/js/auth0-spa-js/2.1/auth0-spa-js.production.js"></script>
 <style>
-.landing-intro{max-width:750px;margin:0 auto 4px}
-.landing-intro p{color:var(--text2);font-size:14px;line-height:1.7}
+/* Landing page only. Deliberately quiet: no gradients, no shadows, generous
+   whitespace, one accent. The tools are introduced before any data appears. */
+.hero{max-width:660px;margin:0 auto;padding:64px 24px 8px;text-align:center}
+.hero h2{font-size:34px;font-weight:600;letter-spacing:-.02em;line-height:1.25;margin-bottom:16px;color:var(--text1)}
+.hero p{font-size:17px;line-height:1.7;color:var(--text2)}
+
+.intro-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px;max-width:1000px;margin:48px auto 0;padding:0 24px}
+.intro-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:28px 26px 26px;text-decoration:none;color:inherit;display:flex;flex-direction:column;transition:border-color .2s}
+.intro-card:hover{border-color:var(--accent)}
+.intro-card h3{font-size:18px;font-weight:600;color:var(--text1);margin-bottom:10px;letter-spacing:-.01em}
+.intro-card p{font-size:15px;line-height:1.65;color:var(--text2);margin-bottom:20px;flex:1}
+.intro-card .go{font-size:15px;color:var(--accent);font-weight:500}
+
+.section-divider{max-width:1400px;margin:72px auto 0;padding:0 24px}
+.section-divider h2{font-size:22px;font-weight:600;color:var(--text1);letter-spacing:-.01em;margin-bottom:8px}
+.section-divider p{font-size:15px;color:var(--text2);max-width:620px}
+
+@media(max-width:600px){
+  .hero{padding-top:44px}
+  .hero h2{font-size:27px}
+}
 </style>
 </head>
 <body>
 
 <div id="siteNavRoot"></div>
 
-<div class="container">
-  <div class="landing-intro">
-    <p>Free investment tools for historical backtesting and sector analytics. Browse ETFs by category below, or use the menu above to jump to a simulator or analysis tool.</p>
-  </div>
+<div class="hero">
+  <h2>Explore investing through real market history</h2>
+  <p>Test a portfolio. Study past market downturns. Understand risk and diversification &mdash; using historical data rather than forecasts.</p>
+</div>
 
-  <div class="status-line" id="statusLine">Loading price data…</div>
+<div class="intro-grid">
+  <a href="/portfolio-simulator.html" class="intro-card">
+    <h3>Build a portfolio</h3>
+    <p>See how an investment mix would have performed historically, month by month.</p>
+    <span class="go">Try Portfolio Simulator &rarr;</span>
+  </a>
+  <a href="/sp500-history.html" class="intro-card">
+    <h3>Explore market history</h3>
+    <p>Crashes, recoveries, best years and worst years &mdash; going back to 1871.</p>
+    <span class="go">Explore S&amp;P 500 History &rarr;</span>
+  </a>
+  <a href="/sector-performance.html" class="intro-card">
+    <h3>Understand diversification</h3>
+    <p>Compare sectors by return, risk, correlation and dividends over time.</p>
+    <span class="go">Explore sectors &rarr;</span>
+  </a>
+</div>
+
+<div class="section-divider" id="etf-directory">
+  <h2>Browse ETFs and investments</h2>
+  <p>A curated list of non-leveraged ETFs by category, with live price and historical range. Use it to find a ticker for the simulators above.</p>
+</div>
+
+<div class="container">
+  <div class="status-line" id="statusLine">Loading price data&hellip;</div>
   <div class="range-chips" id="rangeChips"></div>
   <div class="group-controls">
     <button onclick="setAllGroups(true)">Expand all</button>
@@ -61,10 +99,10 @@
 </div>
 
 <script src="shared-analytics.js?v=1"></script>
-<script src="site-nav.js?v=3"></script>
+<script src="site-nav.js?v=4"></script>
 <script src="shared-auth.js"></script>
 <script src="etf-groups.js?v=1"></script>
-<script src="etf-home.js?v=2"></script>
+<script src="etf-home.js?v=3"></script>
 <script>try{navigator.sendBeacon('/api/track/pageview',JSON.stringify({page:location.pathname,referrer:document.referrer}))}catch(e){}</script>
 </body>
 </html>

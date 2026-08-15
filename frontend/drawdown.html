@@ -29,7 +29,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="shared-analytics.css?v=6">
+<link rel="stylesheet" href="shared-analytics.css?v=8">
 <script src="theme-toggle.js?v=2"></script>
 <script src="https://cdn.auth0.com/js/auth0-spa-js/2.1/auth0-spa-js.production.js"></script>
 <style>
@@ -49,11 +49,11 @@
 <div id="siteNavRoot"></div>
 
 <div class="header">
-  <h1 class="space"><span style="color:var(--accent)">◆</span> Drawdown Analysis</h1>
+  <h1 class="space">Drawdown Analysis</h1>
 </div>
 
 <div class="container">
-  <p class="lede">A <strong>drawdown</strong> is how much a sector fell from its highest point to its lowest point before recovering. Think of it as the worst-case scenario &mdash; if you bought at the peak and held through the bottom, how much would you have lost on paper?</p>
+  <p class="lede">A <strong>drawdown</strong> is how much a sector fell from its highest point to its lowest point before recovering. It describes what an investor who bought at the peak and held through the bottom would have seen on paper.</p>
 
   <div class="controls">
     <label>From</label>
@@ -69,10 +69,10 @@
   <details class="explainer">
     <summary>What should I do with this?</summary>
     <div class="explainer-body">
-      <p class="tip"><strong>Know your pain tolerance.</strong> If a &minus;50% drawdown would make you panic sell, avoid sectors with that history. You need to be able to hold through the dip.</p>
+      <p class="tip"><strong>Understand your comfort with volatility.</strong> Consider whether you would be comfortable holding an investment through a decline of this size, and for the length of time recovery historically took.</p>
       <p class="tip"><strong>Check recovery time.</strong> A big drop that recovers in 12 months is very different from one that takes 5 years. Longer recovery = more patience required.</p>
       <p class="tip"><strong>Compare to the total market (VTI).</strong> If a sector drops much more than VTI during a crisis, it's riskier. If it drops less, it's more defensive.</p>
-      <p class="remember"><strong>Remember:</strong> Past drawdowns don't predict future ones exactly, but sectors that fell hard before tend to be more volatile. Plan for the worst, hope for the best.</p>
+      <p class="remember"><strong>Worth noting:</strong> Past drawdowns don't predict future ones. Sectors that have declined sharply before have historically tended to be more volatile.</p>
     </div>
   </details>
 </div>
@@ -80,7 +80,7 @@
 <div class="cell-tooltip" id="tooltip"></div>
 <script src="shared-analytics.js?v=1"></script>
 <script src="drawdown.js?v=3"></script>
-<script src="site-nav.js?v=3"></script>
+<script src="site-nav.js?v=4"></script>
 <script src="shared-auth.js"></script>
 </body>
 </html>

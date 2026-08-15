@@ -29,7 +29,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="shared-analytics.css?v=6">
+<link rel="stylesheet" href="shared-analytics.css?v=8">
 <script src="theme-toggle.js?v=2"></script>
 <script src="https://cdn.auth0.com/js/auth0-spa-js/2.1/auth0-spa-js.production.js"></script>
 <style>
@@ -56,7 +56,7 @@
 .sim-values{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px}
 @media(max-width:600px){.sim-values{grid-template-columns:1fr 1fr}}
 .sim-val-item{padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:10px}
-.sim-val-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;margin-bottom:2px;display:flex;align-items:center;gap:4px}
+.sim-val-label{font-size:13px;color:var(--text3);font-family:'DM Sans',sans-serif;margin-bottom:2px;display:flex;align-items:center;gap:4px}
 .sim-val-num{font-size:14px;font-weight:700;font-family:'JetBrains Mono',monospace}
 
 /* Tile info icon */
@@ -83,7 +83,7 @@ html[data-theme="light"] .stile-tip{box-shadow:0 8px 24px rgba(0,0,0,.1)}
 <div id="siteNavRoot"></div>
 
 <div class="header">
-  <h1 class="space"><span style="color:var(--accent)">◆</span> Saved Simulations</h1>
+  <h1 class="space">Saved Simulations</h1>
 </div>
 
 <div class="container">
@@ -104,7 +104,7 @@ html[data-theme="light"] .stile-tip{box-shadow:0 8px 24px rgba(0,0,0,.1)}
   </div>
 </div>
 
-<script src="site-nav.js?v=3"></script>
+<script src="site-nav.js?v=4"></script>
 <script src="shared-auth.js"></script>
 <script>
 function fmt(n){return (n||0).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0})}

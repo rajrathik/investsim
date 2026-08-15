@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sector Correlation Matrix</title>
+<title>Sector Correlation</title>
 <meta name="description" content="Pearson correlation matrix between S&P 500 sector ETFs over a custom year range. Identify diversification opportunities.">
 <link rel="canonical" href="https://investsim.claritycapitaltools.com/correlation.html">
 <meta property="og:type" content="website">
@@ -29,16 +29,40 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="shared-analytics.css?v=6">
+<link rel="stylesheet" href="shared-analytics.css?v=8">
 <script src="theme-toggle.js?v=2"></script>
 <script src="https://cdn.auth0.com/js/auth0-spa-js/2.1/auth0-spa-js.production.js"></script>
+<style>
+  /* Single restrained ramp: light gray -> pale blue -> muted teal. Text stays
+     dark on every step, so all five pass contrast without needing a flip. */
+  .corr-1{background:#f2f4f3}
+  .corr-2{background:#e6edee}
+  .corr-3{background:#d3e2e3}
+  .corr-4{background:#bcd4d6}
+  .corr-5{background:#a3c4c7}
+  .corr-self{background:var(--bg);color:var(--text3)!important}
+  .data-table td.corr-1,.data-table td.corr-2,.data-table td.corr-3,
+  .data-table td.corr-4,.data-table td.corr-5{color:#25313c}
+  html[data-theme="dark"] .corr-1{background:#1b2226}
+  html[data-theme="dark"] .corr-2{background:#202c30}
+  html[data-theme="dark"] .corr-3{background:#26363a}
+  html[data-theme="dark"] .corr-4{background:#2d4247}
+  html[data-theme="dark"] .corr-5{background:#354f54}
+  html[data-theme="dark"] .data-table td.corr-1,html[data-theme="dark"] .data-table td.corr-2,
+  html[data-theme="dark"] .data-table td.corr-3,html[data-theme="dark"] .data-table td.corr-4,
+  html[data-theme="dark"] .data-table td.corr-5{color:#e9ecea}
+
+  .corr-legend{display:flex;align-items:center;gap:10px;margin-bottom:16px;font-size:13px;color:var(--text2);flex-wrap:wrap}
+  .corr-scale{display:flex;border-radius:4px;overflow:hidden;border:1px solid var(--border)}
+  .corr-scale span{width:34px;height:14px;display:block}
+</style>
 </head>
 <body>
 
 <div id="siteNavRoot"></div>
 
 <div class="header">
-  <h1 class="space"><span style="color:var(--accent)">◆</span> Sector Correlation</h1>
+  <h1 class="space">Sector Correlation</h1>
 </div>
 
 <div class="container">
@@ -51,6 +75,13 @@
     <select id="yearEnd" onchange="onYearChange()"></select>
   </div>
 
+  <!-- Legend stays visible at all times rather than living in a tooltip. -->
+  <div class="corr-legend">
+    <span>Low relationship</span>
+    <span class="corr-scale"><span class="corr-1"></span><span class="corr-2"></span><span class="corr-3"></span><span class="corr-4"></span><span class="corr-5"></span></span>
+    <span>High relationship</span>
+  </div>
+
   <div class="data-table-wrap" id="matrixContainer">
     <div class="loading">Loading correlation data...</div>
   </div>
@@ -58,7 +89,7 @@
   <details class="explainer">
     <summary>What should I do with this?</summary>
     <div class="explainer-body">
-      <p class="tip">If two sectors you own have <strong>high correlation (0.7+)</strong>, you are doubling down on the same bet. Consider whether you need both.</p>
+      <p class="tip">Higher correlation means two investments have historically moved more similarly. Lower correlation may provide greater diversification.</p>
       <p class="tip">To build a smoother ride, pair sectors with <strong>low correlation (below 0.5)</strong>. When one dips, the other may hold steady.</p>
       <p class="tip">Example: Technology (XLK) and Utilities (XLU) often have low correlation &mdash; owning both spreads your risk better than owning two tech-like sectors.</p>
       <p class="remember"><strong>Remember:</strong> True diversification isn't just owning many sectors &mdash; it's owning sectors that don't all move together.</p>
@@ -68,8 +99,8 @@
 
 <div class="cell-tooltip" id="tooltip"></div>
 <script src="shared-analytics.js?v=1"></script>
-<script src="correlation.js?v=1"></script>
-<script src="site-nav.js?v=3"></script>
+<script src="correlation.js?v=2"></script>
+<script src="site-nav.js?v=4"></script>
 <script src="shared-auth.js"></script>
 </body>
 </html>

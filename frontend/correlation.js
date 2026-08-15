@@ -48,11 +48,16 @@ function getReturns(sym) {
   return rets;
 }
 
+/* Restrained sequential scale -- very light gray through pale blue to muted
+   teal, one hue family. Deliberately not a diverging rainbow: correlation
+   here is a magnitude, so a single ramp reads correctly and stays calm. */
 function corrClass(val) {
-  if (val === 1) return 'val-self';
-  if (val >= 0.4) return 'growth-pos';
-  if (val >= -0.1) return 'growth-gold';
-  return 'growth-neg';
+  if (val === 1) return 'val-self corr-self';
+  if (val >= 0.8) return 'corr-5';
+  if (val >= 0.6) return 'corr-4';
+  if (val >= 0.4) return 'corr-3';
+  if (val >= 0.2) return 'corr-2';
+  return 'corr-1';
 }
 
 function render() {

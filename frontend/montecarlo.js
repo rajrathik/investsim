@@ -22,9 +22,9 @@
     });
     if (group === 'cycle') {
       var descs = {
-        1: 'Draws 1-year return blocks — each year is independent',
-        3: 'Draws 3-year return blocks — preserves bull/bear market clustering',
-        5: 'Draws 5-year return blocks — preserves full market cycle structure',
+        1: 'Each year drawn independently. Narrowest range of outcomes.',
+        3: 'Preserves typical multi-year market cycles.',
+        5: 'Can include a full expansion and contraction. Widest range.',
       };
       document.getElementById('cycleDesc').textContent = descs[val] || '';
     }
@@ -391,7 +391,12 @@
      ============================================================ */
   window.runMC = async function () {
     var initial   = parseFloat(document.getElementById('ctrlInitial').value) || 0;
-    var monthly   = parseFloat(document.getElementById('ctrlMonthly').value) || 0;
+    /* The amount field is always entered as a positive number; direction comes
+       from the Adding money / Taking withdrawals choice. The engine below still
+       works in signed terms, so apply the sign here. */
+    var monthlyRaw = Math.abs(parseFloat(document.getElementById('ctrlMonthly').value) || 0);
+    var flowDir    = document.querySelector('input[name="flowDir"]:checked');
+    var monthly    = (flowDir && flowDir.value === 'withdraw') ? -monthlyRaw : monthlyRaw;
     var years     = getChip('horizon') || 20;
     var blockYears = getChip('cycle')  || 3;
     var lumpSum   = _eventOn ? (parseFloat(document.getElementById('ctrlLumpSum').value) || 0) : 0;
@@ -421,7 +426,7 @@
       } catch (e) {
         showStatus('Error loading data: ' + e.message);
         btn.disabled = false;
-        btn.textContent = 'Run Simulation';
+        btn.textContent = 'Run simulation';
         return;
       }
     }
@@ -449,7 +454,7 @@
     requestAnimationFrame(function () { renderChart(_bands, deposits, params); });
 
     btn.disabled = false;
-    btn.textContent = 'Run Simulation';
+    btn.textContent = 'Run simulation';
   };
 
   /* ---- Init: run default on page load ---- */

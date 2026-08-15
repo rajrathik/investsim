@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Monte Carlo Portfolio Simulator</title>
+<title>Monte Carlo Simulator</title>
 <meta name="description" content="Run 1,000 simulated futures for your portfolio using 150+ years of real S&P 500 return history. See the range of possible outcomes with a fan chart showing best, median, and worst-case paths.">
 <link rel="canonical" href="https://investsim.claritycapitaltools.com/montecarlo.html">
 <meta property="og:type" content="website">
@@ -29,7 +29,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="shared-analytics.css?v=6">
+<link rel="stylesheet" href="shared-analytics.css?v=8">
 <script src="theme-toggle.js?v=2"></script>
 <script src="https://cdn.auth0.com/js/auth0-spa-js/2.1/auth0-spa-js.production.js"></script>
 <style>
@@ -41,15 +41,19 @@
   .data-note a:hover{text-decoration:underline}
   .ctrl-section{margin-bottom:16px}
   .ctrl-section:last-of-type{margin-bottom:0}
-  .ctrl-section-label{font-size:10px;font-weight:600;color:var(--text3);font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px}
+  .ctrl-section-label{font-size:13px;font-weight:600;color:var(--text3);font-family:'DM Sans',sans-serif;margin-bottom:10px}
   .controls-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 20px;align-items:end}
   .controls-grid-3{grid-template-columns:1fr 1fr auto}
   .ctrl-group{display:flex;flex-direction:column;gap:6px}
-  .ctrl-label{font-size:10px;font-weight:600;color:var(--text2);font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.05em}
+  .ctrl-label{font-size:13px;font-weight:600;color:var(--text2);font-family:'DM Sans',sans-serif;}
   .ctrl-label small{font-weight:400;color:var(--text3);text-transform:none;letter-spacing:0}
   .ctrl-input{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;font-family:'JetBrains Mono',monospace;color:var(--text1);outline:none;width:100%;box-sizing:border-box;transition:border-color .15s}
   .ctrl-input:focus{border-color:var(--accent)}
-  .ctrl-run{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px 28px;font-size:13px;font-weight:700;font-family:'Space Grotesk',sans-serif;cursor:pointer;transition:opacity .15s;white-space:nowrap;align-self:flex-end}
+  .flow-choice{display:flex;gap:16px;margin-top:10px;font-size:13px;color:var(--text2)}
+  .flow-choice label{display:flex;align-items:center;gap:6px;cursor:pointer}
+  .flow-choice input{cursor:pointer;accent-color:var(--accent)}
+  .cycle-desc{font-size:13px;color:var(--text2);margin-top:10px}
+  .ctrl-run{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:12px 30px;font-size:15px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;transition:opacity .15s;white-space:nowrap;margin-top:24px}
   .ctrl-run:hover{opacity:.88}
   .ctrl-run:disabled{opacity:.45;cursor:default}
   .ctrl-divider{border:none;border-top:1px solid var(--border);margin:16px 0}
@@ -69,7 +73,7 @@
   /* ---- Stat strip ---- */
   .stat-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:24px}
   .stat-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 18px}
-  .stat-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;margin-bottom:6px}
+  .stat-label{font-size:13px;color:var(--text3);font-family:'DM Sans',sans-serif;margin-bottom:6px}
   .stat-value{font-size:22px;font-weight:700;color:var(--text1);font-family:'Space Grotesk',sans-serif;line-height:1.1}
   .stat-sub{font-size:10px;color:var(--text3);margin-top:3px;font-family:'JetBrains Mono',monospace}
   /* No accent/warn color -- plain bold text for every stat value. */
@@ -129,93 +133,61 @@
 <div id="siteNavRoot"></div>
 
 <div class="header">
-  <h1 class="space"><span style="color:var(--accent)">◆</span> Monte Carlo Simulator</h1>
+  <h1 class="space">Monte Carlo Simulator</h1>
 </div>
 
 <div class="container">
 
+  <p class="page-desc">
+    Run 1,000 scenarios using return patterns drawn from real market history, and see the range of outcomes rather than a single projection.
+  </p>
+
   <!-- Controls -->
   <div class="controls-card">
-    <div class="controls-title">Simulation Parameters</div>
-    <div class="data-note">
-      ⓘ Runs 1,000 simulations using block-bootstrap sampling from 150+ years of real S&P 500 nominal returns
-      (<a href="/sp500-history.html">Shiller dataset</a>). Each path draws random multi-year return sequences
-      from history — not a formula, not a bell curve.
-    </div>
-    <div class="data-note" style="margin-top:0;padding-top:12px;border-top:none;border-bottom:1px solid var(--border);padding-bottom:14px;margin-bottom:18px">
-      <strong style="color:var(--text2)">How to use these inputs:</strong>
-      &nbsp;<strong style="color:var(--text2)">Starting Amount</strong> — how much you're investing today.
-      Higher starting balances benefit more from compound growth over time.
-      &nbsp;·&nbsp;
-      <strong style="color:var(--text2)">Monthly Cash Flow</strong> — how much you plan to add each month (or withdraw — enter a negative number if you're in retirement or drawing income).
-      Consistent monthly additions can dramatically improve long-term outcomes even if the starting amount is small.
-      &nbsp;·&nbsp;
-      <strong style="color:var(--text2)">Investment Horizon</strong> — how many years you want to project. Longer horizons show a wider spread of outcomes; short horizons (5 yrs) show much tighter results.
-      &nbsp;·&nbsp;
-      <strong style="color:var(--text2)">Market Cycle Sensitivity</strong> — Medium (3 yr) is the best default for most people. Choose Long if you want a more conservative stress test — it can simulate multi-year downturns like the dot-com bust or 2008–2009.
-    </div>
 
-    <!-- Row 1: amounts -->
+    <!-- Row 1: the three things most people actually need to set -->
     <div class="ctrl-section">
-      <div class="ctrl-section-label">Your Portfolio</div>
       <div class="controls-grid controls-grid-3">
         <div class="ctrl-group">
-          <label class="ctrl-label" for="ctrlInitial">Starting Amount ($)</label>
+          <label class="ctrl-label" for="ctrlInitial">Starting portfolio ($)</label>
           <input class="ctrl-input" id="ctrlInitial" type="number" min="0" max="100000000" step="1000" value="25000">
         </div>
         <div class="ctrl-group">
-          <label class="ctrl-label" for="ctrlMonthly">Monthly Cash Flow ($) <small>negative = withdraw</small></label>
-          <input class="ctrl-input" id="ctrlMonthly" type="number" min="-100000" max="100000" step="100" value="500">
+          <label class="ctrl-label" for="ctrlMonthly">Monthly amount ($)</label>
+          <input class="ctrl-input" id="ctrlMonthly" type="number" min="0" max="100000" step="100" value="500">
+          <div class="flow-choice" id="flowChoice">
+            <label><input type="radio" name="flowDir" value="add" checked> Adding money</label>
+            <label><input type="radio" name="flowDir" value="withdraw"> Taking withdrawals</label>
+          </div>
         </div>
         <div class="ctrl-group">
-          <button class="ctrl-run" id="btnRun" onclick="runMC()">Run Simulation</button>
+          <div class="ctrl-section-label">Years</div>
+          <div class="chip-row" id="horizonChips">
+            <span class="ctrl-chip" data-val="5" onclick="selectChip('horizon',5)">5</span>
+            <span class="ctrl-chip" data-val="10" onclick="selectChip('horizon',10)">10</span>
+            <span class="ctrl-chip" data-val="15" onclick="selectChip('horizon',15)">15</span>
+            <span class="ctrl-chip active" data-val="20" onclick="selectChip('horizon',20)">20</span>
+            <span class="ctrl-chip" data-val="25" onclick="selectChip('horizon',25)">25</span>
+            <span class="ctrl-chip" data-val="30" onclick="selectChip('horizon',30)">30</span>
+          </div>
         </div>
       </div>
     </div>
 
     <hr class="ctrl-divider">
 
-    <!-- Row 2: horizon + cycle -->
     <div class="ctrl-section">
-      <div class="controls-grid">
-        <div class="ctrl-group">
-          <div class="ctrl-section-label">Investment Horizon</div>
-          <div class="chip-row" id="horizonChips">
-            <span class="ctrl-chip" data-val="5" onclick="selectChip('horizon',5)">5 yrs</span>
-            <span class="ctrl-chip" data-val="10" onclick="selectChip('horizon',10)">10 yrs</span>
-            <span class="ctrl-chip" data-val="15" onclick="selectChip('horizon',15)">15 yrs</span>
-            <span class="ctrl-chip active" data-val="20" onclick="selectChip('horizon',20)">20 yrs</span>
-            <span class="ctrl-chip" data-val="25" onclick="selectChip('horizon',25)">25 yrs</span>
-            <span class="ctrl-chip" data-val="30" onclick="selectChip('horizon',30)">30 yrs</span>
-          </div>
+      <div class="ctrl-group" style="max-width:420px">
+        <div class="ctrl-section-label">Historical pattern</div>
+        <div class="chip-row" id="cycleChips">
+          <span class="ctrl-chip" data-val="1" onclick="selectChip('cycle',1)">Short</span>
+          <span class="ctrl-chip active" data-val="3" onclick="selectChip('cycle',3)">Typical</span>
+          <span class="ctrl-chip" data-val="5" onclick="selectChip('cycle',5)">Long cycles</span>
         </div>
-        <div class="ctrl-group">
-          <div class="ctrl-section-label" style="display:flex;align-items:center;gap:6px">
-            Market Cycle Sensitivity
-            <span class="info-icon" style="font-size:9px;width:15px;height:15px">?
-              <span class="info-tip">
-                <div class="it-row"><strong>Controls how history is replayed in each simulation.</strong></div>
-                <div class="it-row">Real markets don't flip randomly year-to-year — a recession tends to last 2–3 years, and a bull market can run for 5+. This setting decides how much of that "stickiness" the simulation preserves.</div>
-                <div class="it-row" style="margin-top:6px"><strong>Short · 1yr</strong> — each simulated year is drawn independently. No memory of what came before. Gives the narrowest fan — underestimates how bad (or good) a real streak can get.</div>
-                <div class="it-row"><strong>Medium · 3yr</strong> — draws 3-year chunks at a time. If it lands on 2008, it also picks up 2009 recovery. Captures typical recession-and-recovery cycles. Good default.</div>
-                <div class="it-row"><strong>Long · 5yr</strong> — draws 5-year blocks. Can pull in a full bubble-and-bust (e.g. dot-com 1999–2003). Gives the widest fan — most conservative view of tail risk.</div>
-                <div class="it-row" style="margin-top:6px;color:var(--text3)">When in doubt, use Medium. Use Long if you want a more stress-tested worst case.</div>
-              </span>
-            </span>
-          </div>
-          <div class="chip-row" id="cycleChips">
-            <span class="ctrl-chip" data-val="1" onclick="selectChip('cycle',1)">Short · 1yr</span>
-            <span class="ctrl-chip active" data-val="3" onclick="selectChip('cycle',3)">Medium · 3yr</span>
-            <span class="ctrl-chip" data-val="5" onclick="selectChip('cycle',5)">Long · 5yr</span>
-          </div>
-          <div style="font-size:10px;color:var(--text3);font-family:'JetBrains Mono',monospace;margin-top:6px" id="cycleDesc">
-            Draws 3-year return blocks — preserves bull/bear market clustering
-          </div>
-        </div>
+        <div class="cycle-desc" id="cycleDesc">Preserves typical multi-year market cycles.</div>
       </div>
     </div>
 
-    <!-- One-time event (optional) -->
     <hr class="ctrl-divider">
     <span class="event-toggle" onclick="toggleEvent()" id="eventToggle">＋ Add one-time cash event (bonus, inheritance, large withdrawal…)</span>
     <div class="event-panel" id="eventPanel">
@@ -230,7 +202,28 @@
         </div>
       </div>
     </div>
+
+    <button class="ctrl-run" id="btnRun" onclick="runMC()">Run simulation</button>
   </div>
+
+  <details class="detail-panel">
+    <summary>How this works</summary>
+    <div class="detail-body">
+      <p>Each of the 1,000 scenarios is built by drawing real multi-year stretches of S&amp;P 500 history at random and stringing them together &mdash; not by assuming a bell curve or a fixed average return. Returns come from the <a href="/sp500-history.html">Shiller dataset</a>, covering more than 150 years.</p>
+
+      <h3>Historical pattern</h3>
+      <p>Real markets don't reset each year. A downturn tends to last two to three years; an expansion can run much longer. This setting controls how much of that continuity each scenario keeps.</p>
+      <ul>
+        <li><strong>Short</strong> &mdash; each year is drawn independently, with no memory of the year before. Produces the narrowest range, and understates how long a good or bad stretch can persist.</li>
+        <li><strong>Typical</strong> &mdash; draws three years at a time, so a scenario that picks up 2008 also picks up the 2009 recovery. Preserves ordinary recession-and-recovery cycles.</li>
+        <li><strong>Long cycles</strong> &mdash; draws five years at a time, which can pull in a full expansion and contraction such as 1999&ndash;2003. Produces the widest range.</li>
+      </ul>
+
+      <h3>Reading the result</h3>
+      <p>The shaded band spans the 10th to 90th percentile of outcomes: eight scenarios in ten finished inside it. The line through the middle is the median. A wide band means the outcome depends heavily on which years you happen to get.</p>
+      <p>Withdrawals are taken monthly. If a scenario's balance reaches zero it is recorded as depleted, and the depletion rate is reported alongside the percentiles.</p>
+    </div>
+  </details>
 
   <!-- Results — hidden until sim runs -->
   <div id="results" style="display:none">
@@ -298,8 +291,8 @@
 </div>
 
 <script src="shared-analytics.js?v=1"></script>
-<script src="montecarlo.js?v=1"></script>
-<script src="site-nav.js?v=3"></script>
+<script src="montecarlo.js?v=9"></script>
+<script src="site-nav.js?v=4"></script>
 <script src="shared-auth.js"></script>
 </body>
 </html>

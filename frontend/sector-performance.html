@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sector Performance - Annual Returns &amp; Dividends</title>
+<title>Sector Performance</title>
 <meta name="description" content="Annual total returns and dividends for all 11 S&P 500 sector ETFs with color-coded quilt table and summary statistics.">
 <link rel="canonical" href="https://investsim.claritycapitaltools.com/sector-performance.html">
 <meta property="og:type" content="website">
@@ -29,7 +29,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="shared-analytics.css?v=6">
+<link rel="stylesheet" href="shared-analytics.css?v=8">
 <link rel="stylesheet" href="sector-performance.css?v=1">
 <script src="theme-toggle.js?v=2"></script>
 <script src="https://cdn.auth0.com/js/auth0-spa-js/2.1/auth0-spa-js.production.js"></script>
@@ -40,21 +40,13 @@
 <div id="siteNavRoot"></div>
 
 <div class="header" id="mainHeader">
-  <h1 class="space"><span style="color:var(--accent)">◆</span> Sector Performance</h1>
+  <h1 class="space">Sector Performance</h1>
 </div>
 
 <!-- Main Content -->
 <div class="container" id="mainContainer">
 
-  <p style="color:var(--text2);margin-bottom:24px;font-size:14px;max-width:750px">
-    Annual total returns and dividends for S&amp;P 500 sector ETFs.
-    <strong>Total Return</strong> = (price change + dividends) &div; year-begin price.
-    <strong>Dividends are treated as cash received</strong> &mdash; they are <em>not</em> reinvested back into the ETF.
-    Hover any cell for a detailed breakdown.
-    <span style="display:block;margin-top:8px;font-size:13px">
-      Cells with a <strong style="color:var(--gold)">dashed outline and *</strong> are the current in-progress year (YTD) &mdash; measured against the latest month of data loaded so far, not a full year. These update automatically as more months are synced.
-    </span>
-  </p>
+  <p class="page-desc">See which parts of the market led and lagged over time. Hover any cell for a detailed breakdown.</p>
 
   <!-- Controls Row -->
   <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;margin-bottom:24px">
@@ -76,17 +68,29 @@
   </div>
 
   <!-- Summary Stats -->
-  <h2 class="space" style="margin-bottom:8px;font-size:18px;color:var(--text1)">Summary Statistics</h2>
-  <div class="glossary">
-    <span><strong>Price CAGR</strong> &mdash; compound annual growth rate based on price appreciation only</span>
-    <span><strong>Total CAGR</strong> &mdash; compound annual growth rate including dividends</span>
-    <span><strong>Best / Worst Year</strong> &mdash; highest and lowest single-year total return (price + dividends)</span>
-    <span><strong>Positive Years</strong> &mdash; years with a positive total return vs total years</span>
-    <span><strong>Total Dividends</strong> &mdash; sum of all cash distributions paid over the period</span>
-    <span><strong>Avg Dividend/Yr</strong> &mdash; average annual cash dividend payout</span>
-    <span style="display:block;width:100%;margin-top:4px;font-style:italic;color:var(--text3);font-size:10px"><strong style="color:var(--gold)">Note:</strong> Dividends are counted as cash received and are <em>not</em> reinvested back into the ETF.</span>
-  </div>
+  <h2 class="space" style="margin-bottom:16px;font-size:18px;color:var(--text1)">Summary statistics</h2>
   <div class="stats-grid" id="statsContainer"></div>
+
+  <details class="detail-panel">
+    <summary>About the data</summary>
+    <div class="detail-body">
+      <h3>How returns are calculated</h3>
+      <p><strong>Total return</strong> = (price change + dividends) &divide; year-begin price. Dividends are counted as cash received and are <em>not</em> reinvested back into the ETF.</p>
+
+      <h3>In-progress years</h3>
+      <p>Cells with a dashed outline and an asterisk are the current, incomplete calendar year. They are measured against the latest month of data loaded so far rather than a full twelve months, and update automatically as more months are synced.</p>
+
+      <h3>Column definitions</h3>
+      <ul>
+        <li><strong>Price CAGR</strong> &mdash; compound annual growth rate from price appreciation only</li>
+        <li><strong>Total CAGR</strong> &mdash; compound annual growth rate including dividends</li>
+        <li><strong>Best / worst year</strong> &mdash; highest and lowest single-year total return</li>
+        <li><strong>Positive years</strong> &mdash; years with a positive total return, against total years</li>
+        <li><strong>Total dividends</strong> &mdash; sum of all cash distributions paid over the period</li>
+        <li><strong>Avg dividend/yr</strong> &mdash; average annual cash dividend payout</li>
+      </ul>
+    </div>
+  </details>
 
 </div>
 
@@ -94,7 +98,7 @@
 <div class="cell-tooltip" id="tooltip"></div>
 
 <script src="sector-performance.js?v=8"></script>
-<script src="site-nav.js?v=3"></script>
+<script src="site-nav.js?v=4"></script>
 <script src="shared-auth.js"></script>
 <script>try{navigator.sendBeacon('/api/track/pageview',JSON.stringify({page:location.pathname,referrer:document.referrer}))}catch(e){}</script>
 </body>
