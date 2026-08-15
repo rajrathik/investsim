@@ -25,9 +25,9 @@
   "isPartOf": {"@type": "WebSite", "name": "Investment Tools", "url": "https://investsim.claritycapitaltools.com/"}
 }
 </script>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="shared-analytics.css?v=5" />
   <script src="theme-toggle.js?v=2"></script>
   <script src="https://cdn.auth0.com/js/auth0-spa-js/2.1/auth0-spa-js.production.js"></script>
@@ -117,7 +117,7 @@
     .panel-sub {
       font-size: .72rem;
       color: var(--text3);
-      font-family: monospace;
+      font-family: 'JetBrains Mono', monospace;
       margin-top: .15rem;
     }
 
@@ -131,13 +131,13 @@
     .extremes-panel .data-table th.r, .extremes-panel .data-table td.r { text-align: right; }
     .extremes-panel .data-table tr:last-child td { border-bottom: none; }
 
-    .td-rank { color: var(--text3); font-size: .72rem; font-family: monospace; width: 1.6rem; }
+    .td-rank { color: var(--text3); font-size: .72rem; font-family: 'JetBrains Mono', monospace; width: 1.6rem; }
     .td-date { font-weight: 500; white-space: nowrap; }
-    .td-ret  { font-family: monospace; font-weight: 600; text-align: right; white-space: nowrap; padding-right: .5rem; }
+    .td-ret  { font-family: 'JetBrains Mono', monospace; font-weight: 600; text-align: right; white-space: nowrap; padding-right: .5rem; }
     .td-val  { min-width: 90px; }
 
     .val-wrap  { display: flex; flex-direction: column; gap: 3px; }
-    .val-num   { font-family: monospace; font-weight: 600; font-size: .81rem; }
+    .val-num   { font-family: 'JetBrains Mono', monospace; font-weight: 600; font-size: .81rem; }
     .mini-bar  { height: 3px; border-radius: 2px; min-width: 2px; }
 
     /* ── colors ── */
@@ -168,11 +168,12 @@
   </style>
 </head>
 <body>
+  <div id="siteNavRoot"></div>
+
   <div class="header">
     <div style="display:flex;align-items:center;gap:.5rem;">
       <h1>⚡ Monthly Market Extremes</h1>
     </div>
-    <a href="/" class="back-home">← Home</a>
   </div>
 
   <div class="container">
@@ -257,6 +258,7 @@
 
   <script src="shared-analytics.js?v=1"></script>
   <script src="extreme-months.js?v=1"></script>
+  <script src="site-nav.js?v=3"></script>
   <script src="shared-auth.js"></script>
 </body>
 </html>

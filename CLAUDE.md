@@ -70,7 +70,8 @@ frontend/theme-toggle.js       ← Dark/light theme IIFE (no FOUC)
 ## Pages (all public except noted)
 | Page | File |
 |------|------|
-| Landing (tool cards) | `index.html` |
+| Landing — ETF Directory (new layout) | `index.html` + `etf-home.js/css` — range chips (1Y/5Y/10Y/Max), sparklines, filled position-in-range bar, skeleton loaders, sessionStorage history cache |
+| ETF Directory (classic table) | `etf-directory.html` + `etf-directory.js/css` — original full-width table, reachable from Sector tools |
 | Asset Allocation Simulator | `portfolio-simulator.html` |
 | Sector Returns Quilt | `sector-performance.html` |
 | Correlation Matrix | `correlation.html` |
@@ -88,8 +89,7 @@ frontend/theme-toggle.js       ← Dark/light theme IIFE (no FOUC)
 | 5-Year Crash Periods & Recovery | `bad-streaks.html` |
 | S&P 500 Rolling Returns | `sp500-rolling-returns.html` — 1/3/5/7/10yr forward CAGR per year since 1928, from `damodaran_annual_returns` (Damodaran/NYU Stern dataset) |
 | Saved Simulations | `saved-simulations.html` (**sign-in required**) |
-| Admin Dashboard | `admin.html` (**Auth0 + user_admin table**) — tile on `index.html` visible only when `_admin_hint` localStorage flag set (cleared on admin logout) |
-| CD Portfolio Advisor (AI) | `CD-simulator.html` + `cdapp.js` + `cdstyles.css` |
+| Admin Dashboard | `admin.html` (**Auth0 + user_admin table**) — nav link visible only when `_admin_hint` localStorage flag set (cleared on admin logout) |
 
 ## Database (15 Tables)
 `tickers`, `monthly_prices`, `dividends`, `monthly_mm_rates`, `annual_mm_rates`,
@@ -115,9 +115,6 @@ frontend/theme-toggle.js       ← Dark/light theme IIFE (no FOUC)
 > Ongoing catch-up via the same card's "Load Missing Days" button (`POST /api/batch/daily-prices/{ticker}/incremental`)
 > — looks at `MAX(price_date)` on file and appends only the days after it through today; never updates an
 > existing row. Stats (`GET /api/daily-prices/stats`) are public/read-only; both load endpoints are admin-gated.
-
-## Untracked / In-Progress Files
-- `backend/app/backend.py` — Flask-based CD portfolio recommendation engine (separate prototype, not integrated into FastAPI yet)
 
 ## Tools
 - `tools/sync_sql_to_postgres.py` — Syncs local SQL Server data to Railway PostgreSQL (full replace per table, batched INSERT)

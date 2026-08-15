@@ -15,6 +15,8 @@
 <meta name="twitter:description" content="Backtest a dollar-cost averaging portfolio with real historical prices, dividends, and money market rates over 1-20 years.">
 
 <meta property="og:site_name" content="Investment Tools">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="shared-analytics.css?v=5">
 <link rel="stylesheet" href="portfolio-simulator.css">
@@ -39,8 +41,9 @@
 </head>
 <body>
 
+<div id="siteNavRoot"></div>
+
 <div class="header" id="mainHeader">
-  <a href="/" class="back-home">← Home</a>
   <h1 class="space"><span style="color:var(--accent)">◆</span> Asset Allocation Simulator</h1>
   <div class="header-sub"><a href="/simulator-guide.html">? How It Works</a></div>
 </div>
@@ -71,6 +74,7 @@
   <div class="modal"><h3 class="space"><span id="modalTitle">Portfolio Breakdown</span><button class="close-btn" onclick="closeModal()">✕</button></h3><div id="modalSub" class="modal-sub"></div><div id="modalBody"></div></div>
 </div>
 <script src="portfolio-simulator.js?v=13"></script>
+<script src="site-nav.js?v=3"></script>
 <script src="shared-auth.js"></script>
 <script>try{navigator.sendBeacon('/api/track/pageview',JSON.stringify({page:location.pathname,referrer:document.referrer}))}catch(e){}</script>
 </body>

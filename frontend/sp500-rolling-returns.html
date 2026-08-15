@@ -25,9 +25,9 @@
   "isPartOf": {"@type": "WebSite", "name": "Investment Tools", "url": "https://investsim.claritycapitaltools.com/"}
 }
 </script>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="shared-analytics.css?v=5" />
   <script src="theme-toggle.js?v=2"></script>
   <script src="https://cdn.auth0.com/js/auth0-spa-js/2.1/auth0-spa-js.production.js"></script>
@@ -79,11 +79,12 @@
   </style>
 </head>
 <body>
+  <div id="siteNavRoot"></div>
+
   <div class="header">
     <div style="display:flex;align-items:center;gap:.5rem;">
       <h1>📈 S&amp;P 500 Rolling Returns</h1>
     </div>
-    <a href="/" class="back-home">← Home</a>
   </div>
 
   <div class="container">
@@ -136,6 +137,7 @@
 
   <script src="shared-analytics.js?v=1"></script>
   <script src="sp500-rolling-returns.js?v=1"></script>
+  <script src="site-nav.js?v=3"></script>
   <script src="shared-auth.js"></script>
 </body>
 </html>

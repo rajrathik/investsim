@@ -15,7 +15,6 @@ var SITE_NAV = [
       { label: 'S&P 500 Historical Simulator', href: '/sp500-simulate.html' },
       { label: 'Monte Carlo Simulator', href: '/montecarlo.html' },
       { label: 'Asset Allocation Simulator', href: '/portfolio-simulator.html' },
-      { label: 'CD Portfolio Advisor', href: '/CD-simulator.html' },
     ],
   },
   {

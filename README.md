@@ -78,9 +78,10 @@ C:\Raj\python\portfolio-simulator\
 │   ├── robots.txt                  ← Search engine crawl directives
 │   ├── sitemap.xml                 ← XML sitemap for Google Search Console
 │   ├── admin.html                  ← Admin dashboard (Auth0 protected, isolated)
-│   ├── CD-simulator.html           ← CD portfolio advisor (AI-powered)
-│   ├── cdapp.js
-│   └── cdstyles.css
+│   ├── site-nav.js                 ← Shared top nav; edit SITE_NAV array to reorder/move pages
+│   ├── etf-groups.js               ← Curated ETF list, shared by both directory layouts
+│   ├── etf-home.js / etf-home.css  ← Landing-page ETF directory layout
+│   └── etf-directory.js / .css     ← Classic full-width ETF table
 │
 ├── tools\                          ← Utilities & verification
 │   ├── generate_test_spreadsheet.py ← Generates Excel workbook from DB data
