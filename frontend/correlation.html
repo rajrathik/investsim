@@ -29,7 +29,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="shared-analytics.css?v=5">
+<link rel="stylesheet" href="shared-analytics.css?v=6">
 <script src="theme-toggle.js?v=2"></script>
 <script src="https://cdn.auth0.com/js/auth0-spa-js/2.1/auth0-spa-js.production.js"></script>
 </head>
@@ -42,15 +42,7 @@
 </div>
 
 <div class="container">
-  <div class="glossary" style="margin-bottom:24px">
-    <span style="display:block;width:100%;font-size:14px;color:var(--text1);font-weight:600;margin-bottom:6px">What does this tell me?</span>
-    <span style="display:block;width:100%">Each number shows how closely two sectors move together. <strong>+1.0</strong> = they always rise and fall together. <strong>0</strong> = they move independently. <strong>&minus;1.0</strong> = when one goes up, the other goes down.</span>
-    <span style="display:block;width:100%;margin-top:10px;font-size:14px;color:var(--text1);font-weight:600;margin-bottom:4px">What should I do with this?</span>
-    <span><strong style="color:var(--accent)">&#10003;</strong> If two sectors you own have <strong>high correlation (0.7+)</strong>, you are doubling down on the same bet. Consider whether you need both.</span>
-    <span><strong style="color:var(--accent)">&#10003;</strong> To build a smoother ride, pair sectors with <strong>low correlation (below 0.5)</strong>. When one dips, the other may hold steady.</span>
-    <span><strong style="color:var(--accent)">&#10003;</strong> Example: Technology (XLK) and Utilities (XLU) often have low correlation &mdash; owning both spreads your risk better than owning two tech-like sectors.</span>
-    <span style="display:block;width:100%;margin-top:6px;font-style:italic;color:var(--text3);font-size:11px"><strong style="color:var(--gold)">Remember:</strong> True diversification isn't just owning many sectors &mdash; it's owning sectors that don't all move together.</span>
-  </div>
+  <p class="lede">Each number shows how closely two sectors move together. <strong>+1.0</strong> = they always rise and fall together. <strong>0</strong> = they move independently. <strong>&minus;1.0</strong> = when one goes up, the other goes down.</p>
 
   <div class="controls">
     <label>From</label>
@@ -62,6 +54,16 @@
   <div class="data-table-wrap" id="matrixContainer">
     <div class="loading">Loading correlation data...</div>
   </div>
+
+  <details class="explainer">
+    <summary>What should I do with this?</summary>
+    <div class="explainer-body">
+      <p class="tip">If two sectors you own have <strong>high correlation (0.7+)</strong>, you are doubling down on the same bet. Consider whether you need both.</p>
+      <p class="tip">To build a smoother ride, pair sectors with <strong>low correlation (below 0.5)</strong>. When one dips, the other may hold steady.</p>
+      <p class="tip">Example: Technology (XLK) and Utilities (XLU) often have low correlation &mdash; owning both spreads your risk better than owning two tech-like sectors.</p>
+      <p class="remember"><strong>Remember:</strong> True diversification isn't just owning many sectors &mdash; it's owning sectors that don't all move together.</p>
+    </div>
+  </details>
 </div>
 
 <div class="cell-tooltip" id="tooltip"></div>

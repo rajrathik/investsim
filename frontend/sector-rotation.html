@@ -29,7 +29,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="shared-analytics.css?v=5">
+<link rel="stylesheet" href="shared-analytics.css?v=6">
 <script src="theme-toggle.js?v=2"></script>
 <script src="https://cdn.auth0.com/js/auth0-spa-js/2.1/auth0-spa-js.production.js"></script>
 </head>
@@ -42,15 +42,7 @@
 </div>
 
 <div class="container">
-  <div class="glossary" style="margin-bottom:24px">
-    <span style="display:block;width:100%;font-size:14px;color:var(--text1);font-weight:600;margin-bottom:6px">What does this tell me?</span>
-    <span style="display:block;width:100%">This chart ranks every sector from <strong>#1 (best)</strong> to <strong>#12 (worst)</strong> each year. Notice how the top performer changes constantly &mdash; last year's winner is often next year's loser. This is called <strong>sector rotation</strong>.</span>
-    <span style="display:block;width:100%;margin-top:10px;font-size:14px;color:var(--text1);font-weight:600;margin-bottom:4px">What should I do with this?</span>
-    <span><strong style="color:var(--accent)">&#10003;</strong> <strong>Don't chase last year's winner.</strong> The data shows that leadership rotates. Piling into a sector just because it was #1 last year often leads to disappointment.</span>
-    <span><strong style="color:var(--accent)">&#10003;</strong> <strong>Diversify across sectors.</strong> Since no one can predict which sector will lead next year, owning a broad mix (or VTI, the total market) smooths out the ups and downs.</span>
-    <span><strong style="color:var(--accent)">&#10003;</strong> <strong>Look for consistency, not just #1 finishes.</strong> A sector that regularly finishes in the top half may be a steadier performer than one that swings between #1 and #12.</span>
-    <span style="display:block;width:100%;margin-top:6px;font-style:italic;color:var(--text3);font-size:11px"><strong style="color:var(--gold)">Remember:</strong> If picking the winning sector each year were easy, everyone would be rich. History shows that broad diversification beats guessing.</span>
-  </div>
+  <p class="lede">This chart ranks every sector from <strong>#1 (best)</strong> to <strong>#12 (worst)</strong> each year. Notice how the top performer changes constantly &mdash; last year's winner is often next year's loser. This is called <strong>sector rotation</strong>.</p>
 
   <div class="controls">
     <label>From</label>
@@ -66,6 +58,16 @@
   <h2 class="section-title" style="margin-top:32px">Leadership Count</h2>
   <p class="page-desc" style="margin-bottom:16px">How many times each sector finished #1, top 3, or bottom 3 over the selected period.</p>
   <div class="cards-grid" id="leaderCards"></div>
+
+  <details class="explainer">
+    <summary>What should I do with this?</summary>
+    <div class="explainer-body">
+      <p class="tip"><strong>Don't chase last year's winner.</strong> The data shows that leadership rotates. Piling into a sector just because it was #1 last year often leads to disappointment.</p>
+      <p class="tip"><strong>Diversify across sectors.</strong> Since no one can predict which sector will lead next year, owning a broad mix (or VTI, the total market) smooths out the ups and downs.</p>
+      <p class="tip"><strong>Look for consistency, not just #1 finishes.</strong> A sector that regularly finishes in the top half may be a steadier performer than one that swings between #1 and #12.</p>
+      <p class="remember"><strong>Remember:</strong> If picking the winning sector each year were easy, everyone would be rich. History shows that broad diversification beats guessing.</p>
+    </div>
+  </details>
 </div>
 
 <div class="cell-tooltip" id="tooltip"></div>

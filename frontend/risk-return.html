@@ -29,7 +29,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="shared-analytics.css?v=5">
+<link rel="stylesheet" href="shared-analytics.css?v=6">
 <script src="theme-toggle.js?v=2"></script>
 <script src="https://cdn.auth0.com/js/auth0-spa-js/2.1/auth0-spa-js.production.js"></script>
 <style>
@@ -46,16 +46,7 @@
 </div>
 
 <div class="container">
-  <div class="glossary" style="margin-bottom:24px">
-    <span style="display:block;width:100%;font-size:14px;color:var(--text1);font-weight:600;margin-bottom:6px">What does this tell me?</span>
-    <span style="display:block;width:100%">This chart plots each sector by two things: <strong>how much it returned</strong> (up = better, on the Y-axis) and <strong>how bumpy the ride was</strong> (right = wilder swings, on the X-axis). The best spot is the <strong>upper-left corner</strong> &mdash; high return with low volatility.</span>
-    <span style="display:block;width:100%;margin-top:10px;font-size:14px;color:var(--text1);font-weight:600;margin-bottom:4px">What should I do with this?</span>
-    <span><strong style="color:var(--accent)">&#10003;</strong> <strong>Upper-left = sweet spot.</strong> These sectors gave you the most return per unit of risk. They're the efficient performers.</span>
-    <span><strong style="color:var(--accent)">&#10003;</strong> <strong>Lower-right = danger zone.</strong> High volatility but low return means you took big risks for little reward. Think twice before overweighting these.</span>
-    <span><strong style="color:var(--accent)">&#10003;</strong> <strong>Check the Return/Risk number</strong> in the cards below. Higher is better &mdash; it tells you how much return you got for each unit of risk.</span>
-    <span><strong style="color:var(--accent)">&#10003;</strong> <strong>Match your comfort level.</strong> If wild swings stress you out, lean towards sectors on the left side of the chart, even if their returns are slightly lower.</span>
-    <span style="display:block;width:100%;margin-top:6px;font-style:italic;color:var(--text3);font-size:11px"><strong style="color:var(--gold)">Remember:</strong> Higher returns almost always come with higher risk. The goal isn't to avoid all risk &mdash; it's to make sure you're being properly rewarded for the risk you take.</span>
-  </div>
+  <p class="lede">This chart plots each sector by two things: <strong>how much it returned</strong> (up = better, on the Y-axis) and <strong>how bumpy the ride was</strong> (right = wilder swings, on the X-axis). The best spot is the <strong>upper-left corner</strong> &mdash; high return with low volatility.</p>
 
   <div class="controls">
     <label>From</label>
@@ -70,6 +61,17 @@
 
   <h2 class="section-title">Risk-Return Summary</h2>
   <div class="cards-grid" id="summaryCards"></div>
+
+  <details class="explainer">
+    <summary>What should I do with this?</summary>
+    <div class="explainer-body">
+      <p class="tip"><strong>Upper-left = sweet spot.</strong> These sectors gave you the most return per unit of risk. They're the efficient performers.</p>
+      <p class="tip"><strong>Lower-right = danger zone.</strong> High volatility but low return means you took big risks for little reward. Think twice before overweighting these.</p>
+      <p class="tip"><strong>Check the Return/Risk number</strong> in the summary cards. Higher is better &mdash; it tells you how much return you got for each unit of risk.</p>
+      <p class="tip"><strong>Match your comfort level.</strong> If wild swings stress you out, lean towards sectors on the left side of the chart, even if their returns are slightly lower.</p>
+      <p class="remember"><strong>Remember:</strong> Higher returns almost always come with higher risk. The goal isn't to avoid all risk &mdash; it's to make sure you're being properly rewarded for the risk you take.</p>
+    </div>
+  </details>
 </div>
 
 <div class="cell-tooltip" id="tooltip"></div>
