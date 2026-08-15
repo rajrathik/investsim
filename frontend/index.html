@@ -4,42 +4,73 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Investment Tools | Historical Portfolio &amp; Market Analysis</title>
-<meta name="description" content="Test a portfolio, study past market downturns, and understand risk and diversification using real historical data rather than forecasts.">
+<meta name="description" content="Explore portfolios, market cycles, risk and diversification using real historical market data. No predictions, no hype — just perspective.">
 <link rel="canonical" href="https://investsim.claritycapitaltools.com/">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Investment Tools | Historical Portfolio &amp; Market Analysis">
-<meta property="og:description" content="Test a portfolio, study past market downturns, and understand risk and diversification using real historical data rather than forecasts.">
+<meta property="og:description" content="Explore portfolios, market cycles, risk and diversification using real historical market data. No predictions, no hype — just perspective.">
 <meta property="og:url" content="https://investsim.claritycapitaltools.com/">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Investment Tools | Historical Portfolio &amp; Market Analysis">
-<meta name="twitter:description" content="Test a portfolio, study past market downturns, and understand risk and diversification using real historical data.">
+<meta name="twitter:description" content="Explore portfolios, market cycles, risk and diversification using real historical market data.">
 <meta property="og:site_name" content="Clarity Capital Tools">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="shared-analytics.css?v=9">
-<link rel="stylesheet" href="etf-directory.css?v=1">
-<link rel="stylesheet" href="etf-home.css?v=2">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "WebSite",
   "name": "Clarity Capital Tools",
   "url": "https://investsim.claritycapitaltools.com/",
-  "description": "Test a portfolio, study past market downturns, and understand risk and diversification using real historical data rather than forecasts."
+  "description": "Explore portfolios, market cycles, risk and diversification using real historical market data."
 }
 </script>
 <script src="theme-toggle.js?v=2"></script>
 <script src="https://cdn.auth0.com/js/auth0-spa-js/2.1/auth0-spa-js.production.js"></script>
 <style>
-/* Landing page only. The directory is the page -- it opens directly on the
-   heading, with no hero or intro cards above it. */
-.section-divider{max-width:1400px;margin:40px auto 0;padding:0 24px}
-.section-divider h2{font-size:22px;font-weight:600;color:var(--text1);letter-spacing:-.01em;margin-bottom:8px}
-.section-divider p{font-size:15px;color:var(--text2)}
+/* Landing page only. Its whole job is: say what this is, offer a direction,
+   get out of the way. No data, no listings, no explanations. */
+.container{max-width:1000px;padding:0 24px 72px}
+
+.hero{text-align:center;padding:72px 0 8px;max-width:660px;margin:0 auto}
+.hero h2{font-size:36px;font-weight:600;letter-spacing:-.02em;line-height:1.2;color:var(--text1);margin-bottom:18px}
+.hero p{font-size:17px;line-height:1.75;color:var(--text2);margin-bottom:12px}
+.hero .tagline{font-size:15px;color:var(--text3);margin-bottom:28px}
+.hero-cta{display:inline-block;background:var(--accent);color:#fff;font-size:16px;font-weight:600;padding:13px 30px;border-radius:10px;text-decoration:none;transition:opacity .2s}
+.hero-cta:hover{opacity:.88}
+
+.land-section{margin-top:72px}
+.land-section > h3{font-size:20px;font-weight:600;color:var(--text1);letter-spacing:-.01em;margin-bottom:20px}
+
+.dir-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px}
+.dir-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:28px 26px;text-decoration:none;color:inherit;display:flex;flex-direction:column;transition:border-color .2s}
+.dir-card:hover{border-color:var(--accent)}
+.dir-card h4{font-size:18px;font-weight:600;color:var(--text1);margin-bottom:10px;letter-spacing:-.01em}
+.dir-card p{font-size:15px;line-height:1.65;color:var(--text2);margin-bottom:20px;flex:1}
+.dir-card .go{font-size:15px;color:var(--accent);font-weight:500}
+
+.pop-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:16px}
+.pop-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:22px 22px 20px;text-decoration:none;color:inherit;display:block;transition:border-color .2s}
+.pop-card:hover{border-color:var(--accent)}
+.pop-card .name{font-size:16px;font-weight:600;color:var(--text1);margin-bottom:6px;letter-spacing:-.01em}
+.pop-card .desc{font-size:14px;line-height:1.6;color:var(--text2)}
+.view-all{display:inline-block;margin-top:20px;font-size:15px;color:var(--accent);font-weight:500;text-decoration:none}
+.view-all:hover{text-decoration:underline}
+
+/* ETF search sits last and quiet -- it is a lookup, not the point of the site. */
+.etf-cta{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:32px;text-align:center;margin-top:72px}
+.etf-cta h3{font-size:20px;font-weight:600;color:var(--text1);margin-bottom:10px;letter-spacing:-.01em}
+.etf-cta p{font-size:15px;line-height:1.7;color:var(--text2);max-width:520px;margin:0 auto 22px}
+.etf-cta a{display:inline-block;border:1px solid var(--border);color:var(--text1);font-size:15px;font-weight:500;padding:11px 26px;border-radius:10px;text-decoration:none;transition:border-color .2s,color .2s}
+.etf-cta a:hover{border-color:var(--accent);color:var(--accent)}
 
 @media(max-width:600px){
-  .section-divider{margin-top:28px}
+  .hero{padding-top:48px}
+  .hero h2{font-size:28px}
+  .land-section{margin-top:52px}
+  .etf-cta{margin-top:52px;padding:26px 20px}
 }
 </style>
 </head>
@@ -47,27 +78,68 @@
 
 <div id="siteNavRoot"></div>
 
-<div class="section-divider" id="etf-directory">
-  <h2>Browse ETFs and investments</h2>
-  <p>A curated list of non-leveraged ETFs by category, with live price and historical range. Use it to find a ticker for the simulators in the menu above.</p>
-</div>
-
 <div class="container">
-  <div class="status-line" id="statusLine">Loading price data&hellip;</div>
-  <div class="range-chips" id="rangeChips"></div>
-  <div class="group-controls">
-    <button onclick="setAllGroups(true)">Expand all</button>
-    <button onclick="setAllGroups(false)">Collapse all</button>
+
+  <div class="hero">
+    <h2>Understand investing through history</h2>
+    <p>Explore portfolios, market cycles, risk and diversification using real historical market data.</p>
+    <p class="tagline">No predictions. No hype. Just perspective.</p>
+    <a href="/learn.html" class="hero-cta">Explore investment tools</a>
   </div>
 
-  <div id="groupsContainer"></div>
+  <div class="land-section">
+    <div class="dir-grid">
+      <a href="/portfolio-simulator.html" class="dir-card">
+        <h4>Build and test a portfolio</h4>
+        <p>Create an investment mix and see how it performed through different market environments.</p>
+        <span class="go">Portfolio Simulator &rarr;</span>
+      </a>
+      <a href="/sp500-history.html" class="dir-card">
+        <h4>Understand market history</h4>
+        <p>Explore returns, downturns, recoveries and major market events.</p>
+        <span class="go">Explore market history &rarr;</span>
+      </a>
+      <a href="/risk-return.html" class="dir-card">
+        <h4>Compare risk and diversification</h4>
+        <p>Understand sectors, volatility, correlation and long-term growth.</p>
+        <span class="go">Explore investment analysis &rarr;</span>
+      </a>
+    </div>
+  </div>
+
+  <div class="land-section">
+    <h3>Popular tools</h3>
+    <div class="pop-grid">
+      <a href="/portfolio-simulator.html" class="pop-card">
+        <div class="name">Portfolio Simulator</div>
+        <div class="desc">Test an investment allocation.</div>
+      </a>
+      <a href="/sp500-history.html" class="pop-card">
+        <div class="name">S&amp;P 500 History</div>
+        <div class="desc">Explore more than a century of market returns.</div>
+      </a>
+      <a href="/bad-streaks.html" class="pop-card">
+        <div class="name">Market Downturns &amp; Recovery</div>
+        <div class="desc">See how difficult periods unfolded and what followed.</div>
+      </a>
+      <a href="/risk-return.html" class="pop-card">
+        <div class="name">Risk vs Return</div>
+        <div class="desc">Compare historical return and volatility.</div>
+      </a>
+    </div>
+    <a href="/learn.html#all-tools" class="view-all">View all tools &rarr;</a>
+  </div>
+
+  <div class="etf-cta">
+    <h3>Looking for a specific ETF?</h3>
+    <p>Search ETFs by name, ticker or category and explore the available historical data.</p>
+    <a href="/etf-directory.html">Browse ETFs</a>
+  </div>
+
 </div>
 
-<script src="shared-analytics.js?v=1"></script>
-<script src="site-nav.js?v=7"></script>
+<script src="site-nav.js?v=8"></script>
 <script src="shared-auth.js"></script>
-<script src="etf-groups.js?v=1"></script>
-<script src="etf-home.js?v=3"></script>
 <script>try{navigator.sendBeacon('/api/track/pageview',JSON.stringify({page:location.pathname,referrer:document.referrer}))}catch(e){}</script>
 </body>
 </html>

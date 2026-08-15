@@ -61,7 +61,7 @@ var SITE_NAV = [
   },
 ];
 
-var SITE_HOME = { label: 'Browse ETFs', href: '/#etf-directory' };
+var SITE_HOME = { label: 'Browse ETFs', href: '/etf-directory.html' };
 
 (function () {
   'use strict';
@@ -89,7 +89,7 @@ var SITE_HOME = { label: 'Browse ETFs', href: '/#etf-directory' };
         }).join('') +
         '</div></div>';
     });
-    html += '<a href="' + SITE_HOME.href + '" class="site-nav-top site-nav-home">' + esc(SITE_HOME.label) + '</a>';
+    html += '<a href="' + SITE_HOME.href + '" class="site-nav-top site-nav-home' + (isActive(SITE_HOME.href) ? ' active' : '') + '">' + esc(SITE_HOME.label) + '</a>';
     html += '<a href="/admin.html" class="site-nav-top site-nav-admin" id="siteNavAdmin" style="display:none">Admin</a>';
     return html;
   }
