@@ -72,6 +72,15 @@
     .ten-yr-cell { min-width: 190px; }
     .ten-yr-marker { background: var(--text1); }
     .ten-yr-compare { font-size: 10px; color: var(--text3); font-family: 'JetBrains Mono', monospace; margin-top: 4px; white-space: nowrap; }
+
+    /* 10-year return bar -- diverging (can extend left or right of a
+       computed zero-point), single neutral color, no red/green (matches
+       the rest of the site: sign in the number carries direction). */
+    .return-cell { min-width: 130px; }
+    .return-track { width: 100%; height: 8px; background: var(--border); border-radius: 2px; position: relative; margin-bottom: 4px; }
+    .return-zero { position: absolute; top: -2px; bottom: -2px; width: 1px; background: var(--text3); }
+    .return-bar { position: absolute; top: 0; bottom: 0; background: var(--text1); border-radius: 2px; min-width: 1px; }
+    .return-label { font-size: 12px; font-weight: 700; font-family: 'JetBrains Mono', monospace; color: var(--text1); }
   </style>
 </head>
 <body>
@@ -94,6 +103,6 @@
   </div>
 
   <script src="shared-analytics.js?v=1"></script>
-  <script src="etf-directory.js?v=3"></script>
+  <script src="etf-directory.js?v=4"></script>
 </body>
 </html>

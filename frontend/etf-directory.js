@@ -144,6 +144,7 @@ function renderGroups() {
               <th class="r">Price</th>
               <th>52W Range</th>
               <th>10Y Range</th>
+              <th title="Bar length uses a compressed (square-root) scale, not linear -- returns here span -41% to +1500%+, so a linear scale would make everything except the single biggest winner look flat. Compressed scale keeps both ends visually comparable.">10Y Return</th>
             </tr>
           </thead>
           <tbody>
@@ -154,6 +155,7 @@ function renderGroups() {
                 <td class="r price-cell" id="price-${ticker}"><span class="quote-na">…</span></td>
                 <td class="range-cell" id="range-${ticker}"></td>
                 <td class="range-cell ten-yr-cell" id="tenyr-${ticker}"><span class="quote-na">—</span></td>
+                <td class="return-cell" id="return-${ticker}"><span class="quote-na">—</span></td>
               </tr>
             `).join('')}
           </tbody>
@@ -241,6 +243,66 @@ function renderTenYear(ticker, tenYr) {
   `;
 }
 
+/* Diverging bar for the 10Y Return column. Returns here span roughly
+   -41% to +1500%+ (verified against the real loaded data), so a plain
+   linear scale would make every bar except the single biggest winner
+   look flat. Signed-square-root compresses the tail just enough to
+   keep both the bond/broad-market majority AND the outlier winners
+   visually differentiated, instead of a hard cap that would make the
+   top handful of tickers all look identical. Scale is computed fresh
+   from whatever's actually loaded, so it stays calibrated as the
+   underlying data changes over time. */
+function computeReturnScale(ranges) {
+  const pcts = Object.values(ranges).map(v => v.change_pct).filter(p => p != null);
+  if (!pcts.length) return { maxPosSqrt: 1, maxNegSqrt: 1, zeroPct: 50 };
+
+  const maxPos = Math.max(0, ...pcts);
+  const maxNeg = Math.abs(Math.min(0, ...pcts));
+  const maxPosSqrt = Math.sqrt(Math.max(maxPos, 1));
+  const maxNegSqrt = Math.sqrt(Math.max(maxNeg, 1));
+
+  // Zero-point sits proportionally between the two tails -- e.g. if the
+  // worst loser is much smaller in magnitude than the best winner (true
+  // here: bonds down ~40% max vs tech up ~1500%), zero sits close to the
+  // left edge, giving most of the track's width to the positive side.
+  const zeroPct = (maxNegSqrt / (maxNegSqrt + maxPosSqrt)) * 100;
+
+  return { maxPosSqrt, maxNegSqrt, zeroPct };
+}
+
+function renderReturnBar(ticker, tenYr, scale) {
+  const cell = $('return-' + ticker);
+  if (!cell) return;
+
+  if (!tenYr || tenYr.change_pct == null) {
+    cell.innerHTML = '<span class="quote-na">no history loaded</span>';
+    return;
+  }
+
+  const { change_pct } = tenYr;
+  const { maxPosSqrt, maxNegSqrt, zeroPct } = scale;
+  const signedSqrt = Math.sign(change_pct) * Math.sqrt(Math.abs(change_pct));
+
+  let barLeft, barWidth;
+  if (change_pct >= 0) {
+    barWidth = maxPosSqrt > 0 ? (signedSqrt / maxPosSqrt) * (100 - zeroPct) : 0;
+    barLeft = zeroPct;
+  } else {
+    barWidth = maxNegSqrt > 0 ? (Math.abs(signedSqrt) / maxNegSqrt) * zeroPct : 0;
+    barLeft = zeroPct - barWidth;
+  }
+
+  const sign = change_pct >= 0 ? '+' : '';
+
+  cell.innerHTML = `
+    <div class="return-track">
+      <div class="return-zero" style="left:${zeroPct}%"></div>
+      <div class="return-bar" style="left:${barLeft}%; width:${barWidth}%"></div>
+    </div>
+    <div class="return-label">${sign}${change_pct.toFixed(1)}%</div>
+  `;
+}
+
 async function loadTenYearRanges() {
   const allTickers = ETF_GROUPS.flatMap(g => g.rows.map(r => r[1]));
 
@@ -249,10 +311,18 @@ async function loadTenYearRanges() {
     if (!resp.ok) throw new Error('API returned ' + resp.status);
     const ranges = await resp.json();
 
-    allTickers.forEach(ticker => renderTenYear(ticker, ranges[ticker] || null));
+    const scale = computeReturnScale(ranges);
+    allTickers.forEach(ticker => {
+      const data = ranges[ticker] || null;
+      renderTenYear(ticker, data);
+      renderReturnBar(ticker, data, scale);
+    });
   } catch (e) {
     console.error('loadTenYearRanges failed:', e);
-    allTickers.forEach(ticker => renderTenYear(ticker, null));
+    allTickers.forEach(ticker => {
+      renderTenYear(ticker, null);
+      renderReturnBar(ticker, null, null);
+    });
   }
 }
 
