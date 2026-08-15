@@ -117,7 +117,7 @@ body{min-height:100vh;background:var(--bg);color:var(--text1);font-family:'DM Sa
    Activated via html[data-theme="light"]
    ========================================== */
 
-html[data-theme="light"]{--bg:#f8fafc;--card:#ffffff;--border:#e2e8f0;--accent:#059669;--accent-dim:rgba(5,150,105,0.1);--accent-glow:rgba(5,150,105,0.3);--red:#dc2626;--red-dim:rgba(220,38,38,0.1);--gold:#d97706;--gold-dim:rgba(217,119,6,0.1);--blue:#2563eb;--blue-dim:rgba(37,99,235,0.1);--text1:#0f172a;--text2:#475569;--text3:#526073}
+html[data-theme="light"]{--bg:#f8fafc;--card:#ffffff;--border:#e2e8f0;--accent:#059669;--accent-dim:rgba(5,150,105,0.1);--accent-glow:rgba(5,150,105,0.3);--red:#dc2626;--red-dim:rgba(220,38,38,0.1);--gold:#d97706;--gold-dim:rgba(217,119,6,0.1);--blue:#2563eb;--blue-dim:rgba(37,99,235,0.1);--text1:#0f172a;--text2:#475569;--text3:#475569}
 
 /* .data-table, rank/correlation values now built entirely from theme-aware CSS vars
    and shared .growth-pos/.growth-neg/.growth-gold text classes (all just
