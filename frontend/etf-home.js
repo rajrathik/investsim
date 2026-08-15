@@ -1,8 +1,7 @@
 /* ==========================================
    ETF HOME — default landing layout (/)
 
-   Differences from the classic table (etf-directory.js), which is still
-   available at /etf-directory.html:
+   Builds the ETF directory shown on the landing page:
      - Range period chips (1y/5y/10y/max) re-render every row at once, so
        there is no per-ticker click and no hover dependency.
      - Always-on sparkline per row.

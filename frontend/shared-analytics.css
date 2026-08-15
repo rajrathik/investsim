@@ -25,7 +25,11 @@ body{min-height:100vh;background:var(--bg);color:var(--text1);font-family:'DM Sa
 .container{max-width:1400px;margin:0 auto;padding:40px 24px}
 
 /* Description */
-.page-desc{color:var(--text2);margin-bottom:32px;font-size:16px;line-height:1.7;max-width:680px}
+/* No width cap -- intro text spans the container, so it stays visually in
+   step with the full-width tables and charts below it rather than stopping
+   halfway across. These intros are one or two sentences, where long line
+   length costs far less than it would in long-form reading. */
+.page-desc{color:var(--text2);margin-bottom:32px;font-size:16px;line-height:1.7}
 
 /* Collapsible methodology / details panel. Used to push formulas and
    explanations below the data on the explainer-heavy pages, so the
@@ -112,7 +116,7 @@ body{min-height:100vh;background:var(--bg);color:var(--text1);font-family:'DM Sa
 .glossary strong{color:var(--text2);font-weight:600}
 
 /* Lede — one-sentence framing above the controls, keeps data near the top */
-.lede{max-width:760px;margin:-2px 0 18px;font-size:13.5px;line-height:1.65;color:var(--text2)}
+.lede{margin:-2px 0 18px;font-size:13.5px;line-height:1.65;color:var(--text2)}
 .lede strong{color:var(--text1);font-weight:600}
 
 /* Explainer — "what do I do with this" guidance, placed after the data */

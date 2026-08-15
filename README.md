@@ -80,8 +80,8 @@ C:\Raj\python\portfolio-simulator\
 │   ├── admin.html                  ← Admin dashboard (Auth0 protected, isolated)
 │   ├── site-nav.js                 ← Shared top nav; edit SITE_NAV array to reorder/move pages
 │   ├── etf-groups.js               ← Curated ETF list, shared by both directory layouts
-│   ├── etf-home.js / etf-home.css  ← Landing-page ETF directory layout
-│   └── etf-directory.js / .css     ← Classic full-width ETF table
+│   └── etf-home.js / .css          ← Landing-page ETF directory
+│       + etf-directory.css         ← group/table styles it builds on
 │
 ├── tools\                          ← Utilities & verification
 │   ├── generate_test_spreadsheet.py ← Generates Excel workbook from DB data

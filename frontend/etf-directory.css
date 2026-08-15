@@ -1,4 +1,6 @@
-/* ETF Directory — page-specific styles (used by index.html, the landing page) */
+/* ETF Directory — group/table/fund-name styles for the directory on the
+   landing page (index.html). Kept as its own file alongside etf-home.css,
+   which holds the chips, sparklines and range bars. */
 
 .status-line { font-size: 12px; color: var(--text3); font-family: 'JetBrains Mono', monospace; margin-bottom: 4px; }
 

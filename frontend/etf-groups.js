@@ -1,8 +1,7 @@
 /* ==========================================
    ETF DIRECTORY -- CURATED TICKER DATA
-   Single source of truth for the curated list. Consumed by BOTH layouts:
-     - etf-home.js       (new default layout, served at /)
-     - etf-directory.js  (classic table layout, /etf-directory.html)
+   Single source of truth for the curated list. Consumed by etf-home.js,
+   which builds the directory on the landing page.
    Also parsed server-side by loader.get_etf_directory_tickers().
    Row shape: [category, ticker, fund name, issuer url]
    ========================================== */

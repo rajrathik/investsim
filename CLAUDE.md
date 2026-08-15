@@ -71,7 +71,6 @@ frontend/theme-toggle.js       ← Dark/light theme IIFE (no FOUC)
 | Page | File |
 |------|------|
 | Landing — ETF Directory (new layout) | `index.html` + `etf-home.js/css` — range chips (1Y/5Y/10Y/Max), sparklines, filled position-in-range bar, skeleton loaders, sessionStorage history cache |
-| ETF Directory (classic table) | `etf-directory.html` + `etf-directory.js/css` — original full-width table, reachable from Sector tools |
 | Asset Allocation Simulator | `portfolio-simulator.html` |
 | Sector Returns Quilt | `sector-performance.html` |
 | Correlation Matrix | `correlation.html` |
