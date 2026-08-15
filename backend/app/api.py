@@ -84,6 +84,7 @@ Endpoints:
 """
 import os
 import re
+import json
 import uuid
 import time
 import logging
@@ -93,6 +94,7 @@ from datetime import datetime, date, timedelta, timezone
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Depends, HTTPException, Query, Request
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -2004,15 +2006,7 @@ def delete_simulation(
 # PAGE VIEW TRACKING (self-hosted, zero cost)
 # ===========================================
 
-class PageViewBody(BaseModel):
-    page: str
-    referrer: Optional[str] = None
-
-
-@app.post("/api/track/pageview", status_code=204)
-@limiter.limit("30/minute")
-def track_pageview(body: PageViewBody, request: Request):
-    """Record a page view. Fire-and-forget, never fails the client."""
+def _record_pageview(page: str, referrer: Optional[str], ip: Optional[str], user_agent: str):
     try:
         db = SessionLocal()
         try:
@@ -2020,12 +2014,12 @@ def track_pageview(body: PageViewBody, request: Request):
                 request_id="pv",
                 user_email=None,
                 method="PAGEVIEW",
-                path=body.page[:500] if body.page else "/",
+                path=page,
                 status_code=200,
                 response_time_ms=0,
-                ip_address=request.client.host if request.client else None,
-                user_agent=(request.headers.get("user-agent") or "")[:500],
-                error_detail=body.referrer[:500] if body.referrer else None,
+                ip_address=ip,
+                user_agent=user_agent,
+                error_detail=referrer,
             )
             db.add(log)
             db.commit()
@@ -2033,6 +2027,37 @@ def track_pageview(body: PageViewBody, request: Request):
             db.close()
     except Exception:
         pass
+
+
+@app.post("/api/track/pageview", status_code=204)
+@limiter.limit("30/minute")
+async def track_pageview(request: Request):
+    """Record a page view. Fire-and-forget, never fails the client.
+
+    The body is parsed by hand rather than through a Pydantic model: browsers send
+    navigator.sendBeacon string payloads as text/plain, which FastAPI will not hand
+    to a body model, so a declared model rejects every beacon with a 422.
+    """
+    try:
+        raw = await request.body()
+        payload = json.loads(raw) if raw else {}
+        if not isinstance(payload, dict):
+            payload = {}
+    except Exception:
+        payload = {}
+
+    page = payload.get("page")
+    page = str(page)[:500] if page else "/"
+    referrer = payload.get("referrer")
+    referrer = str(referrer)[:500] if referrer else None
+
+    await run_in_threadpool(
+        _record_pageview,
+        page,
+        referrer,
+        request.client.host if request.client else None,
+        (request.headers.get("user-agent") or "")[:500],
+    )
     return
 
 
