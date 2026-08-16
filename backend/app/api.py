@@ -1685,6 +1685,45 @@ def get_daily_price_stats_all(db: Session = Depends(get_db)):
 
 UPDATE_ALL_RECENT_MONTHS = 12
 
+# One line per table on what actually lives in it. Rendered next to every
+# table name in the help panel so the routine reads as a data flow -- source,
+# what gets written, and what that table is for -- rather than a list of
+# names you have to already know.
+TABLE_NOTES = {
+    "monthly_prices":
+        "One row per ticker per month: high, low, close, adjusted close. The backbone "
+        "of every simulation — buys happen at the monthly high.",
+    "dividends":
+        "Cash dividends per ticker per month. Held as cash in simulations and earning "
+        "the money-market rate, never reinvested.",
+    "monthly_mm_rates":
+        "Federal funds rate by month. Doubles as the risk-free benchmark and the rate "
+        "idle dividend cash earns.",
+    "annual_mm_rates":
+        "The same rate series rolled up to calendar years.",
+    "spy_daily_prices":
+        "Daily open/high/low/close/volume for SPY back to 1993-01-29. Standalone table, "
+        "one ticker.",
+    "oef_daily_prices":
+        "The same, for OEF back to 2000-10-27.",
+    "etf_directory_monthly_history":
+        "Monthly closes for all 81 ETF directory tickers, 1996 to last closed month. "
+        "Powers the sparklines and position-in-range bars on the directory page.",
+    "damodaran_annual_returns":
+        "One row per year since 1928: S&P 500, small cap, T-bill, 10-year T-bond, Baa "
+        "corporate, real estate, gold. Powers the rolling-returns page.",
+    "shiller_market_data":
+        "Monthly S&P 500 data since January 1871 including calculated total return. "
+        "Powers Monte Carlo, S&P 500 History, the Historical Simulator, both extremes "
+        "pages and downturns & recovery.",
+    "stack_earn_savings_tiers":
+        "Savings rate tiers for the Stack & Earn calculator.",
+    "stack_earn_goal_tiers":
+        "Goal rate tiers for the Stack & Earn calculator.",
+    "tickers":
+        "The list of securities everything else keys off. Symbol, name, active flag.",
+}
+
 UPDATE_ALL_STEPS = [
     {
         "key": "new-tickers",
@@ -2017,6 +2056,7 @@ def get_update_all_steps(user: dict = Depends(require_admin)):
         "recent_months": UPDATE_ALL_RECENT_MONTHS,
         "steps": UPDATE_ALL_STEPS,
         "excluded": UPDATE_ALL_EXCLUDED,
+        "table_notes": TABLE_NOTES,
     }
 
 
