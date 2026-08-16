@@ -94,6 +94,11 @@ body{min-height:100vh;background:var(--bg);color:var(--text1);font-family:'DM Sa
 .ua-sqlhd{font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin:8px 0 3px}
 .ua-sql{font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.55;color:var(--text2);background:var(--card);border:1px solid var(--border);border-left:2px solid var(--accent);border-radius:8px;padding:9px 11px;margin:0;white-space:pre-wrap;word-break:break-word;overflow-x:auto}
 .ua-sql-warn{border-left-color:var(--gold)}
+.ua-ts{background:var(--card);border:1px solid var(--border);border-left:2px solid var(--red);border-radius:8px;padding:4px 12px}
+.ua-ts-item{padding:9px 0;border-top:1px solid var(--border)}
+.ua-ts-item:first-child{border-top:none}
+.ua-ts-sym{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--red);line-height:1.5;margin-bottom:4px}
+.ua-ts-fix{font-size:12px;color:var(--text2);line-height:1.6;white-space:pre-wrap}
 .ua-rerun{font-size:12px;color:var(--text2);background:var(--card);border:1px solid var(--border);border-radius:8px;padding:9px 12px;margin-top:10px;line-height:1.6}
 .ua-rerun strong{color:var(--gold)}
 .ua-fix{color:var(--gold);text-decoration:none;font-weight:700;margin-left:8px;white-space:nowrap}
@@ -606,6 +611,15 @@ async function toggleUpdateAllHelp() {
                  (r.key ? '<div class="ua-key">key: ' + esc(r.key) + '</div>' : '') +
                  (r.inspect ? '<div class="ua-sqlhd">Inspect</div><pre class="ua-sql">' + esc(r.inspect) + '</pre>' : '') +
                  (r.manual ? '<div class="ua-sqlhd">Repair by hand</div><pre class="ua-sql ua-sql-warn">' + esc(r.manual) + '</pre>' : '') +
+                 (r.troubleshoot && r.troubleshoot.length
+                   ? '<div class="ua-sqlhd">If it fails</div><div class="ua-ts">' +
+                       r.troubleshoot.map(x =>
+                         '<div class="ua-ts-item">' +
+                           '<div class="ua-ts-sym">' + esc(x.symptom) + '</div>' +
+                           '<div class="ua-ts-fix">' + esc(x.fix) + '</div>' +
+                         '</div>').join('') +
+                     '</div>'
+                   : '') +
                '</div>' +
              '</div>';
       });

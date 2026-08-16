@@ -1830,6 +1830,69 @@ TABLE_RECOVERY = {
             "FULL RELOAD — only if history is corrupt, or Shiller revised past months and\n"
             "you want those corrections. Deletes all rows and reinserts:\n"
             "  venv\\Scripts\\python backend\\onetime\\load_shiller_data.py --truncate --db both",
+        "troubleshoot": [
+            {
+                "symptom": "\"Already up to date — nothing to append\" but you expected new months",
+                "fix": (
+                    "The download is stale, not the database. The loader compares the file "
+                    "against the table, so an old ie_data.xls always looks current. Check what "
+                    "the file actually contains with --dry-run, and confirm you saved the new "
+                    "download over inputdata\\ie_data.xls rather than into Downloads."
+                ),
+            },
+            {
+                "symptom": "\"FAILED to connect to postgres\" (or sqlserver) — but the script finished",
+                "fix": (
+                    "This is the dangerous one. With --db both a connection failure is printed "
+                    "and then SKIPPED — the other database still loads and the script exits 0, "
+                    "so a half-done run looks like a success. Always read the output rather than "
+                    "the exit code. Re-run for just the failed side with --db postgres or "
+                    "--db sqlserver, then run the inspect query above against BOTH to confirm "
+                    "the row counts and last_ym match."
+                ),
+            },
+            {
+                "symptom": "\"ERROR: File not found: ...\\inputdata\\ie_data.xls\"",
+                "fix": (
+                    "inputdata/ is gitignored, so it does not exist on a fresh clone. Create it "
+                    "and download the spreadsheet into it, or point at the file directly with "
+                    "--file C:\\path\\to\\ie_data.xls"
+                ),
+            },
+            {
+                "symptom": "\"ERROR: xlrd not installed\"",
+                "fix": "venv\\Scripts\\pip install xlrd  — it is not in requirements.txt because only this loader needs it.",
+            },
+            {
+                "symptom": "\"No sheet named <'Data'>\" or \"Excel xlsx file; not supported\"",
+                "fix": (
+                    "Wrong file or wrong format. The loader reads the sheet literally named "
+                    "'Data' from a legacy .xls; xlrd cannot open .xlsx at all. Make sure you took "
+                    "the 'U.S. Stock Markets 1871-Present and CAPE Ratio' download and did not "
+                    "let Excel re-save it as .xlsx. If Shiller has genuinely renamed the sheet, "
+                    "read_excel() in the loader needs updating."
+                ),
+            },
+            {
+                "symptom": "PostgreSQL: duplicate key value violates unique constraint on \"Id\"",
+                "fix": (
+                    "The identity sequence is behind the table — it happens after a load that "
+                    "supplied explicit Ids. The loader tries to fix this itself but swallows the "
+                    "error. Resync it, then re-run --append:\n"
+                    "SELECT setval('shiller_market_data_\"Id\"_seq',\n"
+                    "              (SELECT MAX(\"Id\") FROM shiller_market_data), true);"
+                ),
+            },
+            {
+                "symptom": "It inserted rows, but the six pages still show old data",
+                "fix": (
+                    "Check you loaded the database the site actually reads. DB_TYPE in "
+                    "backend/.env decides that, and it is currently postgres — meaning the local "
+                    "API talks to Railway, not SQL Server. Run the inspect query through the same "
+                    "connection the app uses before concluding the load failed."
+                ),
+            },
+        ],
     },
     "daily_quotes": {
         "key": "(ticker, quote_date) — uq_daily_quote_ticker_date",
