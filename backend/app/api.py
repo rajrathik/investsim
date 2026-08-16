@@ -1722,6 +1722,10 @@ TABLE_NOTES = {
         "Goal rate tiers for the Stack & Earn calculator.",
     "tickers":
         "The list of securities everything else keys off. Symbol, name, active flag.",
+    "daily_quotes":
+        "One row per ticker per trade date: the current price and 52-week range shown on "
+        "the ETF directory. Written as a side effect of visitors loading that page, not "
+        "by any button.",
 }
 
 # How to inspect and hand-repair each table when a step fails badly enough
@@ -1830,6 +1834,18 @@ TABLE_RECOVERY = {
         "key": "tier_number",
         "inspect": "SELECT * FROM stack_earn_goal_tiers ORDER BY tier_number;",
         "manual": "Edit through the Rate Management card. Nothing fetches this table.",
+    },
+    "daily_quotes": {
+        "key": "(ticker, quote_date) — uq_daily_quote_ticker_date",
+        "inspect":
+            "SELECT quote_date, COUNT(*) AS tickers FROM daily_quotes\n"
+            "GROUP BY quote_date ORDER BY quote_date DESC;",
+        "manual":
+            "No button loads this. It fills from GET /api/quotes, which the ETF directory "
+            "page calls — so it grows when visitors browse and stalls when they do not. "
+            "To force a refill, open /etf-directory.html; a repeat load on the same trade "
+            "date overwrites the same row. Deleting a bad day is safe, nothing reads history "
+            "from it:\nDELETE FROM daily_quotes WHERE quote_date = '2026-08-14';",
     },
     "tickers": {
         "key": "symbol (unique)",
@@ -1960,10 +1976,29 @@ UPDATE_ALL_EXCLUDED = [
         ),
     },
     {
-        "label": "Full 30-year history reload",
-        "tables": ["monthly_prices", "dividends"],
-        "source": "Yahoo Finance",
-        "reason": "Slow and rarely needed. Stays a separate, explicitly confirmed button.",
+        "label": "Live quotes on the ETF directory",
+        "tables": ["daily_quotes"],
+        "source": "Yahoo Finance, via visitor traffic",
+        "reason": (
+            "No button loads this and none is planned. GET /api/quotes writes a row on every "
+            "fresh fetch, so the table fills when people browse the ETF directory and stalls "
+            "when they do not. Nothing else reads it as history."
+        ),
+    },
+    {
+        "label": "Full-history rebuilds (every 'Full History' button)",
+        "tables": [
+            "monthly_prices", "dividends", "spy_daily_prices",
+            "oef_daily_prices", "etf_directory_monthly_history",
+            "monthly_mm_rates", "annual_mm_rates",
+        ],
+        "source": "Yahoo Finance / FRED",
+        "reason": (
+            "Every step here has a full-history sibling — Reload All Tickers, FRED Full, "
+            "ETF Directory Full History, and Daily Prices Full History for SPY and OEF. All "
+            "four are slow, rate-limited and rarely needed, so they stay separate, "
+            "explicitly confirmed buttons rather than part of a routine."
+        ),
     },
     {
         "label": "Stack & Earn rates",
