@@ -70,9 +70,9 @@ able to destroy.
 ### Excluded operations
 
 **Reload All Tickers** (`POST /api/batch/full`) is not part of Update All. It
-drops and re-fetches complete history for every ticker — minutes of API calls
-and a total rewrite of the two largest tables. It stays a separate, manually
-confirmed action. Update All is the routine; that is the recovery tool.
+is minutes of rate-limited API calls across every ticker's full history, and
+it is the wrong shape for a routine. It stays a separate, explicitly confirmed
+action — see §12, which also corrects what that button actually does today.
 
 ## 4. Phase 1 — Snapshot
 
@@ -272,3 +272,68 @@ backup trustworthy.
 
 Steps 1 and 2 carry the risk. Everything after them is additive, and the
 feature is genuinely useful from step 3 onward even before the checks exist.
+
+---
+
+## 12. Reload All Tickers — window it, and make it honest
+
+This is separable from Update All and can ship first.
+
+### What that button actually does today
+
+Not what its name says. In `loader.load_prices()`, `mode="full"` **skips any
+row that already exists**; only `mode="incremental"` updates one. So the
+button downloads roughly thirty years of history for every active ticker —
+the slow, rate-limited part — and then writes only the months that happened
+to be missing. The card's fine print already concedes this ("existing data is
+skipped, not overwritten"). The label is what misleads.
+
+Two things follow.
+
+**It cannot repair anything.** If a historical month is wrong, nothing in
+admin can fix it. `full` skips it. `incremental` only reaches back N months.
+The only route today is deleting rows by hand in the database. This is worth
+stating plainly because it is the strongest argument for the backup half of
+Update All: forward repair does not currently exist.
+
+**The expensive part is the fetch, not the write.** Cost scales with history
+depth × ticker count, and almost all of it is thrown away.
+
+### What is being asked for
+
+Default to reloading the last twelve months. Full history only on an explicit
+request.
+
+### It mostly already exists
+
+`Refresh Recent Data` → `POST /api/batch/incremental` with `months` takes an
+arbitrary window and upserts. Set it to 12 and that *is* "reload the last
+twelve months for every ticker." No new endpoint is needed for the common
+case. The work is defaults and guardrails.
+
+### Proposed changes
+
+| Control | Today | Proposed |
+|---|---|---|
+| Refresh Recent Data | `Months` defaults to 2 | Defaults to **12**. Behaviour unchanged — it already overwrites in-window. |
+| Reload All Tickers | Single `confirm()`, then a ~30-year fetch that cannot overwrite | Rename **Rebuild Full History**. Typed confirmation, not a click-through. Switch to upsert so it can actually repair. |
+
+On the API, `POST /api/batch/full` should require an explicit
+`confirm_full_history: true` in the body and reject the request without it,
+so the expensive path cannot be reached by an accidental or replayed call.
+
+### The one real behaviour change
+
+Making full-history mode upsert instead of skip converts the button from
+"fill in gaps" to "trust the source and rewrite from it." That is what you
+want after a bad load, and it is the only thing that makes forward repair
+possible at all.
+
+It is also the single most destructive operation in the admin dashboard, and
+it would be pointed at the two largest tables. **It should not ship before
+the snapshot/restore machinery in §4 and §8 exists**, and when it does ship
+it should take a snapshot first — the same one Update All takes — regardless
+of whether the rest of the verify/decide flow is built yet.
+
+Sequencing follows from that: defaults and the typed confirmation can land
+immediately; the upsert change waits for backups.
