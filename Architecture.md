@@ -41,7 +41,7 @@ http://localhost:8000/   →   index.html  (landing page — tool cards, no auth
          (no auth)                                      rotation, div-growth,
                                                         growth-chart, risk-return,
                                                         sp500-history, sp500-simulate,
-                                                        stack-earn, extreme-months,
+                                                        extreme-months,
                                                         extreme-years, bad-streaks,
                                                         sp500-rolling-returns
 
@@ -63,7 +63,7 @@ http://localhost:8000/admin.html  →  Auth0 lock screen
 - Root `/` serves `index.html`
 - Every page loads `theme-toggle.js` in `<head>` for dark/light theme switching with localStorage persistence
 - Every public page loads Auth0 SPA SDK + `shared-auth.js` for optional sign-in (welcome bar, sign-in link)
-- Signed-in users see member content on the landing page (Saved Simulations) and can access `saved-simulations.html`. `stack-earn.html` is fully built but not linked from the landing page — accessible via direct URL only
+- Signed-in users see member content on the landing page (Saved Simulations) and can access `saved-simulations.html`
 - Signed-in members who are admins also see an Admin tile — auto-detected via `GET /api/admin/verify` using `_pubAuthFetch` on page load; `_admin_hint` flag cached in localStorage
 
 ---
@@ -180,7 +180,6 @@ Each ticker has: symbol, name, active flag, created/updated timestamps.
 | `risk-return.html/js` | Risk vs return scatter plot |
 | `sp500-history.html/js` | S&P 500 decade heatmap. Compounds monthly `NominalTotalReturn` values into annual returns; renders a color-interpolated decade grid (muted green/red); methodology panel explains columns used, formula, and assumptions |
 | `sp500-simulate.html/js` | S&P 500 Historical Simulator. Pick year range (1872–2024), starting amount, monthly contribution → final balance, stat strip, area chart (balance vs invested), year-by-year table with inline return bars. API: `GET /api/sp500-simulate` |
-| `stack-earn.html/js` | Stack & Earn savings calculator. Two tabs: Savings (forward simulation with split-bucket compounding) and Goal (binary-search reverse solve). Loads tier rates from `GET /api/stack-earn/savings-tiers` and `GET /api/stack-earn/goal-tiers`. Three independent balance buckets (T1/T2/T3) compound at their own monthly rate. Tier table respects `display_rate`, `display_upto`, and `product_type` fields from the API |
 | `montecarlo.html/js` | Monte Carlo portfolio simulator. Block-bootstrap: draws random N-year return blocks from Shiller history, 1,000 trials client-side. Horizon 5–30yr. Fan chart (P10/P25/P50/P75/P90 bands). Supports withdrawal mode (tracks ruin rate) and optional one-time lump sum event. Market Cycle Sensitivity selector (Short·1yr / Medium·3yr / Long·5yr) with plain-language `?` tooltip. Percentile table includes Deposited column and `?` tooltip explaining each column. API: `GET /api/shiller-monthly-returns` |
 | `extreme-months.html/js` | Monthly Market Extremes. Fetches `GET /api/sp500-extreme-months?n=20` once (cached). Renders side-by-side panels: worst months (red) and best months (green). Summary cards show all-time worst and best. Table rows: rank, date, return%, $10K result, mini-bar (width proportional to magnitude, scales to #1 entry). Chip toggle for top-10/top-20 slices from cached 20 with no re-fetch |
 | `extreme-years.html/js` | Annual Market Extremes. Fetches `GET /api/sp500-extreme-years?n=20` once (cached). Same layout as extreme-months. Annual returns compounded from monthly Shiller data server-side. Chip toggle for top-10/top-20 |
@@ -279,8 +278,6 @@ HTTP Request
 | `GET /api/sp500-extreme-years` | Returns N best and N worst full calendar years by compounded NominalTotalReturn (rank, date as year string, return_pct, end_value). Default N=20, max 50. 60/min rate limit |
 | `GET /api/sp500-bad-streaks` | Returns N worst non-overlapping 5-year windows. Each period includes rank, start/end year, return_pct, end_value ($10K result), years_detail (per-year pills), recovery_yr1, recovery_yr2, recovery_combined_pct. Default N=10, max 20. 60/min rate limit |
 | `GET /api/damodaran-forward-returns` | Returns 1/3/5/7/10-year rolling forward CAGR for every year in `damodaran_annual_returns`. Each entry: year, r1, r3, r5, r7, r10 (null when the dataset doesn't have enough future years to fill the window). 30/min rate limit |
-| `GET /api/stack-earn/savings-tiers` | Tier rates for the savings calculator. Returns 8 fields: tier_number, tier_label, min_amount, max_amount, annual_rate, display_rate, display_upto, product_type |
-| `GET /api/stack-earn/goal-tiers` | Tier rates for the goal calculator. Same 8-field response |
 
 ### Authenticated endpoints (Auth0 Bearer token required — public sign-in)
 
@@ -303,12 +300,6 @@ HTTP Request
 | `POST /api/batch/incremental` | Incremental load — configurable months (requires Auth0 token + ENABLE_WRITE_API) |
 | `POST /api/batch/fred-full` | Full FRED rate history load (requires Auth0 token + ENABLE_WRITE_API) |
 | `POST /api/batch/fred-incremental` | Incremental FRED load — last 3 months (requires Auth0 token + ENABLE_WRITE_API) |
-| `GET /api/admin/stack-earn/savings-tiers` | List savings tiers (admin-only) |
-| `PUT /api/admin/stack-earn/savings-tiers/{n}` | Update a savings tier (rate, label, display flags) |
-| `POST /api/admin/stack-earn/savings-tiers` | Add a new savings tier (auto-assigns next tier_number) |
-| `GET /api/admin/stack-earn/goal-tiers` | List goal tiers (admin-only) |
-| `PUT /api/admin/stack-earn/goal-tiers/{n}` | Update a goal tier |
-| `POST /api/admin/stack-earn/goal-tiers` | Add a new goal tier |
 
 All write endpoints are **double-gated**: Auth0 JWT token + `ENABLE_WRITE_API=True` in `.env`. Rate limited to 10/min (ticker CRUD) or 5/min (batch loads).
 
@@ -369,7 +360,6 @@ Individual page logic:
 | `risk-return.js` | Annual returns | StdDev of annual returns (X) vs average total return (Y); scatter plot |
 | `sp500-history.js` | `shiller_market_data.NominalTotalReturn` | Compounds monthly returns into annual returns; renders decade heatmap with muted color interpolation (dark green/dark red poles); hover tooltip; re-colors on theme change |
 | `sp500-simulate.js` | `GET /api/sp500-simulate` | Historical simulation: each month balance = (balance + monthly) × (1 + NominalTotalReturn); renders stat strip, area chart with hover crosshair, year-by-year table with color-coded return bars |
-| `stack-earn.js` | `GET /api/stack-earn/savings-tiers`, `GET /api/stack-earn/goal-tiers` | Savings: 3-bucket split compounding (t1/t2/t3 each earn their rate independently). Goal: 60-iteration binary search to find monthly contribution → renders hero result + year-by-year table. `renderTiers()` respects display_rate / display_upto / product_type flags |
 | `montecarlo.js` | `GET /api/shiller-monthly-returns` | Fetches ~1,850 monthly returns once (cached). Block-bootstrap: each trial draws random N-year blocks (1/3/5yr cycles), runs 1,000 trials. Horizon selectable 5–30yr. Computes P10/P25/P50/P75/P90 per year. Fan chart draws two filled bands + median line + optional deposits line. Percentile table with Deposited column. Ruin tracking for withdrawal mode. Optional one-time lump sum event |
 | `extreme-months.js` | `GET /api/sp500-extreme-months` | Fetches n=20 worst+best once (cached). Chip toggle re-renders sliced table (top-10 or top-20) without re-fetching. Mini-bars scale to the #1 entry in each list. Red/green color classes adapt to dark-mode via CSS `[data-theme="dark"]` overrides |
 | `extreme-years.js` | `GET /api/sp500-extreme-years` | Same pattern as extreme-months. Annual returns compounded server-side from monthly Shiller data. Chip toggle, mini-bars, dark-mode CSS |

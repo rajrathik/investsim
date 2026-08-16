@@ -70,7 +70,6 @@ var SITE_NAV = [
    Sign out are appended to this menu automatically. */
 var USER_MENU = [
   { label: 'Saved Simulations', href: '/saved-simulations.html' },
-  { label: 'Stack & Earn', href: '/stack-earn.html' },
 ];
 
 (function () {

@@ -121,7 +121,7 @@ if os.path.exists(env_path):
                 os.environ.setdefault(key.strip(), value.strip())
 
 from app.database import SessionLocal, init_db, engine
-from app.models import Ticker, MonthlyPrice, Dividend, UserLogin, UserAdmin, ApiRequestLog, SavedSimulation, StackEarnSavingsTier, StackEarnGoalTier, SpyDailyPrice, OefDailyPrice
+from app.models import Ticker, MonthlyPrice, Dividend, UserLogin, UserAdmin, ApiRequestLog, SavedSimulation, SpyDailyPrice, OefDailyPrice
 from app.config import MAX_TICKERS, ENABLE_WRITE_API, ALLOWED_ORIGINS
 from app.auth import get_current_user
 
@@ -1716,10 +1716,6 @@ TABLE_NOTES = {
         "Monthly S&P 500 data since January 1871 including calculated total return. "
         "Powers Monte Carlo, S&P 500 History, the Historical Simulator, both extremes "
         "pages and downturns & recovery.",
-    "stack_earn_savings_tiers":
-        "Savings rate tiers for the Stack & Earn calculator.",
-    "stack_earn_goal_tiers":
-        "Goal rate tiers for the Stack & Earn calculator.",
     "tickers":
         "The list of securities everything else keys off. Symbol, name, active flag.",
     "daily_quotes":
@@ -1824,16 +1820,6 @@ TABLE_RECOVERY = {
             "venv\\Scripts\\python backend\\onetime\\load_shiller_data.py --truncate\n"
             "--truncate deletes all 1,863 rows and reinserts. Without it the loader refuses "
             "to write when the table already has data.",
-    },
-    "stack_earn_savings_tiers": {
-        "key": "tier_number",
-        "inspect": "SELECT * FROM stack_earn_savings_tiers ORDER BY tier_number;",
-        "manual": "Edit through the Rate Management card. Nothing fetches this table.",
-    },
-    "stack_earn_goal_tiers": {
-        "key": "tier_number",
-        "inspect": "SELECT * FROM stack_earn_goal_tiers ORDER BY tier_number;",
-        "manual": "Edit through the Rate Management card. Nothing fetches this table.",
     },
     "daily_quotes": {
         "key": "(ticker, quote_date) — uq_daily_quote_ticker_date",
@@ -1999,12 +1985,6 @@ UPDATE_ALL_EXCLUDED = [
             "four are slow, rate-limited and rarely needed, so they stay separate, "
             "explicitly confirmed buttons rather than part of a routine."
         ),
-    },
-    {
-        "label": "Stack & Earn rates",
-        "tables": ["stack_earn_savings_tiers", "stack_earn_goal_tiers"],
-        "source": "Entered by hand",
-        "reason": "Edited through the Rate Management card, not fetched from anywhere.",
     },
     {
         "label": "Ticker list",
@@ -3041,148 +3021,6 @@ def get_sp500_simulate(
 
 
 # ===========================================
-# STACK & EARN — TIERED SAVINGS CALCULATOR
-# ===========================================
-
-def _serialize_tier(r):
-    return {
-        "tier_number": r.tier_number,
-        "tier_label": r.tier_label,
-        "min_amount": r.min_amount,
-        "max_amount": r.max_amount,
-        "annual_rate": r.annual_rate,
-        "display_rate": getattr(r, "display_rate", 1) if getattr(r, "display_rate", None) is not None else 1,
-        "display_upto": getattr(r, "display_upto", 0) if getattr(r, "display_upto", None) is not None else 0,
-        "product_type": getattr(r, "product_type", None) or "PurposeSaving",
-    }
-
-
-@app.get("/api/stack-earn/savings-tiers")
-@limiter.limit("60/minute")
-def get_stack_earn_savings_tiers(request: Request, db: Session = Depends(get_db)):
-    """Return tiered interest rates for the savings calculator."""
-    rows = db.query(StackEarnSavingsTier).order_by(StackEarnSavingsTier.tier_number).all()
-    return [_serialize_tier(r) for r in rows]
-
-
-@app.get("/api/stack-earn/goal-tiers")
-@limiter.limit("60/minute")
-def get_stack_earn_goal_tiers(request: Request, db: Session = Depends(get_db)):
-    """Return tiered interest rates for the goal calculator."""
-    rows = db.query(StackEarnGoalTier).order_by(StackEarnGoalTier.tier_number).all()
-    return [_serialize_tier(r) for r in rows]
-
-
-# ---- Admin CRUD for Stack & Earn tiers ----
-
-class TierUpsert(BaseModel):
-    tier_label: str
-    min_amount: float
-    max_amount: Optional[float] = None
-    annual_rate: float
-    display_rate: Optional[int] = 1
-    display_upto: Optional[int] = 0
-    product_type: Optional[str] = "PurposeSaving"
-
-
-@app.get("/api/admin/stack-earn/savings-tiers")
-@limiter.limit("30/minute")
-def admin_get_savings_tiers(
-    request: Request,
-    user: dict = Depends(require_admin),
-    db: Session = Depends(get_db),
-):
-    rows = db.query(StackEarnSavingsTier).order_by(StackEarnSavingsTier.tier_number).all()
-    return [_serialize_tier(r) for r in rows]
-
-
-@app.put("/api/admin/stack-earn/savings-tiers/{tier_number}")
-@limiter.limit("10/minute")
-def admin_update_savings_tier(
-    request: Request,
-    tier_number: int,
-    body: TierUpsert,
-    user: dict = Depends(require_admin),
-    db: Session = Depends(get_db),
-):
-    require_write_enabled()
-    row = db.query(StackEarnSavingsTier).filter(StackEarnSavingsTier.tier_number == tier_number).first()
-    if not row:
-        raise HTTPException(status_code=404, detail="Tier not found")
-    for field, val in body.model_dump(exclude_unset=True).items():
-        setattr(row, field, val)
-    db.commit()
-    db.refresh(row)
-    return _serialize_tier(row)
-
-
-@app.post("/api/admin/stack-earn/savings-tiers", status_code=201)
-@limiter.limit("10/minute")
-def admin_create_savings_tier(
-    request: Request,
-    body: TierUpsert,
-    user: dict = Depends(require_admin),
-    db: Session = Depends(get_db),
-):
-    require_write_enabled()
-    # auto-assign next tier_number
-    max_num = db.query(StackEarnSavingsTier).count()
-    row = StackEarnSavingsTier(tier_number=max_num + 1, **body.model_dump())
-    db.add(row)
-    db.commit()
-    db.refresh(row)
-    return _serialize_tier(row)
-
-
-@app.get("/api/admin/stack-earn/goal-tiers")
-@limiter.limit("30/minute")
-def admin_get_goal_tiers(
-    request: Request,
-    user: dict = Depends(require_admin),
-    db: Session = Depends(get_db),
-):
-    rows = db.query(StackEarnGoalTier).order_by(StackEarnGoalTier.tier_number).all()
-    return [_serialize_tier(r) for r in rows]
-
-
-@app.put("/api/admin/stack-earn/goal-tiers/{tier_number}")
-@limiter.limit("10/minute")
-def admin_update_goal_tier(
-    request: Request,
-    tier_number: int,
-    body: TierUpsert,
-    user: dict = Depends(require_admin),
-    db: Session = Depends(get_db),
-):
-    require_write_enabled()
-    row = db.query(StackEarnGoalTier).filter(StackEarnGoalTier.tier_number == tier_number).first()
-    if not row:
-        raise HTTPException(status_code=404, detail="Tier not found")
-    for field, val in body.model_dump(exclude_unset=True).items():
-        setattr(row, field, val)
-    db.commit()
-    db.refresh(row)
-    return _serialize_tier(row)
-
-
-@app.post("/api/admin/stack-earn/goal-tiers", status_code=201)
-@limiter.limit("10/minute")
-def admin_create_goal_tier(
-    request: Request,
-    body: TierUpsert,
-    user: dict = Depends(require_admin),
-    db: Session = Depends(get_db),
-):
-    require_write_enabled()
-    max_num = db.query(StackEarnGoalTier).count()
-    row = StackEarnGoalTier(tier_number=max_num + 1, **body.model_dump())
-    db.add(row)
-    db.commit()
-    db.refresh(row)
-    return _serialize_tier(row)
-
-
-# ===========================================
 # DAMODARAN ANNUAL RETURNS (admin-managed reference data)
 # ===========================================
 
@@ -3451,10 +3289,6 @@ if _frontend_dir.exists():
     @app.get("/saved-simulations.html")
     def serve_saved_simulations():
         return FileResponse(str(_frontend_dir / "saved-simulations.html"))
-
-    @app.get("/stack-earn.html")
-    def serve_stack_earn():
-        return FileResponse(str(_frontend_dir / "stack-earn.html"))
 
     @app.get("/montecarlo.html")
     def serve_montecarlo():

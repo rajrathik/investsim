@@ -4,7 +4,6 @@
 
   Deliberately absent:
     saved-simulations.html  - requires sign-in, carries a noindex tag
-    stack-earn.html         - member content, carries a noindex tag
     admin.html              - disallowed in robots.txt
     index.html              - the homepage is listed once, as "/", matching
                               its canonical tag and every internal link

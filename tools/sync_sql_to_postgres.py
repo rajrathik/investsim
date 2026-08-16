@@ -228,24 +228,6 @@ class SavedSimulation(Base):
     created_at = Column(DateTime, default=_utcnow, nullable=False)
 
 
-class StackEarnSavingsTier(Base):
-    __tablename__ = "stack_earn_savings_tiers"
-    tier_number = Column(Integer, primary_key=True)
-    tier_label  = Column(String(50), nullable=False)
-    min_amount  = Column(Float, nullable=False)
-    max_amount  = Column(Float, nullable=True)
-    annual_rate = Column(Float, nullable=False)
-
-
-class StackEarnGoalTier(Base):
-    __tablename__ = "stack_earn_goal_tiers"
-    tier_number = Column(Integer, primary_key=True)
-    tier_label  = Column(String(50), nullable=False)
-    min_amount  = Column(Float, nullable=False)
-    max_amount  = Column(Float, nullable=True)
-    annual_rate = Column(Float, nullable=False)
-
-
 class SpyDailyPrice(Base):
     __tablename__ = "spy_daily_prices"
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -323,8 +305,6 @@ DATA_TABLES = [
     ("monthly_mm_rates",  MonthlyMoneyMarketRate),
     ("annual_mm_rates",   AnnualMoneyMarketRate),
     ("user_admin",              UserAdmin),
-    ("stack_earn_savings_tiers", StackEarnSavingsTier),
-    ("stack_earn_goal_tiers",    StackEarnGoalTier),
     ("spy_daily_prices",         SpyDailyPrice),
     ("oef_daily_prices",         OefDailyPrice),
     ("daily_quotes",             DailyQuote),

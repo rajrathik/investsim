@@ -21,6 +21,21 @@
 
 ## Changelog
 
+### Phase 24 — Stack & Earn retired (Aug 2026)
+
+Removed in full rather than left dormant. Phases 17 and 21 below describe the
+feature as it was built and are left unedited as historical record.
+
+| Area | Removed |
+|------|---------|
+| Database | `stack_earn_savings_tiers`, `stack_earn_goal_tiers` dropped on SQL Server and Railway PostgreSQL. Final 6 rows dumped to `backups/stack_earn_tiers_final.json` first |
+| `backend/app/api.py` | 8 endpoints — `GET /api/stack-earn/{savings,goal}-tiers` and the 6 admin CRUD routes — plus `_serialize_tier()`, the `TierUpsert` model, and the `/stack-earn.html` static route |
+| `backend/app/models.py` | `StackEarnSavingsTier`, `StackEarnGoalTier` |
+| `backend/onetime/` | `seed_stack_earn_tiers.py`, `migrate_stack_earn_add_columns.py` |
+| `frontend/` | `stack-earn.html`, `stack-earn.js`; admin Rate Management card, its CSS, its JS and its Quick Reference row; the Member nav entry in `site-nav.js`; the sitemap exclusion note |
+| `tools/sync_sql_to_postgres.py` | Both model definitions and their `DATA_TABLES` rows |
+| Docs | Current-state references in `CLAUDE.md`, `Architecture.md`, `README.md`, `QUICKSTART.md`, `docs/Update_All_Plan.md` |
+
 ### Phase 1 — Database & Data Pipeline (Feb 7-8)
 
 | Commit | Description |

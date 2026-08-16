@@ -58,8 +58,6 @@ C:\Raj\python\portfolio-simulator\
 │   ├── sp500-history.js
 │   ├── sp500-simulate.html         ← Historical Simulator: pick year range, starting amount, monthly contribution
 │   ├── sp500-simulate.js
-│   ├── stack-earn.html             ← Savings calculator: recurring deposits accumulate with interest; reverse-solve for goal contributions
-│   ├── stack-earn.js
 │   ├── montecarlo.html             ← Monte Carlo portfolio simulator: 1,000 block-bootstrap futures from 150+ yrs of S&P 500 history; 5–30yr horizon; Market Cycle Sensitivity tooltip (Short/Medium/Long blocks); percentile table with Deposited column + plain-language tooltip
 │   ├── montecarlo.js
 │   ├── extreme-months.html         ← Monthly Market Extremes: ranked best & worst single months in S&P 500 history since 1871; shows $10K result per month; top-10/20 chip toggle; mini-bar magnitude indicators
@@ -151,7 +149,6 @@ All public pages are open (no login required). Admin is completely separate.
 | `http://localhost:8000/risk-return.html` | Risk vs return scatter plot | Public |
 | `http://localhost:8000/sp500-history.html` | S&P 500 decade heatmap | Public |
 | `http://localhost:8000/sp500-simulate.html` | S&P 500 Historical Simulator | Public |
-| `http://localhost:8000/stack-earn.html` | Stack & Earn savings calculator | Accessible via direct URL (not linked from landing page — ready to be re-added to member content when needed) |
 | `http://localhost:8000/montecarlo.html` | Monte Carlo portfolio simulator (5–30yr horizon, withdrawal mode, lump sum, cycle sensitivity) | Public |
 | `http://localhost:8000/extreme-months.html` | Monthly Market Extremes — best & worst single months, $10K result | Public |
 | `http://localhost:8000/extreme-years.html` | Annual Market Extremes — best & worst full calendar years, $10K result | Public |
@@ -317,7 +314,7 @@ Opens at `http://localhost:6419`. Press Ctrl+C to stop.
 - **Dark/light theme toggle** — 🌙/☀️ button on every page; persists via localStorage; no FOUC (synchronous IIFE in `<head>`); Canvas charts re-render on toggle
 - **CSS consolidation** — `shared-analytics.css` is the single source of truth for `:root` variables, reset, fonts, header, and shared component styles; page-specific CSS files contain only overrides
 - **Optional public Auth0 sign-in** — `shared-auth.js` loaded on all 11 public pages; provides optional sign-in link, welcome bar, `_pubAuthFetch()` for authenticated API calls, `_pubIsSignedIn()` for checking login state; all pages use single `/` callback URL
-- **Member content section** — landing page shows member-only tiles (Saved Simulations, Newsletters, Watchlists) when signed in. **Stack & Earn** (`stack-earn.html`) is fully built (DB tables, API, frontend) but not linked from the landing page — re-add its card to the member content section in `index.html` when ready to surface it
+- **Member content section** — landing page shows member-only tiles (Saved Simulations, Newsletters, Watchlists) when signed in
 - **Public pages, isolated admin** — all public pages are open (no login required); admin is Auth0-protected and completely separate with no cross-links
 - **Landing page with tool cards** — root URL serves `index.html` with clickable cards for each tool; separate `simulator-guide.html` for the How It Works walkthrough
 - **Admin dashboard** — Auth0 login + `user_admin` table whitelist; two-layer security; no links to/from public pages

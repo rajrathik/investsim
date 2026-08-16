@@ -52,15 +52,7 @@ venv\Scripts\grip tools\Spreadsheet_Guide.md
 
 ## 5. One-time DB migrations (run once per DB after pulling new code)
 
-### Stack & Earn — add display_rate / display_upto / product_type columns (Phase 21)
-
-```bash
-cd C:\Raj\python\portfolio-simulator\backend
-..\venv\Scripts\activate
-python onetime\migrate_stack_earn_add_columns.py
-```
-
-Run once on local SQL Server. To run against Railway PostgreSQL, set `DB_TYPE=postgres` in `backend\.env` first, then run the same script.
+_None outstanding._
 
 ## 7. Update data (when needed)
 

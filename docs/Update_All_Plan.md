@@ -58,8 +58,6 @@ and survives the browser being closed.
 | `user_logins` | Same. Activity that happened during the run is real and must survive a rollback. |
 | `api_request_logs` | Same. |
 | `user_admin` | Access control. Must never be reverted by a data operation. |
-| `stack_earn_savings_tiers` | Hand-edited via Rate Management. The routine does not write it. |
-| `stack_earn_goal_tiers` | Same. |
 | `shiller_market_data` | One-time historical load. The routine does not write it. |
 | `tickers` | The routine reads it, never writes it. Snapshotting it would mean a rollback could erase a ticker added during the run. |
 

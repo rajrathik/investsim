@@ -1,0 +1,70 @@
+{
+  "dumped_at": "2026-08-16T17:09:56.682680",
+  "reason": "Stack & Earn retired",
+  "tables": {
+    "stack_earn_savings_tiers": [
+      {
+        "tier_number": 2,
+        "tier_label": "Tier 2",
+        "min_amount": 1000.0,
+        "max_amount": 10000.0,
+        "annual_rate": 0.03,
+        "display_rate": 1,
+        "display_upto": 0,
+        "product_type": "PurposeSaving"
+      },
+      {
+        "tier_number": 3,
+        "tier_label": "Tier 3",
+        "min_amount": 10000.0,
+        "max_amount": null,
+        "annual_rate": 0.01,
+        "display_rate": 1,
+        "display_upto": 0,
+        "product_type": "PurposeSaving"
+      },
+      {
+        "tier_number": 1,
+        "tier_label": "Tier 1",
+        "min_amount": 0.0,
+        "max_amount": 1000.0,
+        "annual_rate": 0.05,
+        "display_rate": 1,
+        "display_upto": 1,
+        "product_type": "PurposeSaving"
+      }
+    ],
+    "stack_earn_goal_tiers": [
+      {
+        "tier_number": 1,
+        "tier_label": "Tier 1",
+        "min_amount": 0.0,
+        "max_amount": 1000.0,
+        "annual_rate": 0.05,
+        "display_rate": 1,
+        "display_upto": 0,
+        "product_type": "PurposeSaving"
+      },
+      {
+        "tier_number": 2,
+        "tier_label": "Tier 2",
+        "min_amount": 1000.0,
+        "max_amount": 10000.0,
+        "annual_rate": 0.03,
+        "display_rate": 1,
+        "display_upto": 0,
+        "product_type": "PurposeSaving"
+      },
+      {
+        "tier_number": 3,
+        "tier_label": "Tier 3",
+        "min_amount": 10000.0,
+        "max_amount": null,
+        "annual_rate": 0.01,
+        "display_rate": 1,
+        "display_upto": 0,
+        "product_type": "PurposeSaving"
+      }
+    ]
+  }
+}
