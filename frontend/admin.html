@@ -83,7 +83,20 @@ body{min-height:100vh;background:var(--bg);color:var(--text1);font-family:'DM Sa
 .ua-tables{margin-top:6px}
 .ua-trow{display:flex;gap:12px;align-items:baseline;padding:3px 0}
 .ua-tbl{color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:11px;flex:0 0 210px}
-.ua-tbl-note{font-size:12px;color:var(--text3);line-height:1.6}
+/* min-width:0 is not needed today -- the SQL blocks wrap on their own via
+   pre-wrap + word-break. It is here so they still cannot force the page into
+   horizontal scroll if either of those is ever dropped, or a snippet gains a
+   long unbroken token. */
+.ua-tbl-note{font-size:12px;color:var(--text3);line-height:1.6;flex:1 1 auto;min-width:0}
+.ua-key{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text3);opacity:.75;margin-top:3px}
+.ua-sqlhd{font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin:8px 0 3px}
+.ua-sql{font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.55;color:var(--text2);background:var(--card);border:1px solid var(--border);border-left:2px solid var(--accent);border-radius:8px;padding:9px 11px;margin:0;white-space:pre-wrap;word-break:break-word;overflow-x:auto}
+.ua-sql-warn{border-left-color:var(--gold)}
+.ua-rerun{font-size:12px;color:var(--text2);background:var(--card);border:1px solid var(--border);border-radius:8px;padding:9px 12px;margin-top:10px;line-height:1.6}
+.ua-rerun strong{color:var(--gold)}
+.ua-fix{color:var(--gold);text-decoration:none;font-weight:700;margin-left:8px;white-space:nowrap}
+.ua-fix:hover{text-decoration:underline}
+.ua-step-hl{background:var(--gold-dim);border-radius:8px;box-shadow:0 0 0 8px var(--gold-dim);transition:background .3s,box-shadow .3s}
 .ua-ep{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text3);opacity:.6;margin-top:8px}
 .ua-writes-over{color:var(--gold)}
 .ua-writes-add{color:var(--accent)}
@@ -597,17 +610,24 @@ async function toggleUpdateAllHelp() {
     if (!r.ok) throw new Error(d.detail || 'Failed to load');
 
     const notes = d.table_notes || {};
+    const rec = d.table_recovery || {};
 
-    // source → what it writes → which tables, and what lives in each of them
+    // source → what it writes → which tables, what lives in each, and how to
+    // inspect and hand-repair it when re-running the step is not enough.
     const flow = (source, writes, tables) => {
       let h = '<div class="ua-flow">' + esc(source) + ' <span class="ua-arrow">→</span> ' +
         (writes ? '<span class="' + (/Overwrite/i.test(writes) ? 'ua-writes-over' : 'ua-writes-add') + '">' +
           esc(writes) + '</span>' : '') + '</div>';
       h += '<div class="ua-tables">';
       tables.forEach(t => {
+        const r = rec[t] || {};
         h += '<div class="ua-trow">' +
                '<div class="ua-tbl">' + esc(t) + '</div>' +
-               '<div class="ua-tbl-note">' + esc(notes[t] || '') + '</div>' +
+               '<div class="ua-tbl-note">' + esc(notes[t] || '') +
+                 (r.key ? '<div class="ua-key">key: ' + esc(r.key) + '</div>' : '') +
+                 (r.inspect ? '<div class="ua-sqlhd">Inspect</div><pre class="ua-sql">' + esc(r.inspect) + '</pre>' : '') +
+                 (r.manual ? '<div class="ua-sqlhd">Repair by hand</div><pre class="ua-sql ua-sql-warn">' + esc(r.manual) + '</pre>' : '') +
+               '</div>' +
              '</div>';
       });
       return h + '</div>';
@@ -616,13 +636,14 @@ async function toggleUpdateAllHelp() {
     let html = '<h3>What runs, in order</h3>';
     d.steps.forEach((s, i) => {
       html +=
-        '<div class="ua-step">' +
+        '<div class="ua-step" id="ua-help-' + esc(s.key) + '">' +
           '<div class="ua-step-hd">' +
             '<span class="ua-step-n">' + (i + 1) + '.</span>' +
             '<span class="ua-step-name">' + esc(s.label) + '</span>' +
           '</div>' +
           '<div>' + esc(s.description) + '</div>' +
           flow(s.source, s.writes, s.tables) +
+          (s.rerun ? '<div class="ua-rerun"><strong>If this step fails:</strong> ' + esc(s.rerun) + '</div>' : '') +
           '<div class="ua-ep">' + esc(s.endpoint) + '</div>' +
         '</div>';
     });
@@ -713,13 +734,29 @@ function renderUpdateAllProgress(d) {
     if (s && s.status === 'failed') note = ' — ' + esc(s.error);
     else if (s && s.status === 'completed' && s.summary && s.summary.note) note = ' — ' + esc(s.summary.note);
 
+    // A failed step is exactly when the docs matter, so link straight to its
+    // entry: which button re-runs it, and how to inspect and repair its tables.
+    const fix = (s && s.status === 'failed')
+      ? ' <a href="javascript:void(0)" class="ua-fix" onclick="openUpdateAllHelpAt(\'' + esc(s.key) + '\')">Fix this →</a>'
+      : '';
+
     html +=
       '<div class="ua-prow ua-prow-' + state + '">' +
         '<span class="ua-icon">' + UA_ICONS[state] + '</span>' +
-        '<span>' + (i + 1) + '. ' + esc(label) + '<span class="ua-note">' + note + '</span></span>' +
+        '<span>' + (i + 1) + '. ' + esc(label) + '<span class="ua-note">' + note + '</span>' + fix + '</span>' +
       '</div>';
   }
   el.innerHTML = html;
+}
+
+async function openUpdateAllHelpAt(stepKey) {
+  const el = document.getElementById('updateAllHelp');
+  if (el.style.display === 'none') await toggleUpdateAllHelp();
+  const target = document.getElementById('ua-help-' + stepKey);
+  if (!target) return;
+  target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  target.classList.add('ua-step-hl');
+  setTimeout(() => target.classList.remove('ua-step-hl'), 2600);
 }
 
 // ---- Yahoo Batch ----

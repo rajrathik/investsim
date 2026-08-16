@@ -1724,9 +1724,127 @@ TABLE_NOTES = {
         "The list of securities everything else keys off. Symbol, name, active flag.",
 }
 
+# How to inspect and hand-repair each table when a step fails badly enough
+# that re-running it is not enough. `key` is the real unique constraint, so a
+# targeted DELETE hits exactly the rows you mean; `inspect` is always safe to
+# run. Append-only tables need the delete before a re-run will replace
+# anything -- the loader will not touch a date it already has.
+TABLE_RECOVERY = {
+    "monthly_prices": {
+        "key": "(ticker_id, year, month) — uq_ticker_year_month",
+        "inspect":
+            "SELECT t.symbol, COUNT(*) AS rows, MIN(p.year*100+p.month) AS first_ym,\n"
+            "       MAX(p.year*100+p.month) AS last_ym\n"
+            "FROM monthly_prices p JOIN tickers t ON t.id = p.ticker_id\n"
+            "GROUP BY t.symbol ORDER BY t.symbol;",
+        "manual":
+            "Re-running the step overwrites in place, so a delete is usually unnecessary. "
+            "To force one ticker/month to be re-fetched from scratch:\n"
+            "DELETE FROM monthly_prices\n"
+            "WHERE ticker_id = (SELECT id FROM tickers WHERE symbol = 'SPY')\n"
+            "  AND year = 2026 AND month = 3;",
+    },
+    "dividends": {
+        "key": "(ticker_id, pay_date) — uq_ticker_pay_date",
+        "inspect":
+            "SELECT t.symbol, COUNT(*) AS rows, MAX(d.pay_date) AS last_paid\n"
+            "FROM dividends d JOIN tickers t ON t.id = d.ticker_id\n"
+            "GROUP BY t.symbol ORDER BY t.symbol;",
+        "manual":
+            "A spurious dividend is the usual failure. Delete the row, then re-run the step:\n"
+            "DELETE FROM dividends\n"
+            "WHERE ticker_id = (SELECT id FROM tickers WHERE symbol = 'SPY')\n"
+            "  AND pay_date = '2026-03-20';",
+    },
+    "monthly_mm_rates": {
+        "key": "(year, month) — uq_mm_year_month",
+        "inspect": "SELECT year, month, rate FROM monthly_mm_rates ORDER BY year DESC, month DESC;",
+        "manual":
+            "Upserted on re-run. To correct one month by hand:\n"
+            "UPDATE monthly_mm_rates SET rate = 4.33 WHERE year = 2026 AND month = 7;",
+    },
+    "annual_mm_rates": {
+        "key": "year (unique)",
+        "inspect": "SELECT year, avg_rate FROM annual_mm_rates ORDER BY year DESC;",
+        "manual":
+            "Derived from the monthly series — fix monthly_mm_rates first, then re-run "
+            "the FRED step rather than editing this table directly.",
+    },
+    "spy_daily_prices": {
+        "key": "(ticker, price_date) — uq_spy_daily_ticker_date",
+        "inspect":
+            "SELECT COUNT(*) AS rows, MIN(price_date) AS first_day, MAX(price_date) AS last_day\n"
+            "FROM spy_daily_prices WHERE ticker = 'SPY';",
+        "manual":
+            "APPEND ONLY — the loader skips any date already on file, so a bad day must be "
+            "deleted before it can be reloaded:\n"
+            "DELETE FROM spy_daily_prices WHERE ticker = 'SPY' AND price_date >= '2026-08-01';\n"
+            "Then run Load Missing Days. It refills everything after the new MAX(price_date).",
+    },
+    "oef_daily_prices": {
+        "key": "(ticker, price_date) — uq_oef_daily_ticker_date",
+        "inspect":
+            "SELECT COUNT(*) AS rows, MIN(price_date) AS first_day, MAX(price_date) AS last_day\n"
+            "FROM oef_daily_prices WHERE ticker = 'OEF';",
+        "manual":
+            "APPEND ONLY — same as SPY. Delete the bad tail, then Load Missing Days:\n"
+            "DELETE FROM oef_daily_prices WHERE ticker = 'OEF' AND price_date >= '2026-08-01';",
+    },
+    "etf_directory_monthly_history": {
+        "key": "(ticker, year, month) — uq_etf_dir_hist_ticker_year_month",
+        "inspect":
+            "SELECT ticker, COUNT(*) AS rows, MAX(year*100+month) AS last_ym\n"
+            "FROM etf_directory_monthly_history GROUP BY ticker ORDER BY last_ym, ticker;\n"
+            "-- tickers with a stale last_ym are the ones that failed",
+        "manual":
+            "APPEND ONLY — delete the bad months for one ticker, then re-run the step:\n"
+            "DELETE FROM etf_directory_monthly_history\n"
+            "WHERE ticker = 'XLK' AND year = 2026 AND month = 7;",
+    },
+    "damodaran_annual_returns": {
+        "key": '"Year" (unique)',
+        "inspect": 'SELECT "Year", "SP500Return" FROM damodaran_annual_returns ORDER BY "Year" DESC;',
+        "manual":
+            "Upserted by year on re-run, so a re-sync fixes most problems. A single year can "
+            "also be edited from the Damodaran card, or:\n"
+            'DELETE FROM damodaran_annual_returns WHERE "Year" = 2025;',
+    },
+    "shiller_market_data": {
+        "key": "(Year, Month)",
+        "inspect":
+            'SELECT COUNT(*) AS rows, MIN("Year"*100+"Month") AS first_ym,\n'
+            '       MAX("Year"*100+"Month") AS last_ym FROM shiller_market_data;',
+        "manual":
+            "Not loaded by any button. Download ie_data.xls from shillerdata.com into "
+            "inputdata/, then:\n"
+            "venv\\Scripts\\python backend\\onetime\\load_shiller_data.py --truncate\n"
+            "--truncate deletes all 1,863 rows and reinserts. Without it the loader refuses "
+            "to write when the table already has data.",
+    },
+    "stack_earn_savings_tiers": {
+        "key": "tier_number",
+        "inspect": "SELECT * FROM stack_earn_savings_tiers ORDER BY tier_number;",
+        "manual": "Edit through the Rate Management card. Nothing fetches this table.",
+    },
+    "stack_earn_goal_tiers": {
+        "key": "tier_number",
+        "inspect": "SELECT * FROM stack_earn_goal_tiers ORDER BY tier_number;",
+        "manual": "Edit through the Rate Management card. Nothing fetches this table.",
+    },
+    "tickers": {
+        "key": "symbol (unique)",
+        "inspect": "SELECT id, symbol, name, is_active FROM tickers ORDER BY symbol;",
+        "manual":
+            "Managed by the Add Ticker card. Deactivating rather than deleting keeps the "
+            "price history intact:\n"
+            "UPDATE tickers SET is_active = 0 WHERE symbol = 'XYZ';",
+    },
+}
+
 UPDATE_ALL_STEPS = [
     {
         "key": "new-tickers",
+        "rerun": "Yahoo Finance card → Load New Tickers. Only touches tickers with no data at all, so it is safe to repeat.",
         "label": "Load new tickers",
         "endpoint": "/api/batch/full-new",
         "source": "Yahoo Finance",
@@ -1740,6 +1858,7 @@ UPDATE_ALL_STEPS = [
     },
     {
         "key": "recent-months",
+        "rerun": "Yahoo Finance card → set Months to 12 → Refresh Recent Data. Overwrites in place, safe to repeat.",
         "label": f"Refresh the last {UPDATE_ALL_RECENT_MONTHS} months",
         "endpoint": "/api/batch/incremental",
         "source": "Yahoo Finance",
@@ -1753,6 +1872,7 @@ UPDATE_ALL_STEPS = [
     },
     {
         "key": "current-month",
+        "rerun": "Load Current Month card → Load Current Month. Overwrites the same row each time, safe to repeat.",
         "label": "Load the current month, all sources",
         "endpoint": "/api/batch/current-month",
         "source": "Yahoo Finance + FRED",
@@ -1766,6 +1886,7 @@ UPDATE_ALL_STEPS = [
     },
     {
         "key": "spy-daily",
+        "rerun": "Daily Price History card → SPY → Load Missing Days. Append-only: it will not replace a day already on file, so delete the bad tail first.",
         "label": "SPY daily prices — missing days",
         "endpoint": "/api/batch/daily-prices/SPY/incremental",
         "source": "Yahoo Finance",
@@ -1778,6 +1899,7 @@ UPDATE_ALL_STEPS = [
     },
     {
         "key": "oef-daily",
+        "rerun": "Daily Price History card → OEF → Load Missing Days. Same append-only caveat as SPY.",
         "label": "OEF daily prices — missing days",
         "endpoint": "/api/batch/daily-prices/OEF/incremental",
         "source": "Yahoo Finance",
@@ -1787,6 +1909,7 @@ UPDATE_ALL_STEPS = [
     },
     {
         "key": "etf-history",
+        "rerun": "ETF Directory card → Load Missing Months. Append-only, and it runs 81 tickers in sequence — check which ones have a stale last month before re-running.",
         "label": "ETF directory monthly history — missing months",
         "endpoint": "/api/batch/etf-history/incremental",
         "source": "Yahoo Finance",
@@ -1799,6 +1922,7 @@ UPDATE_ALL_STEPS = [
     },
     {
         "key": "fred",
+        "rerun": "FRED card → Incremental. Upserts, safe to repeat. FRED not having published the current month yet is normal, not a failure.",
         "label": "FRED federal funds rate",
         "endpoint": "/api/batch/fred-incremental",
         "source": "FRED (St. Louis Fed)",
@@ -1808,6 +1932,7 @@ UPDATE_ALL_STEPS = [
     },
     {
         "key": "damodaran",
+        "rerun": "Damodaran card → Sync Latest from Damodaran. Upserts by year, safe to repeat. A 502 means their page could not be read — retry later.",
         "label": "Damodaran annual returns",
         "endpoint": "/api/admin/damodaran-returns/sync",
         "source": "Aswath Damodaran / NYU Stern",
@@ -2057,6 +2182,7 @@ def get_update_all_steps(user: dict = Depends(require_admin)):
         "steps": UPDATE_ALL_STEPS,
         "excluded": UPDATE_ALL_EXCLUDED,
         "table_notes": TABLE_NOTES,
+        "table_recovery": TABLE_RECOVERY,
     }
 
 
