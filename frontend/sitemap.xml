@@ -1,93 +1,146 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Public, indexable pages only.
+
+  Deliberately absent:
+    saved-simulations.html  - requires sign-in, carries a noindex tag
+    stack-earn.html         - member content, carries a noindex tag
+    admin.html              - disallowed in robots.txt
+    index.html              - the homepage is listed once, as "/", matching
+                              its canonical tag and every internal link
+
+  lastmod values come from git history and are real. Do not hand-edit them
+  to a newer date to try to prompt a recrawl.
+-->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+
   <url>
     <loc>https://investsim.claritycapitaltools.com/</loc>
-    <lastmod>2026-02-22</lastmod>
+    <lastmod>2026-08-16</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
+
+  <!-- Portfolio -->
   <url>
     <loc>https://investsim.claritycapitaltools.com/portfolio-simulator.html</loc>
-    <lastmod>2026-02-22</lastmod>
+    <lastmod>2026-08-16</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://investsim.claritycapitaltools.com/simulator-guide.html</loc>
-    <lastmod>2026-02-22</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
+    <loc>https://investsim.claritycapitaltools.com/sp500-simulate.html</loc>
+    <lastmod>2026-08-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://investsim.claritycapitaltools.com/sector-performance.html</loc>
-    <lastmod>2026-02-22</lastmod>
+    <loc>https://investsim.claritycapitaltools.com/montecarlo.html</loc>
+    <lastmod>2026-08-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- Market history -->
+  <url>
+    <loc>https://investsim.claritycapitaltools.com/sp500-history.html</loc>
+    <lastmod>2026-08-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://investsim.claritycapitaltools.com/sp500-rolling-returns.html</loc>
+    <lastmod>2026-08-16</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://investsim.claritycapitaltools.com/correlation.html</loc>
-    <lastmod>2026-02-22</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://investsim.claritycapitaltools.com/drawdown.html</loc>
-    <lastmod>2026-02-22</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://investsim.claritycapitaltools.com/sector-rotation.html</loc>
-    <lastmod>2026-02-22</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://investsim.claritycapitaltools.com/dividend-growth.html</loc>
-    <lastmod>2026-02-22</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://investsim.claritycapitaltools.com/growth-chart.html</loc>
-    <lastmod>2026-02-22</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://investsim.claritycapitaltools.com/risk-return.html</loc>
-    <lastmod>2026-02-22</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://investsim.claritycapitaltools.com/saved-simulations.html</loc>
-    <lastmod>2026-02-22</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.5</priority>
-  </url>
-  <url>
-    <loc>https://investsim.claritycapitaltools.com/stack-earn.html</loc>
-    <lastmod>2026-03-10</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://investsim.claritycapitaltools.com/montecarlo.html</loc>
-    <lastmod>2026-03-10</lastmod>
+    <loc>https://investsim.claritycapitaltools.com/extreme-years.html</loc>
+    <lastmod>2026-08-16</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://investsim.claritycapitaltools.com/extreme-months.html</loc>
-    <lastmod>2026-03-10</lastmod>
+    <lastmod>2026-08-16</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://investsim.claritycapitaltools.com/extreme-years.html</loc>
-    <lastmod>2026-03-11</lastmod>
+    <loc>https://investsim.claritycapitaltools.com/bad-streaks.html</loc>
+    <lastmod>2026-08-16</lastmod>
     <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- Sectors, risk and diversification -->
+  <url>
+    <loc>https://investsim.claritycapitaltools.com/sector-performance.html</loc>
+    <lastmod>2026-08-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://investsim.claritycapitaltools.com/sector-rotation.html</loc>
+    <lastmod>2026-08-16</lastmod>
+    <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
+  <url>
+    <loc>https://investsim.claritycapitaltools.com/correlation.html</loc>
+    <lastmod>2026-08-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://investsim.claritycapitaltools.com/drawdown.html</loc>
+    <lastmod>2026-08-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://investsim.claritycapitaltools.com/risk-return.html</loc>
+    <lastmod>2026-08-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://investsim.claritycapitaltools.com/dividend-growth.html</loc>
+    <lastmod>2026-08-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://investsim.claritycapitaltools.com/growth-chart.html</loc>
+    <lastmod>2026-08-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- Reference -->
+  <url>
+    <loc>https://investsim.claritycapitaltools.com/etf-directory.html</loc>
+    <lastmod>2026-08-16</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://investsim.claritycapitaltools.com/learn.html</loc>
+    <lastmod>2026-08-16</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://investsim.claritycapitaltools.com/simulator-guide.html</loc>
+    <lastmod>2026-08-16</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://investsim.claritycapitaltools.com/about.html</loc>
+    <lastmod>2026-08-16</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
 </urlset>
