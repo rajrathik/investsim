@@ -7,14 +7,23 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- Same design system as the rest of the site: shared-analytics.css is the
+     single source for the palette (it already defines every token this page
+     used, including --red/--gold/--blue and their -dim variants), and
+     theme-toggle.js is loaded synchronously so there is no flash. Admin's own
+     rules below are overrides only -- they come after the link, so where a
+     class name collides (.header, .container, .card) admin still wins. -->
+<link rel="stylesheet" href="shared-analytics.css?v=13">
+<script src="theme-toggle.js?v=2"></script>
 <script src="https://cdn.auth0.com/js/auth0-spa-js/2.1/auth0-spa-js.production.js"></script>
 <style>
-:root{--bg:#0a0e17;--card:#111827;--border:#1e293b;--accent:#10b981;--accent-dim:rgba(16,185,129,0.15);--accent-glow:rgba(16,185,129,0.4);--red:#ef4444;--red-dim:rgba(239,68,68,0.15);--gold:#f59e0b;--gold-dim:rgba(245,158,11,0.15);--blue:#3b82f6;--blue-dim:rgba(59,130,246,0.15);--text1:#f1f5f9;--text2:#94a3b8;--text3:#64748b}
-*{box-sizing:border-box;margin:0;padding:0}
-body{min-height:100vh;background:var(--bg);color:var(--text1);font-family:'DM Sans',sans-serif}
+/* Admin-only token: a scrim over the page behind the login gate. Needs to
+   track the theme, so it is defined for both rather than hardcoded dark. */
+:root{--admin-scrim:rgba(18,22,26,.95)}
+html[data-theme="light"]{--admin-scrim:rgba(247,248,246,.95)}
 
 /* Auth overlay */
-.auth-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(10,14,23,0.95);backdrop-filter:blur(8px);z-index:1000;display:flex;align-items:center;justify-content:center;transition:opacity 0.3s}
+.auth-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:var(--admin-scrim);backdrop-filter:blur(8px);z-index:1000;display:flex;align-items:center;justify-content:center;transition:opacity 0.3s}
 .auth-overlay.hidden{opacity:0;pointer-events:none}
 .auth-card{text-align:center;padding:48px;background:var(--card);border:1px solid var(--border);border-radius:20px;max-width:440px}
 .auth-card p{color:var(--text3);margin-bottom:24px;font-size:14px}
@@ -48,14 +57,14 @@ body{min-height:100vh;background:var(--bg);color:var(--text1);font-family:'DM Sa
 
 /* Warning banner */
 .banner{padding:14px 20px;border-radius:12px;margin-bottom:24px;font-size:14px;font-weight:500;display:none}
-.banner-warn{background:var(--gold-dim);border:1px solid rgba(245,158,11,.3);color:var(--gold)}
-.banner-ok{background:var(--accent-dim);border:1px solid rgba(16,185,129,.3);color:var(--accent)}
-.banner-err{background:var(--red-dim);border:1px solid rgba(239,68,68,.3);color:var(--red)}
+.banner-warn{background:var(--gold-dim);border:1px solid var(--gold);color:var(--gold)}
+.banner-ok{background:var(--accent-dim);border:1px solid var(--accent);color:var(--accent)}
+.banner-err{background:var(--red-dim);border:1px solid var(--red);color:var(--red)}
 .banner.show{display:block}
 
 /* Ticker list */
 .ticker-list{display:flex;flex-wrap:wrap;gap:8px}
-.ticker-tag{padding:8px 14px;background:var(--accent-dim);border:1px solid rgba(16,185,129,.2);border-radius:10px;font-size:13px;font-weight:600;color:var(--accent);font-family:'JetBrains Mono',monospace}
+.ticker-tag{padding:8px 14px;background:var(--accent-dim);border:1px solid var(--accent);border-radius:10px;font-size:13px;font-weight:600;color:var(--accent);font-family:'JetBrains Mono',monospace}
 .ticker-tag .tn{font-size:11px;color:var(--text3);font-weight:400;margin-left:6px}
 
 /* Status panel */
@@ -133,7 +142,7 @@ body{min-height:100vh;background:var(--bg);color:var(--text1);font-family:'DM Sa
 .ua-prow-completed{color:var(--accent)}
 .ua-prow-failed{color:var(--red)}
 .ua-note{font-size:11px;color:var(--text3);margin-left:6px}
-.log-entry{border-bottom:1px solid rgba(30,41,59,.3);padding:4px 0}
+.log-entry{border-bottom:1px solid var(--border);padding:4px 0}
 .log-entry:last-child{border-bottom:none}
 .log-ok{color:var(--accent)}
 .log-err{color:var(--red)}
