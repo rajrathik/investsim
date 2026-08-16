@@ -31,7 +31,15 @@
 
   /* ---- UI injection ---- */
 
+  /* site-nav.js renders the whole right-hand side of the header -- Sign In when
+     signed out, a name dropdown when signed in -- and redraws it on 'pubauth'.
+     Where it is present, this file stays out of the header entirely. */
+  function navOwnsHeader() {
+    return !!document.getElementById('siteNavUser');
+  }
+
   function injectSignInLink() {
+    if (navOwnsHeader()) return;
     /* Add a small "Sign In" link to the header nav area */
     var header = document.querySelector('.header') || document.querySelector('.hero');
     if (!header) return;
@@ -45,6 +53,7 @@
   }
 
   function injectHeaderAuth(user) {
+    if (navOwnsHeader()) return;
     if (!user || !user.email) return;
     var sl = document.getElementById('pubSignInLink');
     if (sl) sl.remove();
@@ -142,6 +151,9 @@
       _user = null;
       removeAuthUI();
       if (!document.getElementById('pubSignInLink')) injectSignInLink();
+      /* Also fire on the signed-out path: the cache may have been stale, and
+         the nav needs to fall back to "Sign In". */
+      window.dispatchEvent(new CustomEvent('pubauth', { detail: null }));
     }
   }
 
@@ -151,6 +163,9 @@
       authorizationParams: { redirect_uri: window.location.origin + '/' }
     });
   }
+
+  /* Expose sign-in globally so site-nav.js can drive the header's Sign In */
+  window._pubSignIn = doPublicLogin;
 
   /* Expose sign-out globally for the onclick handler */
   window._pubSignOut = async function () {

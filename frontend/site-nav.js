@@ -54,17 +54,17 @@ var SITE_NAV = [
       { label: 'About These Tools', href: '/about.html' },
     ],
   },
-  {
-    label: 'Member',
-    memberOnly: true,
-    items: [
-      { label: 'Saved Simulations', href: '/saved-simulations.html' },
-      { label: 'Stack & Earn', href: '/stack-earn.html' },
-    ],
-  },
 ];
 
 var SITE_HOME = { label: 'Browse ETFs', href: '/etf-directory.html' };
+
+/* Personal items. These live under the signed-in user's own name rather than
+   in the main bar: they are "your things", not a category of tool. Admin and
+   Sign out are appended to this menu automatically. */
+var USER_MENU = [
+  { label: 'Saved Simulations', href: '/saved-simulations.html' },
+  { label: 'Stack & Earn', href: '/stack-earn.html' },
+];
 
 (function () {
   'use strict';
@@ -81,14 +81,30 @@ var SITE_HOME = { label: 'Browse ETFs', href: '/etf-directory.html' };
     return path === href;
   }
 
+  function renderLinks(items) {
+    return items.map(function (it) {
+      return '<a href="' + it.href + '"' + (isActive(it.href) ? ' class="active"' : '') + '>' + esc(it.label) + '</a>';
+    }).join('');
+  }
+
   function renderGroup(group, i) {
-    return '<div class="site-nav-group' + (group.memberOnly ? ' site-nav-member-only' : '') + '" data-i="' + i + '">' +
+    return '<div class="site-nav-group" data-i="' + i + '">' +
       '<button type="button" class="site-nav-top">' + esc(group.label) + ' <span class="chev">&#9662;</span></button>' +
-      '<div class="site-nav-drop">' +
-      group.items.map(function (it) {
-        return '<a href="' + it.href + '"' + (isActive(it.href) ? ' class="active"' : '') + '>' + esc(it.label) + '</a>';
-      }).join('') +
-      '</div></div>';
+      '<div class="site-nav-drop">' + renderLinks(group.items) + '</div></div>';
+  }
+
+  /* Clicking a category opens it and closes any other. Used for the main bar
+     and again for the user menu, which is re-rendered on every auth change. */
+  function wireGroups(scope) {
+    scope.querySelectorAll('.site-nav-group').forEach(function (g) {
+      var btn = g.querySelector('.site-nav-top');
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var wasOpen = g.classList.contains('open');
+        document.querySelectorAll('.site-nav-group.open').forEach(function (o) { o.classList.remove('open'); });
+        if (!wasOpen) g.classList.add('open');
+      });
+    });
   }
 
   function renderMenu() {
@@ -101,7 +117,6 @@ var SITE_HOME = { label: 'Browse ETFs', href: '/etf-directory.html' };
     SITE_NAV.forEach(function (group, i) {
       if (group.atEnd) html += renderGroup(group, i);
     });
-    html += '<a href="/admin.html" class="site-nav-top site-nav-admin" id="siteNavAdmin" style="display:none">Admin</a>';
     return html;
   }
 
@@ -117,7 +132,10 @@ var SITE_HOME = { label: 'Browse ETFs', href: '/etf-directory.html' };
       '<nav class="site-nav-menu" id="siteNavMenu">' +
       '<a href="/" class="site-nav-top site-nav-item' + (isActive('/') ? ' active' : '') + '">Home</a>' +
       renderMenu() + '</nav>' +
-      '<a href="/about.html" class="site-nav-top site-nav-about' + (isActive('/about.html') ? ' active' : '') + '">About</a>' +
+      /* Everything personal -- saved work, Admin, Sign out -- collapses into
+         one menu under the user's own name. About is not repeated here; it
+         already lives under Learn. */
+      '<div class="site-nav-user" id="siteNavUser"></div>' +
       '<button type="button" class="site-nav-toggle" id="siteNavToggle" aria-label="Menu">&#9776;</button>';
 
     /* Mobile hamburger */
@@ -128,45 +146,61 @@ var SITE_HOME = { label: 'Browse ETFs', href: '/etf-directory.html' };
     });
 
     /* Touch-friendly category open/close (hover still works via CSS on desktop) */
-    root.querySelectorAll('.site-nav-group').forEach(function (g) {
-      var btn = g.querySelector('.site-nav-top');
-      btn.addEventListener('click', function (e) {
-        e.stopPropagation();
-        var wasOpen = g.classList.contains('open');
-        root.querySelectorAll('.site-nav-group.open').forEach(function (o) { o.classList.remove('open'); });
-        if (!wasOpen) g.classList.add('open');
-      });
-    });
+    wireGroups(root);
     document.addEventListener('click', function () {
-      root.querySelectorAll('.site-nav-group.open').forEach(function (o) { o.classList.remove('open'); });
+      document.querySelectorAll('.site-nav-group.open').forEach(function (o) { o.classList.remove('open'); });
     });
 
-    refreshMemberAndAdmin();
-    window.addEventListener('pubauth', refreshMemberAndAdmin);
+    renderUser();
+    window.addEventListener('pubauth', renderUser);
   }
 
-  function refreshMemberAndAdmin() {
-    var signedIn = !!(window._pubIsSignedIn && window._pubIsSignedIn());
-    document.querySelectorAll('.site-nav-member-only').forEach(function (el) {
-      el.style.display = signedIn ? '' : 'none';
+  function firstName(user) {
+    var raw = (user.name || user.email || '').trim();
+    if (raw.indexOf('@') > -1 && !user.name) raw = raw.split('@')[0];
+    return raw.split(/[\s.]+/)[0] || 'Account';
+  }
+
+  function renderUser() {
+    var slot = document.getElementById('siteNavUser');
+    if (!slot) return;
+
+    if (!(window._pubIsSignedIn && window._pubIsSignedIn())) {
+      localStorage.removeItem('_admin_hint');
+      slot.innerHTML = '<a href="javascript:void(0)" class="site-nav-top site-nav-signin" id="siteNavSignIn">Sign In</a>';
+      slot.querySelector('#siteNavSignIn').addEventListener('click', function () {
+        if (window._pubSignIn) window._pubSignIn();
+      });
+      return;
+    }
+
+    var user = {};
+    try { user = JSON.parse(localStorage.getItem('pub_auth_user')) || {}; } catch (e) {}
+    var isAdmin = localStorage.getItem('_admin_hint') === '1';
+
+    slot.innerHTML =
+      '<div class="site-nav-group site-nav-usermenu">' +
+        '<button type="button" class="site-nav-top">' + esc(firstName(user)) + ' <span class="chev">&#9662;</span></button>' +
+        '<div class="site-nav-drop">' +
+          renderLinks(USER_MENU) +
+          (isAdmin ? '<div class="site-nav-sep"></div><a href="/admin.html"' + (isActive('/admin.html') ? ' class="active"' : '') + '>Admin</a>' : '') +
+          '<div class="site-nav-sep"></div>' +
+          '<a href="javascript:void(0)" id="siteNavSignOut">Sign out</a>' +
+        '</div>' +
+      '</div>';
+
+    wireGroups(slot);
+    slot.querySelector('#siteNavSignOut').addEventListener('click', function () {
+      if (window._pubSignOut) window._pubSignOut();
     });
 
-    var adminLink = document.getElementById('siteNavAdmin');
-    if (!adminLink) return;
-    if (!signedIn) {
-      adminLink.style.display = 'none';
-      localStorage.removeItem('_admin_hint');
-      return;
-    }
-    if (localStorage.getItem('_admin_hint') === '1') {
-      adminLink.style.display = '';
-      return;
-    }
-    if (window._pubAuthFetch) {
+    /* Admin is invisible until verified server-side; the localStorage hint only
+       avoids a round trip on later page loads. */
+    if (!isAdmin && window._pubAuthFetch) {
       window._pubAuthFetch('/api/admin/verify').then(function (r) {
-        if (r.ok) {
+        if (r && r.ok) {
           localStorage.setItem('_admin_hint', '1');
-          adminLink.style.display = '';
+          renderUser();
         }
       }).catch(function () {});
     }
