@@ -4,15 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Market History &amp; Investing Tools | Clarity Capital Tools</title>
-<meta name="description" content="Explore portfolios, market cycles, risk and diversification using real historical market data. No predictions, no hype — just perspective.">
+<meta name="description" content="A simple set of tools for exploring how markets and portfolios have behaved over time. Historical data, no predictions — just perspective.">
 <link rel="canonical" href="https://investsim.claritycapitaltools.com/">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Market History &amp; Investing Tools | Clarity Capital Tools">
-<meta property="og:description" content="Explore portfolios, market cycles, risk and diversification using real historical market data. No predictions, no hype — just perspective.">
+<meta property="og:description" content="A simple set of tools for exploring how markets and portfolios have behaved over time. Historical data, no predictions — just perspective.">
 <meta property="og:url" content="https://investsim.claritycapitaltools.com/">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Market History &amp; Investing Tools | Clarity Capital Tools">
-<meta name="twitter:description" content="Explore portfolios, market cycles, risk and diversification using real historical market data.">
+<meta name="twitter:description" content="A simple set of tools for exploring how markets and portfolios have behaved over time.">
 <meta property="og:site_name" content="Clarity Capital Tools">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -24,56 +24,28 @@
   "@type": "WebSite",
   "name": "Clarity Capital Tools",
   "url": "https://investsim.claritycapitaltools.com/",
-  "description": "Explore portfolios, market cycles, risk and diversification using real historical market data."
+  "description": "A simple set of tools for exploring how markets and portfolios have behaved over time."
 }
 </script>
 <script src="theme-toggle.js?v=2"></script>
 <script src="https://cdn.auth0.com/js/auth0-spa-js/2.1/auth0-spa-js.production.js"></script>
 <style>
-/* Landing page only. Its whole job is: say what this is, offer a direction,
-   get out of the way. No data, no listings, no explanations. */
-.container{max-width:1000px;padding:0 24px 72px}
+/* Landing page. Top navigation -> calm explanation -> contextual links ->
+   small footer. No tile grid: the nav above and the footer below already
+   cover navigation, and the links live in the prose where the surrounding
+   sentence tells you what each destination is. */
+.container{max-width:1000px;padding:0 24px 48px}
 
-.hero{text-align:center;padding:72px 0 8px;max-width:660px;margin:0 auto}
-.hero h1{font-size:36px;font-weight:600;letter-spacing:-.02em;line-height:1.2;color:var(--text1);margin-bottom:18px}
-.hero p{font-size:17px;line-height:1.75;color:var(--text2);margin-bottom:12px}
-.hero .tagline{font-size:15px;color:var(--text3);margin-bottom:28px}
-.hero-cta{display:inline-block;background:var(--accent);color:#fff;font-size:16px;font-weight:600;padding:13px 30px;border-radius:10px;text-decoration:none;transition:opacity .2s}
-.hero-cta:hover{opacity:.88}
-
-.land-section{margin-top:72px}
-.land-section > h3{font-size:20px;font-weight:600;color:var(--text1);letter-spacing:-.01em;margin-bottom:20px}
-
-.dir-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px}
-.dir-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:28px 26px;text-decoration:none;color:inherit;display:flex;flex-direction:column;transition:border-color .2s}
-.dir-card:hover{border-color:var(--accent)}
-.dir-card h4{font-size:18px;font-weight:600;color:var(--text1);margin-bottom:10px;letter-spacing:-.01em}
-.dir-card p{font-size:15px;line-height:1.65;color:var(--text2);margin-bottom:20px;flex:1}
-.dir-card .go{font-size:15px;color:var(--accent);font-weight:500}
-
-.pop-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:16px}
-.pop-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:22px 22px 20px;text-decoration:none;color:inherit;display:block;transition:border-color .2s}
-.pop-card:hover{border-color:var(--accent)}
-.pop-card .name{font-size:16px;font-weight:600;color:var(--text1);margin-bottom:6px;letter-spacing:-.01em}
-.pop-card .desc{font-size:14px;line-height:1.6;color:var(--text2)}
-.view-all{display:inline-block;margin-top:20px;font-size:15px;color:var(--accent);font-weight:500;text-decoration:none}
-.view-all:hover{text-decoration:underline}
-
-.closing-line{text-align:center;font-size:18px;line-height:1.6;color:var(--text2);max-width:560px;margin:72px auto 0}
-
-/* ETF search sits last and quiet -- it is a lookup, not the point of the site. */
-.etf-cta{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:32px;text-align:center;margin-top:28px}
-.etf-cta h3{font-size:20px;font-weight:600;color:var(--text1);margin-bottom:10px;letter-spacing:-.01em}
-.etf-cta p{font-size:15px;line-height:1.7;color:var(--text2);max-width:520px;margin:0 auto 22px}
-.etf-cta a{display:inline-block;border:1px solid var(--border);color:var(--text1);font-size:15px;font-weight:500;padding:11px 26px;border-radius:10px;text-decoration:none;transition:border-color .2s,color .2s}
-.etf-cta a:hover{border-color:var(--accent);color:var(--accent)}
+.intro{padding:72px 0 8px}
+.intro h1{font-size:36px;font-weight:600;letter-spacing:-.02em;line-height:1.2;color:var(--text1);margin-bottom:24px}
+.intro p{font-size:17px;line-height:1.85;color:var(--text2);margin-bottom:20px}
+.intro a{color:var(--accent);text-decoration:none;font-weight:500}
+.intro a:hover{text-decoration:underline}
+.intro .closing{font-size:17px;font-weight:600;color:var(--text1);margin-top:28px;margin-bottom:0}
 
 @media(max-width:600px){
-  .hero{padding-top:48px}
-  .hero h1{font-size:28px}
-  .land-section{margin-top:52px}
-  .closing-line{margin-top:52px;font-size:16px}
-  .etf-cta{margin-top:24px;padding:26px 20px}
+  .intro{padding-top:44px}
+  .intro h1{font-size:28px}
 }
 </style>
 </head>
@@ -83,64 +55,30 @@
 
 <div class="container">
 
-  <div class="hero">
+  <div class="intro">
     <h1>Understand investing through real market history</h1>
-    <p>Test portfolios, explore market cycles, and understand risk and diversification using historical data.</p>
-    <p class="tagline">No predictions. No hype. Just perspective.</p>
-    <a href="/sp500-history.html" class="hero-cta">Explore Market History</a>
-  </div>
 
-  <div class="land-section">
-    <div class="dir-grid">
-      <a href="/portfolio-simulator.html" class="dir-card">
-        <h4>Build and test a portfolio</h4>
-        <p>Create an investment mix and see how it performed through different market environments.</p>
-        <span class="go">Portfolio Simulator &rarr;</span>
-      </a>
-      <a href="/sp500-history.html" class="dir-card">
-        <h4>Understand market history</h4>
-        <p>Explore returns, downturns, recoveries and major market events.</p>
-        <span class="go">Explore market history &rarr;</span>
-      </a>
-      <a href="/sector-performance.html" class="dir-card">
-        <h4>Compare risk and diversification</h4>
-        <p>Understand sectors, volatility, correlation and long-term growth.</p>
-        <span class="go">Explore investment analysis &rarr;</span>
-      </a>
-    </div>
-  </div>
+    <p>
+      InvestSim is a simple set of tools for exploring how markets and portfolios have behaved over
+      time. Instead of trying to predict what comes next, it uses historical data to help put returns,
+      risk, downturns, recoveries and diversification into perspective.
+    </p>
 
-  <div class="land-section">
-    <h3>Popular tools</h3>
-    <div class="pop-grid">
-      <a href="/portfolio-simulator.html" class="pop-card">
-        <div class="name">Portfolio Simulator</div>
-        <div class="desc">Test an investment allocation.</div>
-      </a>
-      <a href="/sp500-history.html" class="pop-card">
-        <div class="name">S&amp;P 500 History</div>
-        <div class="desc">Explore more than a century of market returns.</div>
-      </a>
-      <a href="/bad-streaks.html" class="pop-card">
-        <div class="name">Market Downturns &amp; Recovery</div>
-        <div class="desc">See how difficult periods unfolded and what followed.</div>
-      </a>
-      <a href="/risk-return.html" class="pop-card">
-        <div class="name">Risk vs Return</div>
-        <div class="desc">Compare historical return and volatility.</div>
-      </a>
-    </div>
-    <a href="/learn.html#all-tools" class="view-all">View all tools &rarr;</a>
-  </div>
+    <p>
+      You can <a href="/portfolio-simulator.html">test an investment mix</a>, look back at
+      <a href="/sp500-history.html">different market periods</a>,
+      <a href="/sector-performance.html">compare sectors</a>, or get a better sense of how unusual a
+      particular <a href="/bad-streaks.html">market decline and recovery</a> really was. The goal is to
+      make the history easier to explore and understand without adding unnecessary complexity.
+    </p>
 
-  <!-- The positioning line, used once as brand language rather than repeated
-       across buttons. Closes the page on the same idea the hero opens with. -->
-  <p class="closing-line">Explore what market history can teach us about investing.</p>
+    <p>
+      You can also <a href="/etf-directory.html">browse ETFs by ticker and category</a>, giving you a
+      view of today's investment choices alongside the longer historical perspective provided
+      throughout the site.
+    </p>
 
-  <div class="etf-cta">
-    <h3>Looking for a specific ETF?</h3>
-    <p>Search ETFs by name, ticker or category and explore the available historical data.</p>
-    <a href="/etf-directory.html">Browse ETFs</a>
+    <p class="closing">Historical data. No predictions. Just perspective.</p>
   </div>
 
 </div>
@@ -149,16 +87,16 @@
 <script src="shared-auth.js"></script>
 <script>try{navigator.sendBeacon('/api/track/pageview',JSON.stringify({page:location.pathname,referrer:document.referrer}))}catch(e){}</script>
 
-<!-- STATIC FOOTER — real <a href> links for crawlers and for people.
-     Generated by tools/add_footer.py. Keep in sync with site-nav.js. -->
+<!-- STATIC FOOTER — real <a href> links. The nav is JavaScript-generated, so
+     this is what a crawler actually sees. Keep in sync with site-nav.js. -->
 <footer class="site-footer">
   <div class="site-footer-inner">
     <div>
       <h2>Portfolio</h2>
       <ul>
         <li><a href="/portfolio-simulator.html">Portfolio Simulator</a></li>
-        <li><a href="/sp500-simulate.html">S&amp;P 500 Historical Simulator</a></li>
-        <li><a href="/montecarlo.html">Monte Carlo Simulator</a></li>
+        <li><a href="/sp500-simulate.html">Historical Simulator</a></li>
+        <li><a href="/montecarlo.html">Monte Carlo</a></li>
       </ul>
     </div>
     <div>
@@ -166,39 +104,28 @@
       <ul>
         <li><a href="/sp500-history.html">S&amp;P 500 History</a></li>
         <li><a href="/sp500-rolling-returns.html">Rolling Returns</a></li>
+        <li><a href="/bad-streaks.html">Downturns &amp; Recovery</a></li>
         <li><a href="/extreme-years.html">Best &amp; Worst Years</a></li>
         <li><a href="/extreme-months.html">Best &amp; Worst Months</a></li>
-        <li><a href="/bad-streaks.html">Market Downturns &amp; Recovery</a></li>
       </ul>
     </div>
     <div>
-      <h2>Sectors and risk</h2>
+      <h2>Explore</h2>
       <ul>
         <li><a href="/sector-performance.html">Sector Performance</a></li>
-        <li><a href="/sector-rotation.html">Sector Rotation</a></li>
-        <li><a href="/correlation.html">Sector Correlation</a></li>
-        <li><a href="/drawdown.html">Market Drawdown Analysis</a></li>
+        <li><a href="/correlation.html">Correlation</a></li>
         <li><a href="/risk-return.html">Risk vs Return</a></li>
+        <li><a href="/drawdown.html">Drawdown Analysis</a></li>
         <li><a href="/dividend-growth.html">Dividend Growth</a></li>
         <li><a href="/growth-chart.html">$10,000 Growth</a></li>
-      </ul>
-    </div>
-    <div>
-      <h2>Reference</h2>
-      <ul>
-        <li><a href="/">Home</a></li>
         <li><a href="/etf-directory.html">Browse ETFs</a></li>
-        <li><a href="/learn.html">Understand Investing Through History</a></li>
-        <li><a href="/simulator-guide.html">How the Simulator Works</a></li>
-        <li><a href="/about.html">About These Tools</a></li>
-        <li><a href="https://claritycapitaltools.com/">Clarity Capital Tools</a></li>
       </ul>
     </div>
   </div>
   <div class="site-footer-base">
     <p>Historical data is provided for research and educational purposes. It is not
        individualized investment advice and is not a prediction of future performance.</p>
-    <a href="/about.html">Data sources and methodology</a>
+    <a href="https://claritycapitaltools.com/">Clarity Capital Tools</a>
   </div>
 </footer>
 
