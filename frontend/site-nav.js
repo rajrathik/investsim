@@ -98,8 +98,11 @@ var SITE_HOME = { label: 'Browse ETFs', href: '/etf-directory.html' };
     var root = document.getElementById('siteNavRoot');
     if (!root) return;
     root.className = 'header site-nav';
+    /* The brand is the parent company, so it leaves for the parent site.
+       "Home" below is this site's own home. Previously both went to "/",
+       which made the brand name look like a dead label. */
     root.innerHTML =
-      '<a href="/" class="site-nav-brand">Clarity Capital Tools</a>' +
+      '<a href="https://claritycapitaltools.com/" class="site-nav-brand">Clarity Capital Tools</a>' +
       '<nav class="site-nav-menu" id="siteNavMenu">' +
       '<a href="/" class="site-nav-top site-nav-item' + (isActive('/') ? ' active' : '') + '">Home</a>' +
       renderMenu() + '</nav>' +
