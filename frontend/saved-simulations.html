@@ -92,9 +92,8 @@ html[data-theme="light"] .stile-tip{box-shadow:0 8px 24px rgba(0,0,0,.1)}
 <div class="container">
   <!-- Auth gate — shown when not signed in -->
   <div id="authGate" class="auth-gate" style="display:none">
-    <div style="font-size:48px;margin-bottom:16px">🔒</div>
-    <p>Sign in to view your saved portfolio simulations</p>
-    <button class="auth-gate-btn" onclick="window._pubSignOut?location.href='/':void(0)">Sign In from Home</button>
+    <p>Sign in to view the portfolio simulations you have saved.</p>
+    <button class="auth-gate-btn" onclick="window._pubSignIn?window._pubSignIn():location.href='/'">Sign In</button>
   </div>
 
   <!-- Main content — shown when signed in -->
