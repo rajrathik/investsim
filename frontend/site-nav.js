@@ -40,7 +40,7 @@ var SITE_NAV = [
       { label: 'Dividend Growth', href: '/dividend-growth.html' },
       { label: '$10,000 Growth', href: '/growth-chart.html' },
       { label: 'Risk vs Return', href: '/risk-return.html' },
-      { label: 'Drawdown Analysis', href: '/drawdown.html' },
+      { label: 'Market Drawdown Analysis', href: '/drawdown.html' },
     ],
   },
   {
