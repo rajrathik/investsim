@@ -69,6 +69,28 @@ body{min-height:100vh;background:var(--bg);color:var(--text1);font-family:'DM Sa
 
 /* Log area */
 .log{margin-top:16px;padding:12px 16px;background:var(--bg);border:1px solid var(--border);border-radius:10px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text2);max-height:200px;overflow-y:auto;line-height:1.8}
+/* Update All — help panel + step progress */
+.ua-help{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:14px;font-size:13px;line-height:1.7;color:var(--text2)}
+.ua-help h3{font-size:13px;font-weight:700;color:var(--text1);margin:20px 0 10px;font-family:'Space Grotesk',sans-serif}
+.ua-help h3:first-child{margin-top:0}
+.ua-step{border-top:1px solid var(--border);padding:12px 0}
+.ua-step:first-of-type{border-top:none;padding-top:0}
+.ua-step-hd{display:flex;gap:8px;align-items:baseline;margin-bottom:4px}
+.ua-step-n{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text3);flex-shrink:0}
+.ua-step-name{font-weight:600;color:var(--text1);font-size:13px}
+.ua-meta{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text3);margin-top:5px;display:flex;flex-wrap:wrap;gap:4px 14px}
+.ua-tbl{color:var(--accent)}
+.ua-writes-over{color:var(--gold)}
+.ua-excl{opacity:.85}
+.ua-excl .ua-step-name{color:var(--text2)}
+.ua-progress{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:14px;font-family:'JetBrains Mono',monospace;font-size:12px}
+.ua-prow{display:flex;gap:10px;align-items:baseline;padding:5px 0;line-height:1.6}
+.ua-icon{width:16px;flex-shrink:0;text-align:center}
+.ua-prow-pending{color:var(--text3)}
+.ua-prow-running{color:var(--gold)}
+.ua-prow-completed{color:var(--accent)}
+.ua-prow-failed{color:var(--red)}
+.ua-note{font-size:11px;color:var(--text3);margin-left:6px}
 .log-entry{border-bottom:1px solid rgba(30,41,59,.3);padding:4px 0}
 .log-entry:last-child{border-bottom:none}
 .log-ok{color:var(--accent)}
@@ -174,6 +196,25 @@ body{min-height:100vh;background:var(--bg);color:var(--text1);font-family:'DM Sa
     <h2>Active Tickers</h2>
     <div id="tickerList" class="ticker-list">
       <span style="color:var(--text3)">Loading...</span>
+    </div>
+  </div>
+
+  <!-- Update All — the whole routine, one button -->
+  <div class="card">
+    <h2>🚀 Update All — Run the Whole Routine</h2>
+    <div class="btn-row" style="margin-bottom:14px">
+      <button id="btnUpdateAll" class="btn btn-accent" onclick="runUpdateAll()">🚀 Update All</button>
+      <button id="btnUpdateAllHelp" class="btn" onclick="toggleUpdateAllHelp()">What does this run?</button>
+    </div>
+
+    <div id="updateAllHelp" class="ua-help" style="display:none"></div>
+    <div id="updateAllProgress" class="ua-progress" style="display:none"></div>
+
+    <div style="font-size:12px;color:var(--text3);line-height:1.8">
+      Runs every data-refresh step below in a fixed order, one at a time — the next starts only
+      when the previous finishes. Takes roughly <strong>4&ndash;8 minutes</strong>; the individual
+      buttons are disabled while it runs. If a step fails the run stops there rather than
+      carrying on, and the steps that already completed stay completed.
     </div>
   </div>
 
@@ -434,7 +475,15 @@ async function adminInit() {
   await pollDailyStatus();
   await loadEtfHistStats();
   await pollEtfHistStatus();
+  /* Last, and after the others: a run in progress must re-lock every button,
+     so this has to be the final word on their disabled state. Also means a
+     browser refresh mid-run picks the progress back up. */
+  await pollUpdateAll();
+  if (_getUaStatusCache() === 'running') startUpdateAllPolling();
 }
+
+let _uaLastStatus = 'idle';
+function _getUaStatusCache() { return _uaLastStatus; }
 
 async function detectWriteApi() {
   try {
@@ -510,6 +559,148 @@ async function addTicker() {
   } catch (e) {
     showInlineMsg(msgEl, 'banner-err', '❌ Network error: ' + e.message);
   }
+}
+
+// ---- Update All ----
+let uaPollTimer = null;
+let uaHelpLoaded = false;
+
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s == null ? '' : String(s);
+  return d.innerHTML;
+}
+
+async function toggleUpdateAllHelp() {
+  const el = document.getElementById('updateAllHelp');
+  const open = el.style.display !== 'none';
+  if (open) { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  if (uaHelpLoaded) return;
+
+  el.innerHTML = '<div style="color:var(--text3)">Loading…</div>';
+  try {
+    // Rendered from the same list the orchestrator iterates, so this can
+    // never describe something other than what actually runs.
+    const r = await adminFetch(API + '/api/batch/update-all/steps');
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail || 'Failed to load');
+
+    let html = '<h3>What runs, in order</h3>';
+    d.steps.forEach((s, i) => {
+      const over = /Overwrite/i.test(s.writes);
+      html +=
+        '<div class="ua-step">' +
+          '<div class="ua-step-hd">' +
+            '<span class="ua-step-n">' + (i + 1) + '.</span>' +
+            '<span class="ua-step-name">' + esc(s.label) + '</span>' +
+          '</div>' +
+          '<div>' + esc(s.description) + '</div>' +
+          '<div class="ua-meta">' +
+            '<span>source: ' + esc(s.source) + '</span>' +
+            '<span class="ua-tbl">→ ' + s.tables.map(esc).join(', ') + '</span>' +
+            '<span class="' + (over ? 'ua-writes-over' : '') + '">' + esc(s.writes) + '</span>' +
+            '<span>' + esc(s.endpoint) + '</span>' +
+          '</div>' +
+        '</div>';
+    });
+
+    html += '<h3>What it deliberately does not touch</h3>';
+    d.excluded.forEach(x => {
+      html +=
+        '<div class="ua-step ua-excl">' +
+          '<div class="ua-step-hd"><span class="ua-step-name">' + esc(x.label) + '</span></div>' +
+          '<div>' + esc(x.reason) + '</div>' +
+          '<div class="ua-meta">' +
+            '<span>source: ' + esc(x.source) + '</span>' +
+            '<span class="ua-tbl">→ ' + x.tables.map(esc).join(', ') + '</span>' +
+          '</div>' +
+        '</div>';
+    });
+
+    el.innerHTML = html;
+    uaHelpLoaded = true;
+  } catch (e) {
+    el.innerHTML = '<div style="color:var(--red)">Could not load: ' + esc(e.message) + '</div>';
+  }
+}
+
+async function runUpdateAll() {
+  if (!confirm('Update All runs 8 data steps in order and takes roughly 4-8 minutes.\n\nSteps 2, 3, 7 and 8 overwrite existing rows. There is no undo.\n\nStart?')) return;
+
+  try {
+    disableBatchButtons(true);
+    addLog('Starting Update All (8 steps)...', 'info');
+
+    const r = await adminFetch(API + '/api/batch/update-all', { method: 'POST' });
+    const d = await r.json();
+
+    if (r.ok) {
+      addLog('✓ ' + d.message, 'ok');
+      startUpdateAllPolling();
+    } else {
+      addLog('✗ ' + (d.detail || d.error || 'Failed'), 'err');
+      disableBatchButtons(false);
+    }
+  } catch (e) {
+    addLog('✗ Network error: ' + e.message, 'err');
+    disableBatchButtons(false);
+  }
+}
+
+function startUpdateAllPolling() {
+  if (uaPollTimer) clearInterval(uaPollTimer);
+  pollUpdateAll();
+  uaPollTimer = setInterval(pollUpdateAll, 3000);
+}
+
+async function pollUpdateAll() {
+  try {
+    const r = await fetch(API + '/api/batch/update-all/status');
+    const d = await r.json();
+    _uaLastStatus = d.status;
+    renderUpdateAllProgress(d);
+
+    if (d.status === 'running') {
+      disableBatchButtons(true);
+    } else {
+      disableBatchButtons(false);
+      if (uaPollTimer) { clearInterval(uaPollTimer); uaPollTimer = null; }
+      if (d.status === 'completed') addLog('✓ Update All completed — all 8 steps.', 'ok');
+      if (d.status === 'failed') {
+        const bad = (d.steps || []).find(s => s.status === 'failed');
+        addLog('✗ Update All stopped at "' + (bad ? bad.label : d.current_step) + '": ' + (bad ? bad.error : 'unknown'), 'err');
+      }
+    }
+  } catch (e) { /* ignore transient polling errors */ }
+}
+
+const UA_ICONS = { completed: '✓', running: '⏳', failed: '✗', pending: '·' };
+
+function renderUpdateAllProgress(d) {
+  const el = document.getElementById('updateAllProgress');
+  if (!d || d.status === 'idle') { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+
+  const done = (d.steps || []).filter(s => s.status === 'completed').length;
+  let html = '<div style="margin-bottom:10px;color:var(--text2)">Update All — <strong>' +
+    esc(d.status) + '</strong> · ' + done + '/' + d.total_steps + ' steps complete</div>';
+
+  for (let i = 0; i < d.total_steps; i++) {
+    const s = (d.steps || [])[i];
+    const state = s ? s.status : 'pending';
+    const label = s ? s.label : 'Step ' + (i + 1);
+    let note = '';
+    if (s && s.status === 'failed') note = ' — ' + esc(s.error);
+    else if (s && s.status === 'completed' && s.summary && s.summary.note) note = ' — ' + esc(s.summary.note);
+
+    html +=
+      '<div class="ua-prow ua-prow-' + state + '">' +
+        '<span class="ua-icon">' + UA_ICONS[state] + '</span>' +
+        '<span>' + (i + 1) + '. ' + esc(label) + '<span class="ua-note">' + note + '</span></span>' +
+      '</div>';
+  }
+  el.innerHTML = html;
 }
 
 // ---- Yahoo Batch ----
@@ -641,10 +832,16 @@ function updateStatusPanel(d) {
 }
 
 // ---- Helpers ----
+/* Every data-writing button, including the ones Update All drives. While a
+   run is in progress they all lock: a manual load would race the orchestrated
+   step for the same table and clobber the status panel it polls. Help is not
+   in the list -- reading the docs mid-run is harmless. */
 function disableBatchButtons(disabled) {
-  ['btnFullNew', 'btnFull', 'btnIncr', 'btnFredFull', 'btnFredIncr', 'btnCurMonth'].forEach(id => {
+  ['btnUpdateAll', 'btnFullNew', 'btnFull', 'btnIncr', 'btnFredFull', 'btnFredIncr',
+   'btnCurMonth', 'btnSpyFull', 'btnSpyIncr', 'btnOefFull', 'btnOefIncr',
+   'btnEtfHistFull', 'btnEtfHistIncr', 'btnDmSync'].forEach(id => {
     const el = document.getElementById(id);
-    if (writeEnabled) el.disabled = disabled;
+    if (el && writeEnabled) el.disabled = disabled;
   });
 }
 

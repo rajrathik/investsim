@@ -1671,6 +1671,356 @@ def get_daily_price_stats_all(db: Session = Depends(get_db)):
 
 
 # ===========================================
+# UPDATE ALL — the whole routine behind one button
+#
+# Every step here already existed as its own admin button. What was missing
+# was the order, which lived in whoever was clicking. This runs them
+# sequentially in one background thread; a step starts only once the previous
+# one has finished, and a failure stops the run rather than carrying on.
+#
+# UPDATE_ALL_STEPS below is the single source of truth: the orchestrator
+# iterates it, and admin.html renders its help panel from the same list. The
+# documentation cannot drift from what actually runs.
+# ===========================================
+
+UPDATE_ALL_RECENT_MONTHS = 12
+
+UPDATE_ALL_STEPS = [
+    {
+        "key": "new-tickers",
+        "label": "Load new tickers",
+        "endpoint": "/api/batch/full-new",
+        "source": "Yahoo Finance",
+        "tables": ["monthly_prices", "dividends"],
+        "writes": "Insert only",
+        "description": (
+            "Pulls complete history for any ticker that has no price data yet. "
+            "Tickers that already have data are skipped entirely, so this usually "
+            "does nothing — it matters on the first run after you add a symbol."
+        ),
+    },
+    {
+        "key": "recent-months",
+        "label": f"Refresh the last {UPDATE_ALL_RECENT_MONTHS} months",
+        "endpoint": "/api/batch/incremental",
+        "source": "Yahoo Finance",
+        "tables": ["monthly_prices", "dividends"],
+        "writes": "Overwrites existing rows",
+        "description": (
+            f"Re-fetches the last {UPDATE_ALL_RECENT_MONTHS} months for every active "
+            "ticker and overwrites what is on file. This is the step that corrects "
+            "revised or bad recent data."
+        ),
+    },
+    {
+        "key": "current-month",
+        "label": "Load the current month, all sources",
+        "endpoint": "/api/batch/current-month",
+        "source": "Yahoo Finance + FRED",
+        "tables": ["monthly_prices", "dividends", "monthly_mm_rates"],
+        "writes": "Overwrites the current-month row",
+        "description": (
+            "The in-progress month is a live candle — it changes every day until the "
+            "month closes. This overwrites the current-month row for every ticker, "
+            "plus FRED. Safe to re-run any day of the month."
+        ),
+    },
+    {
+        "key": "spy-daily",
+        "label": "SPY daily prices — missing days",
+        "endpoint": "/api/batch/daily-prices/SPY/incremental",
+        "source": "Yahoo Finance",
+        "tables": ["spy_daily_prices"],
+        "writes": "Append only",
+        "description": (
+            "Looks at the most recent price_date on file and appends only the days "
+            "after it, through today. Never rewrites an existing day."
+        ),
+    },
+    {
+        "key": "oef-daily",
+        "label": "OEF daily prices — missing days",
+        "endpoint": "/api/batch/daily-prices/OEF/incremental",
+        "source": "Yahoo Finance",
+        "tables": ["oef_daily_prices"],
+        "writes": "Append only",
+        "description": "Identical behaviour to the SPY step, against the OEF table.",
+    },
+    {
+        "key": "etf-history",
+        "label": "ETF directory monthly history — missing months",
+        "endpoint": "/api/batch/etf-history/incremental",
+        "source": "Yahoo Finance",
+        "tables": ["etf_directory_monthly_history"],
+        "writes": "Append only",
+        "description": (
+            "Appends closed months for every ETF directory ticker, one security at a "
+            "time. Deliberately never writes the current in-progress month."
+        ),
+    },
+    {
+        "key": "fred",
+        "label": "FRED federal funds rate",
+        "endpoint": "/api/batch/fred-incremental",
+        "source": "FRED (St. Louis Fed)",
+        "tables": ["monthly_mm_rates", "annual_mm_rates"],
+        "writes": "Overwrites existing rows",
+        "description": "Re-fetches the last 3 months of the federal funds rate series and upserts.",
+    },
+    {
+        "key": "damodaran",
+        "label": "Damodaran annual returns",
+        "endpoint": "/api/admin/damodaran-returns/sync",
+        "source": "Aswath Damodaran / NYU Stern",
+        "tables": ["damodaran_annual_returns"],
+        "writes": "Overwrites existing rows",
+        "description": (
+            "Re-reads the NYU Stern table and upserts by year. Existing years are "
+            "updated in place; a new year appears each January."
+        ),
+    },
+]
+
+# Sources the routine deliberately does not touch. Surfaced in the help panel
+# so the gap is visible rather than assumed -- Shiller in particular is a
+# manual spreadsheet load and will silently fall behind.
+UPDATE_ALL_EXCLUDED = [
+    {
+        "label": "Shiller monthly market data",
+        "tables": ["shiller_market_data"],
+        "source": "Robert Shiller / shillerdata.com",
+        "reason": (
+            "Manual spreadsheet load. Download ie_data.xls, then run "
+            "backend/onetime/load_shiller_data.py. No API exists, and inputdata/ is "
+            "gitignored, so this can only be done locally. Powers six pages."
+        ),
+    },
+    {
+        "label": "Full 30-year history reload",
+        "tables": ["monthly_prices", "dividends"],
+        "source": "Yahoo Finance",
+        "reason": "Slow and rarely needed. Stays a separate, explicitly confirmed button.",
+    },
+    {
+        "label": "Stack & Earn rates",
+        "tables": ["stack_earn_savings_tiers", "stack_earn_goal_tiers"],
+        "source": "Entered by hand",
+        "reason": "Edited through the Rate Management card, not fetched from anywhere.",
+    },
+    {
+        "label": "Ticker list",
+        "tables": ["tickers"],
+        "source": "Entered by hand",
+        "reason": "Read only. The routine never adds or removes a symbol.",
+    },
+]
+
+_update_all_lock = threading.Lock()
+_update_all_status = {
+    "status": "idle",          # idle | running | completed | failed
+    "started_at": None,
+    "completed_at": None,
+    "current_step": None,
+    "step_index": 0,
+    "total_steps": len(UPDATE_ALL_STEPS),
+    "steps": [],
+}
+
+
+def _update_update_all_status(**kwargs):
+    with _update_all_lock:
+        _update_all_status.update(kwargs)
+
+
+def _get_update_all_status():
+    with _update_all_lock:
+        return dict(_update_all_status)
+
+
+def _batch_summary_or_raise():
+    """Sub-jobs report through the shared batch status rather than returning.
+    Pull the result off it and turn a failure into an exception the
+    orchestrator can stop on."""
+    st = _get_batch_status()
+    if st.get("status") == "failed":
+        raise RuntimeError(str((st.get("summary") or {}).get("error", "step failed")))
+    return st.get("summary")
+
+
+def _active_symbols():
+    from app.loader import get_active_tickers
+    db = SessionLocal()
+    try:
+        return get_active_tickers(db)
+    finally:
+        db.close()
+
+
+def _step_new_tickers():
+    from app.loader import get_tickers_without_data
+    db = SessionLocal()
+    try:
+        symbols = get_tickers_without_data(db)
+    finally:
+        db.close()
+    if not symbols:
+        return {"note": "All active tickers already have price data — nothing to load."}
+    _run_batch_in_background(symbols, "full")
+    return _batch_summary_or_raise()
+
+
+def _step_recent_months():
+    symbols = _active_symbols()
+    if not symbols:
+        raise RuntimeError("No active tickers found")
+    _run_batch_in_background(symbols, "incremental", UPDATE_ALL_RECENT_MONTHS)
+    return _batch_summary_or_raise()
+
+
+def _step_current_month():
+    symbols = _active_symbols()
+    if not symbols:
+        raise RuntimeError("No active tickers found")
+    _run_current_month_in_background(symbols)
+    return _batch_summary_or_raise()
+
+
+def _step_daily(ticker: str):
+    _run_daily_load_in_background(ticker, "incremental")
+    st = _get_daily_status()
+    if st.get("status") == "failed":
+        raise RuntimeError(str((st.get("summary") or {}).get("error", f"{ticker} daily load failed")))
+    return st.get("summary")
+
+
+def _step_etf_history():
+    _run_etf_history_in_background("incremental")
+    st = _get_etf_history_status()
+    if st.get("status") == "failed":
+        raise RuntimeError(str((st.get("summary") or {}).get("error", "ETF history load failed")))
+    return st.get("summary")
+
+
+def _step_fred():
+    _run_fred_in_background("incremental", None)
+    return _batch_summary_or_raise()
+
+
+def _step_damodaran():
+    db = SessionLocal()
+    try:
+        return _sync_damodaran_core(db)
+    finally:
+        db.close()
+
+
+UPDATE_ALL_RUNNERS = {
+    "new-tickers": _step_new_tickers,
+    "recent-months": _step_recent_months,
+    "current-month": _step_current_month,
+    "spy-daily": lambda: _step_daily("SPY"),
+    "oef-daily": lambda: _step_daily("OEF"),
+    "etf-history": _step_etf_history,
+    "fred": _step_fred,
+    "damodaran": _step_damodaran,
+}
+
+
+def _run_update_all_in_background():
+    """Run every step in UPDATE_ALL_STEPS in order, one at a time."""
+    now = lambda: datetime.now(timezone.utc).isoformat()
+    results = []
+
+    _update_update_all_status(
+        status="running", started_at=now(), completed_at=None,
+        current_step=None, step_index=0, steps=[],
+    )
+
+    for i, meta in enumerate(UPDATE_ALL_STEPS, start=1):
+        key = meta["key"]
+        entry = {
+            "key": key, "label": meta["label"], "tables": meta["tables"],
+            "status": "running", "started_at": now(), "completed_at": None,
+            "summary": None, "error": None,
+        }
+        results.append(entry)
+        _update_update_all_status(
+            current_step=key, step_index=i, steps=[dict(r) for r in results],
+        )
+
+        try:
+            entry["summary"] = UPDATE_ALL_RUNNERS[key]()
+            entry["status"] = "completed"
+            entry["completed_at"] = now()
+        except Exception as e:
+            logger.error(f"Update All failed at step '{key}': {traceback.format_exc()}")
+            entry["status"] = "failed"
+            entry["error"] = str(e)
+            entry["completed_at"] = now()
+            _update_update_all_status(
+                status="failed", current_step=key, completed_at=now(),
+                steps=[dict(r) for r in results],
+            )
+            return
+
+        _update_update_all_status(steps=[dict(r) for r in results])
+
+    _update_update_all_status(
+        status="completed", current_step=None, completed_at=now(),
+        steps=[dict(r) for r in results],
+    )
+    logger.info(f"Update All completed — {len(UPDATE_ALL_STEPS)} steps")
+
+
+@app.post("/api/batch/update-all", response_model=BatchResponse)
+@limiter.limit("2/minute")
+def run_update_all(request: Request, user: dict = Depends(require_admin)):
+    """Run the whole data-refresh routine, one step at a time.
+    Requires Auth0 token + ENABLE_WRITE_API.
+    """
+    require_write_enabled()
+
+    if _get_update_all_status()["status"] == "running":
+        raise HTTPException(status_code=409, detail="Update All is already running. Check /api/batch/update-all/status")
+
+    # Any individually-started job would have its status clobbered by the
+    # steps below, and would race them for the same tables.
+    for label, getter in (
+        ("A batch job", _get_batch_status),
+        ("A daily-price load", _get_daily_status),
+        ("An ETF history load", _get_etf_history_status),
+    ):
+        if getter()["status"] == "running":
+            raise HTTPException(status_code=409, detail=f"{label} is already running. Wait for it to finish.")
+
+    thread = threading.Thread(target=_run_update_all_in_background, daemon=True)
+    thread.start()
+
+    return BatchResponse(
+        status="started",
+        message=f"Update All started — {len(UPDATE_ALL_STEPS)} steps. Check /api/batch/update-all/status for progress.",
+    )
+
+
+@app.get("/api/batch/update-all/status")
+def get_update_all_status():
+    """Progress of the current or most recent Update All run."""
+    return _get_update_all_status()
+
+
+@app.get("/api/batch/update-all/steps")
+def get_update_all_steps(user: dict = Depends(require_admin)):
+    """What Update All runs, in order, and what it deliberately leaves out.
+    Same list the orchestrator iterates, so the help panel cannot go stale.
+    """
+    return {
+        "recent_months": UPDATE_ALL_RECENT_MONTHS,
+        "steps": UPDATE_ALL_STEPS,
+        "excluded": UPDATE_ALL_EXCLUDED,
+    }
+
+
+# ===========================================
 # SECTOR PERFORMANCE (annual returns + dividends from DB)
 # ===========================================
 
@@ -2715,25 +3065,16 @@ def admin_update_damodaran_return(
     return _serialize_damodaran_row(row)
 
 
-@app.post("/api/admin/damodaran-returns/sync")
-@limiter.limit("5/minute")
-def admin_sync_damodaran_returns(
-    request: Request,
-    user: dict = Depends(require_admin),
-    db: Session = Depends(get_db),
-):
-    """Fetch the latest table from Damodaran's page (NYU Stern) and upsert by year.
+def _sync_damodaran_core(db: Session) -> dict:
+    """Fetch Damodaran's table and upsert by year. Shared by the standalone
+    endpoint and by Update All, so both stay identical.
 
-    Existing years are updated in place; new years (e.g. once Damodaran
-    publishes the next calendar year, each January) are inserted.
+    Raises DamodaranFetchError if the source cannot be read; the caller
+    decides whether that is a 502 or a failed step.
     """
-    require_write_enabled()
-    from app.damodaran_fetcher import fetch_damodaran_returns, DamodaranFetchError, SOURCE_LABEL, DAMODARAN_URL
+    from app.damodaran_fetcher import fetch_damodaran_returns, SOURCE_LABEL, DAMODARAN_URL
 
-    try:
-        records = fetch_damodaran_returns()
-    except DamodaranFetchError as e:
-        raise HTTPException(status_code=502, detail=str(e))
+    records = fetch_damodaran_returns()
 
     inserted = 0
     updated = 0
@@ -2775,6 +3116,27 @@ def admin_sync_damodaran_returns(
     total = db.execute(text("SELECT COUNT(*) FROM damodaran_annual_returns")).scalar()
     latest_year = db.execute(text('SELECT MAX("Year") FROM damodaran_annual_returns')).scalar()
     return {"inserted": inserted, "updated": updated, "total": total, "latest_year": latest_year}
+
+
+@app.post("/api/admin/damodaran-returns/sync")
+@limiter.limit("5/minute")
+def admin_sync_damodaran_returns(
+    request: Request,
+    user: dict = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """Fetch the latest table from Damodaran's page (NYU Stern) and upsert by year.
+
+    Existing years are updated in place; new years (e.g. once Damodaran
+    publishes the next calendar year, each January) are inserted.
+    """
+    require_write_enabled()
+    from app.damodaran_fetcher import DamodaranFetchError
+
+    try:
+        return _sync_damodaran_core(db)
+    except DamodaranFetchError as e:
+        raise HTTPException(status_code=502, detail=str(e))
 
 
 @app.get("/api/damodaran-forward-returns")
