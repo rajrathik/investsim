@@ -103,7 +103,8 @@ from slowapi.errors import RateLimitExceeded
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import and_, text, extract
-from pydantic import BaseModel, field_validator
+from decimal import Decimal
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional
 
 from fastapi.staticfiles import StaticFiles
@@ -3179,6 +3180,198 @@ def admin_update_damodaran_return(
         {"yr": year},
     ).fetchone()
     return _serialize_damodaran_row(row)
+
+
+# ===========================================
+# SHILLER — MANUAL MONTH ENTRY
+#
+# shiller_market_data is the one source no button can refresh: it comes from a
+# spreadsheet downloaded by hand. These endpoints let a month be typed in from
+# the admin page instead, for when downloading and running the loader is not
+# possible.
+#
+# Only four columns matter downstream -- Year, Month, DataDate and
+# NominalTotalReturn -- and the last is calculated, not sourced:
+#
+#     NominalTotalReturn = (P_t / P_t-1 - 1) + (D_t / 12) / P_t-1
+#
+# So the form asks for SpPrice and Dividend and computes the rest, matching
+# load_shiller_data.read_excel() exactly. Note the dependency runs forward as
+# well as back: month M's price is the denominator for month M+1, so writing M
+# invalidates M+1 and both are recomputed.
+# ===========================================
+
+SHILLER_INPUT_COLS = ("SpPrice", "Dividend", "Earnings", "Cpi", "LongInterestRate")
+
+
+def _shiller_recompute(db: Session, year: int, month: int) -> bool:
+    """Recompute NominalTotalReturn for one month from its own and the prior
+    month's stored values. Returns True if a non-null value was written."""
+    prev_y, prev_m = (year - 1, 12) if month == 1 else (year, month - 1)
+
+    cur = db.execute(text(
+        'SELECT "SpPrice", "Dividend" FROM shiller_market_data WHERE "Year"=:y AND "Month"=:m'
+    ), {"y": year, "m": month}).fetchone()
+    if cur is None:
+        return False
+    prev = db.execute(text(
+        'SELECT "SpPrice" FROM shiller_market_data WHERE "Year"=:y AND "Month"=:m'
+    ), {"y": prev_y, "m": prev_m}).fetchone()
+
+    p_t = cur[0]
+    d_t = cur[1]
+    p_t1 = prev[0] if prev is not None else None
+
+    val = None
+    if p_t is not None and p_t1 is not None and p_t1 != 0 and d_t is not None:
+        val = (Decimal(p_t) / Decimal(p_t1) - 1) + (Decimal(d_t) / 12) / Decimal(p_t1)
+
+    db.execute(text(
+        'UPDATE shiller_market_data SET "NominalTotalReturn"=:v WHERE "Year"=:y AND "Month"=:m'
+    ), {"v": val, "y": year, "m": month})
+    return val is not None
+
+
+@app.get("/api/admin/shiller/gaps")
+def admin_shiller_gaps(user: dict = Depends(require_admin), db: Session = Depends(get_db)):
+    """What is missing from shiller_market_data, and what the pages can actually use.
+
+    `usable_through` is the real answer to "how current is the site" -- a row
+    with a NULL NominalTotalReturn exists but contributes nothing, which is the
+    normal state of the newest months because Shiller's dividend column lags
+    behind its price column.
+    """
+    rows = db.execute(text(
+        'SELECT "Year", "Month", "SpPrice", "Dividend", "NominalTotalReturn" '
+        'FROM shiller_market_data ORDER BY "Year", "Month"'
+    )).fetchall()
+    if not rows:
+        return {"total_rows": 0, "first_month": None, "last_month": None,
+                "usable_through": None, "incomplete": [], "missing": [], "months_behind": None}
+
+    fmt = lambda y, m: f"{y}-{m:02d}"
+    last_y, last_m = rows[-1][0], rows[-1][1]
+
+    usable = [r for r in rows if r[4] is not None]
+    usable_through = fmt(usable[-1][0], usable[-1][1]) if usable else None
+
+    # Rows on file that contribute nothing yet, and why
+    incomplete = []
+    for r in rows[-24:]:
+        if r[4] is None:
+            incomplete.append({
+                "year": r[0], "month": r[1], "label": fmt(r[0], r[1]),
+                "has_price": r[2] is not None,
+                "has_dividend": r[3] is not None,
+                "needs": [n for n, v in (("SpPrice", r[2]), ("Dividend", r[3])) if v is None] or ["prior month price"],
+            })
+
+    # Months absent entirely, from the last on file through the last complete
+    # calendar month (the in-progress month is not published yet)
+    today = date.today()
+    end_y, end_m = (today.year - 1, 12) if today.month == 1 else (today.year, today.month - 1)
+    missing = []
+    y, m = (last_y + 1, 1) if last_m == 12 else (last_y, last_m + 1)
+    while (y, m) <= (end_y, end_m) and len(missing) < 120:
+        missing.append({"year": y, "month": m, "label": fmt(y, m)})
+        y, m = (y + 1, 1) if m == 12 else (y, m + 1)
+
+    return {
+        "total_rows": len(rows),
+        "first_month": fmt(rows[0][0], rows[0][1]),
+        "last_month": fmt(last_y, last_m),
+        "usable_through": usable_through,
+        "months_behind": len(missing),
+        "incomplete": incomplete,
+        "missing": missing,
+        "next_month": missing[0] if missing else None,
+    }
+
+
+class ShillerMonthEntry(BaseModel):
+    year: int = Field(..., ge=1871, le=2100)
+    month: int = Field(..., ge=1, le=12)
+    sp_price: float | None = Field(None, gt=0)
+    dividend: float | None = Field(None, ge=0)
+    earnings: float | None = Field(None, ge=0)
+    cpi: float | None = Field(None, gt=0)
+    long_interest_rate: float | None = Field(None, ge=0, le=100)
+
+
+@app.post("/api/admin/shiller/month")
+@limiter.limit("20/minute")
+def admin_shiller_add_month(
+    request: Request,
+    entry: ShillerMonthEntry,
+    user: dict = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """Insert or complete one month of Shiller data by hand.
+
+    Inserts must be contiguous — the next month after the newest on file — so a
+    typed entry can never punch a hole in a 155-year series. Updating a month
+    that already exists is always allowed, which is the common case: the newest
+    rows arrive with a price but no dividend, so they sit unusable until the
+    dividend is filled in.
+    """
+    require_write_enabled()
+    y, m = entry.year, entry.month
+
+    existing = db.execute(text(
+        'SELECT "SpPrice" FROM shiller_market_data WHERE "Year"=:y AND "Month"=:m'
+    ), {"y": y, "m": m}).fetchone()
+
+    supplied = {
+        "SpPrice": entry.sp_price, "Dividend": entry.dividend, "Earnings": entry.earnings,
+        "Cpi": entry.cpi, "LongInterestRate": entry.long_interest_rate,
+    }
+    supplied = {k: v for k, v in supplied.items() if v is not None}
+    if not supplied:
+        raise HTTPException(status_code=400, detail="Nothing supplied — enter at least one value.")
+
+    if existing:
+        sets = ", ".join(f'"{c}"=:{c}' for c in supplied)
+        db.execute(text(f'UPDATE shiller_market_data SET {sets} WHERE "Year"=:y AND "Month"=:m'),
+                   {**supplied, "y": y, "m": m})
+        action = "updated"
+    else:
+        last = db.execute(text(
+            'SELECT "Year", "Month" FROM shiller_market_data ORDER BY "Year" DESC, "Month" DESC'
+        )).fetchone()
+        if last:
+            exp_y, exp_m = (last[0] + 1, 1) if last[1] == 12 else (last[0], last[1] + 1)
+            if (y, m) != (exp_y, exp_m):
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Next month to add is {exp_y}-{exp_m:02d}. Adding {y}-{m:02d} "
+                           f"would leave a gap; months must be entered in order.",
+                )
+        if entry.sp_price is None:
+            raise HTTPException(status_code=400, detail="S&P price is required when adding a new month.")
+        cols = ['"DataDate"', '"Year"', '"Month"'] + [f'"{c}"' for c in supplied]
+        vals = [":dt", ":y", ":m"] + [f":{c}" for c in supplied]
+        db.execute(text(
+            f'INSERT INTO shiller_market_data ({", ".join(cols)}) VALUES ({", ".join(vals)})'
+        ), {**supplied, "dt": date(y, m, 1), "y": y, "m": m})
+        action = "inserted"
+
+    # This month, then the month after it — M's price is M+1's denominator.
+    computed = _shiller_recompute(db, y, m)
+    nxt_y, nxt_m = (y + 1, 1) if m == 12 else (y, m + 1)
+    next_computed = _shiller_recompute(db, nxt_y, nxt_m)
+    db.commit()
+
+    return {
+        "action": action,
+        "month": f"{y}-{m:02d}",
+        "fields_written": sorted(supplied),
+        "return_computed": computed,
+        "next_month_recomputed": next_computed,
+        "note": None if computed else
+                "Row saved, but NominalTotalReturn is still NULL — it needs both this month's "
+                "S&P price and dividend, plus the prior month's price. The month exists but the "
+                "pages cannot use it yet.",
+    }
 
 
 def _sync_damodaran_core(db: Session) -> dict:

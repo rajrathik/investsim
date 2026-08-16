@@ -99,6 +99,18 @@ body{min-height:100vh;background:var(--bg);color:var(--text1);font-family:'DM Sa
 .ua-ts-item:first-child{border-top:none}
 .ua-ts-sym{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--red);line-height:1.5;margin-bottom:4px}
 .ua-ts-fix{font-size:12px;color:var(--text2);line-height:1.6;white-space:pre-wrap}
+
+/* Shiller manual entry */
+.sh-status{padding:14px 18px;background:var(--bg);border:1px solid var(--border);border-radius:12px;font-family:'JetBrains Mono',monospace;font-size:12px;margin-bottom:16px}
+.sh-row{display:flex;justify-content:space-between;gap:16px;padding:4px 0;color:var(--text3)}
+.sh-row b{color:var(--text1)}
+.sh-ok{color:var(--accent)}
+.sh-warn{color:var(--gold)}
+.sh-inc{margin-top:10px;padding-top:10px;border-top:1px solid var(--border);color:var(--text2);line-height:1.7}
+.sh-need{color:var(--gold)}
+.sh-target{font-size:13px;color:var(--text2);margin-bottom:14px;padding:10px 14px;background:var(--card);border:1px solid var(--border);border-left:2px solid var(--accent);border-radius:8px}
+.sh-target b{color:var(--text1)}
+.sh-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px}
 .ua-rerun{font-size:12px;color:var(--text2);background:var(--card);border:1px solid var(--border);border-radius:8px;padding:9px 12px;margin-top:10px;line-height:1.6}
 .ua-rerun strong{color:var(--gold)}
 .ua-fix{color:var(--gold);text-decoration:none;font-weight:700;margin-left:8px;white-space:nowrap}
@@ -314,6 +326,48 @@ body{min-height:100vh;background:var(--bg);color:var(--text1);font-family:'DM Sa
     </div>
   </div>
 
+  <!-- Shiller — manual month entry -->
+  <div class="card">
+    <h2>📖 Shiller Market Data — Enter a Month by Hand</h2>
+    <div id="shGaps" class="sh-status"><span style="color:var(--text3)">Loading…</span></div>
+
+    <div id="shFormWrap" style="display:none">
+      <div class="sh-target" id="shTarget"></div>
+      <div class="sh-grid">
+        <div><div class="label">Year</div><input id="shYear" class="inp" type="number" min="1871" max="2100"></div>
+        <div><div class="label">Month</div><input id="shMonth" class="inp" type="number" min="1" max="12"></div>
+        <div><div class="label">S&amp;P Price *</div><input id="shPrice" class="inp" type="number" step="0.01" placeholder="6869.50"></div>
+        <div><div class="label">Dividend *</div><input id="shDiv" class="inp" type="number" step="0.01" placeholder="79.52"></div>
+        <div><div class="label">Earnings</div><input id="shEarn" class="inp" type="number" step="0.01" placeholder="optional"></div>
+        <div><div class="label">CPI</div><input id="shCpi" class="inp" type="number" step="0.001" placeholder="optional"></div>
+        <div><div class="label">10Y Rate %</div><input id="shRate" class="inp" type="number" step="0.01" placeholder="optional"></div>
+      </div>
+      <div class="btn-row" style="margin-top:14px">
+        <button id="btnShSave" class="btn btn-accent" onclick="saveShillerMonth()">Save Month</button>
+        <button class="btn" onclick="loadShillerGaps()">Refresh</button>
+      </div>
+      <div id="shMsg" class="banner" style="margin-top:12px;margin-bottom:0"></div>
+    </div>
+
+    <div style="font-size:12px;color:var(--text3);line-height:1.8;margin-top:16px">
+      For when you cannot download <code>ie_data.xls</code> and run the loader. Only
+      <strong style="color:var(--accent)">S&amp;P Price</strong> and
+      <strong style="color:var(--accent)">Dividend</strong> matter — every page reads
+      <code>NominalTotalReturn</code>, which is calculated from those two plus the prior month's
+      price. The other fields are stored if you have them and ignored if you don't.<br>
+      <strong style="color:var(--gold)">Use Shiller's own definitions</strong> — S&amp;P Price is the
+      <em>monthly average of daily closes</em>, not the month-end close, and Dividend is the
+      annualised 12-month trailing total. A month-end close will look close and quietly skew the
+      series.<br>
+      Months must be entered <strong>in order</strong>, so a typed row cannot leave a hole. Filling
+      the dividend on a month that is already on file is always allowed — that is the usual case,
+      since Shiller publishes prices before dividends.<br>
+      <strong style="color:var(--gold)">Reconcile later:</strong> <code>--append</code> skips months
+      already on file, so hand-typed values persist. Once you can download the spreadsheet again,
+      run the loader with <code>--truncate --db both</code> to replace estimates with the real figures.
+    </div>
+  </div>
+
   <!-- Damodaran Annual Returns -->
   <div class="card">
     <h2>Historical Market Returns — Damodaran (NYU Stern)</h2>
@@ -472,6 +526,7 @@ async function adminInit() {
   await loadTickers();
   await pollStatus();
   await loadDamodaranReturns();
+  await loadShillerGaps();
   await loadDailyStats();
   await pollDailyStatus();
   await loadEtfHistStats();
@@ -1095,6 +1150,95 @@ function formatTime(iso) {
     return d.toLocaleString();
   } catch (e) {
     return iso;
+  }
+}
+
+// ---- Shiller manual month entry ----
+async function loadShillerGaps() {
+  const el = document.getElementById('shGaps');
+  try {
+    const r = await adminFetch(API + '/api/admin/shiller/gaps');
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail || 'Failed');
+
+    // usable_through is the honest number: rows exist past it but contribute nothing
+    const stale = d.usable_through !== d.last_month;
+    el.innerHTML =
+      '<div class="sh-row"><span>Rows on file</span><b>' + d.total_rows.toLocaleString() + '</b></div>' +
+      '<div class="sh-row"><span>Coverage</span><b>' + esc(d.first_month) + ' → ' + esc(d.last_month) + '</b></div>' +
+      '<div class="sh-row"><span>Usable by the pages</span><b class="' + (stale ? 'sh-warn' : 'sh-ok') + '">' +
+        esc(d.usable_through || 'nothing') + '</b></div>' +
+      '<div class="sh-row"><span>Months not on file</span><b class="' + (d.months_behind ? 'sh-warn' : 'sh-ok') + '">' +
+        d.months_behind + '</b></div>' +
+      (d.incomplete.length
+        ? '<div class="sh-inc">On file but unusable — ' +
+            d.incomplete.map(i => esc(i.label) + ' <span class="sh-need">(needs ' + i.needs.map(esc).join(' + ') + ')</span>').join(', ') +
+          '</div>'
+        : '');
+
+    // Prefill: complete the oldest incomplete row first, else add the next missing month
+    const target = d.incomplete.length ? d.incomplete[0] : d.next_month;
+    const wrap = document.getElementById('shFormWrap');
+    if (!target) {
+      document.getElementById('shTarget').innerHTML = '';
+      wrap.style.display = 'none';
+      el.innerHTML += '<div class="sh-inc sh-ok">Nothing missing — every month through ' +
+        esc(d.last_month) + ' is complete.</div>';
+      return;
+    }
+    wrap.style.display = 'block';
+    document.getElementById('shYear').value = target.year;
+    document.getElementById('shMonth').value = target.month;
+    document.getElementById('shTarget').innerHTML = d.incomplete.length
+      ? 'Completing <b>' + esc(target.label) + '</b> — already on file, needs ' +
+          esc(target.needs.join(' + '))
+      : 'Adding <b>' + esc(target.label) + '</b> — the next month after ' + esc(d.last_month);
+    ['shPrice','shDiv','shEarn','shCpi','shRate'].forEach(id => document.getElementById(id).value = '');
+  } catch (e) {
+    el.innerHTML = '<span style="color:var(--red)">Could not load: ' + esc(e.message) + '</span>';
+  }
+}
+
+async function saveShillerMonth() {
+  const msgEl = document.getElementById('shMsg');
+  const num = id => {
+    const v = document.getElementById(id).value.trim();
+    return v === '' ? null : parseFloat(v);
+  };
+  const body = {
+    year: parseInt(document.getElementById('shYear').value),
+    month: parseInt(document.getElementById('shMonth').value),
+    sp_price: num('shPrice'), dividend: num('shDiv'), earnings: num('shEarn'),
+    cpi: num('shCpi'), long_interest_rate: num('shRate'),
+  };
+  if (!body.year || !body.month) {
+    showInlineMsg(msgEl, 'banner-err', '❌ Year and month are required');
+    return;
+  }
+  try {
+    document.getElementById('btnShSave').disabled = true;
+    const r = await adminFetch(API + '/api/admin/shiller/month', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const d = await r.json();
+    if (r.ok) {
+      const ok = d.return_computed;
+      showInlineMsg(msgEl, ok ? 'banner-ok' : 'banner-warn',
+        (ok ? '✅ ' : '⚠️ ') + d.action + ' ' + d.month + ' (' + d.fields_written.join(', ') + ')' +
+        (ok ? ' — return computed, the pages can use it now.' : '') +
+        (d.next_month_recomputed ? ' Next month recomputed.' : '') +
+        (d.note ? ' ' + d.note : ''));
+      addLog((ok ? '✓' : '⚠') + ' Shiller ' + d.action + ' ' + d.month, ok ? 'ok' : 'info');
+      await loadShillerGaps();
+    } else {
+      showInlineMsg(msgEl, 'banner-err', '❌ ' + (d.detail || 'Failed'));
+    }
+  } catch (e) {
+    showInlineMsg(msgEl, 'banner-err', '❌ ' + e.message);
+  } finally {
+    document.getElementById('btnShSave').disabled = false;
   }
 }
 
