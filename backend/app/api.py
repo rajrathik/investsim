@@ -1810,16 +1810,26 @@ TABLE_RECOVERY = {
             'DELETE FROM damodaran_annual_returns WHERE "Year" = 2025;',
     },
     "shiller_market_data": {
-        "key": "(Year, Month)",
+        "key": "(Year, Month) — uq_shiller_year_month",
         "inspect":
             'SELECT COUNT(*) AS rows, MIN("Year"*100+"Month") AS first_ym,\n'
             '       MAX("Year"*100+"Month") AS last_ym FROM shiller_market_data;',
         "manual":
-            "Not loaded by any button. Download ie_data.xls from shillerdata.com into "
-            "inputdata/, then:\n"
-            "venv\\Scripts\\python backend\\onetime\\load_shiller_data.py --truncate\n"
-            "--truncate deletes all 1,863 rows and reinserts. Without it the loader refuses "
-            "to write when the table already has data.",
+            "ROUTINE UPDATE — append only, existing history is never touched:\n"
+            "  1. Download ie_data.xls from shillerdata.com (link above) — it is the\n"
+            "     'U.S. Stock Markets 1871-Present and CAPE Ratio' link on that page.\n"
+            "  2. Save it over inputdata\\ie_data.xls\n"
+            "  3. venv\\Scripts\\python backend\\onetime\\load_shiller_data.py --append --db both\n"
+            "\n"
+            "--append reads the newest (Year, Month) on file and inserts only the months\n"
+            "after it. Safe to re-run: if nothing is new it reports 'Already up to date'\n"
+            "and writes nothing. --db both loads local SQL Server and Railway in one pass,\n"
+            "which matters because this table is NOT in tools/sync_sql_to_postgres.py.\n"
+            "Add --dry-run first to see what it would insert.\n"
+            "\n"
+            "FULL RELOAD — only if history is corrupt, or Shiller revised past months and\n"
+            "you want those corrections. Deletes all rows and reinserts:\n"
+            "  venv\\Scripts\\python backend\\onetime\\load_shiller_data.py --truncate --db both",
     },
     "daily_quotes": {
         "key": "(ticker, quote_date) — uq_daily_quote_ticker_date",
@@ -1955,10 +1965,14 @@ UPDATE_ALL_EXCLUDED = [
         "label": "Shiller monthly market data",
         "tables": ["shiller_market_data"],
         "source": "Robert Shiller / shillerdata.com",
+        "source_url": "https://shillerdata.com/",
         "reason": (
-            "Manual spreadsheet load. Download ie_data.xls, then run "
-            "backend/onetime/load_shiller_data.py. No API exists, and inputdata/ is "
-            "gitignored, so this can only be done locally. Powers six pages."
+            "No API exists — the spreadsheet is downloaded by hand, which is the only "
+            "reason this is not a step above. Run it with --append and it inserts just "
+            "the new months, leaving 155 years of history alone. Powers six pages: Monte "
+            "Carlo, S&P 500 History, the Historical Simulator, both extremes pages, and "
+            "downturns & recovery — so when this falls behind, all six quietly do too. "
+            "The exact commands are under the table below."
         ),
     },
     {

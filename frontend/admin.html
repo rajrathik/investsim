@@ -80,6 +80,8 @@ body{min-height:100vh;background:var(--bg);color:var(--text1);font-family:'DM Sa
 .ua-step-name{font-weight:600;color:var(--text1);font-size:13px}
 .ua-flow{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text3);margin-top:8px}
 .ua-arrow{color:var(--text3);margin:0 2px}
+.ua-srclink{color:var(--blue);text-decoration:none}
+.ua-srclink:hover{text-decoration:underline}
 .ua-tables{margin-top:6px}
 .ua-trow{display:flex;gap:12px;align-items:baseline;padding:3px 0}
 .ua-tbl{color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:11px;flex:0 0 210px}
@@ -585,8 +587,14 @@ async function toggleUpdateAllHelp() {
 
     // source → what it writes → which tables, what lives in each, and how to
     // inspect and hand-repair it when re-running the step is not enough.
-    const flow = (source, writes, tables) => {
-      let h = '<div class="ua-flow">' + esc(source) + ' <span class="ua-arrow">→</span> ' +
+    const flow = (source, writes, tables, sourceUrl) => {
+      // Only https URLs become links, and the text is still escaped — the
+      // payload is ours, but this stays true if it ever stops being.
+      const src = (sourceUrl && /^https:\/\//.test(sourceUrl))
+        ? '<a href="' + esc(sourceUrl) + '" target="_blank" rel="noopener" class="ua-srclink">' +
+            esc(source) + ' ↗</a>'
+        : esc(source);
+      let h = '<div class="ua-flow">' + src + ' <span class="ua-arrow">→</span> ' +
         (writes ? '<span class="' + (/Overwrite/i.test(writes) ? 'ua-writes-over' : 'ua-writes-add') + '">' +
           esc(writes) + '</span>' : '') + '</div>';
       h += '<div class="ua-tables">';
@@ -613,7 +621,7 @@ async function toggleUpdateAllHelp() {
             '<span class="ua-step-name">' + esc(s.label) + '</span>' +
           '</div>' +
           '<div>' + esc(s.description) + '</div>' +
-          flow(s.source, s.writes, s.tables) +
+          flow(s.source, s.writes, s.tables, s.source_url) +
           (s.rerun ? '<div class="ua-rerun"><strong>If this step fails:</strong> ' + esc(s.rerun) + '</div>' : '') +
           '<div class="ua-ep">' + esc(s.endpoint) + '</div>' +
         '</div>';
@@ -625,7 +633,7 @@ async function toggleUpdateAllHelp() {
         '<div class="ua-step ua-excl">' +
           '<div class="ua-step-hd"><span class="ua-step-name">' + esc(x.label) + '</span></div>' +
           '<div>' + esc(x.reason) + '</div>' +
-          flow(x.source, null, x.tables) +
+          flow(x.source, null, x.tables, x.source_url) +
         '</div>';
     });
 

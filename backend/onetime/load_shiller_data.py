@@ -1,15 +1,24 @@
 """
-One-time loader: Shiller S&P 500 historical data
-Source:  https://shillerdata.com/
-File:    inputdata/ie_data.xls  (sheet: Data)
+Loader: Shiller S&P 500 historical data
+
+Source:  https://shillerdata.com/  -- the "U.S. Stock Markets 1871-Present and
+         CAPE Ratio" link on that page downloads ie_data.xls.
+File:    inputdata/ie_data.xls  (sheet: Data)   [inputdata/ is gitignored]
 Target:  shiller_market_data table (SQL Server and/or PostgreSQL)
 
-Run from the project root:
-    venv\\Scripts\\python backend\\onetime\\load_shiller_data.py
-    venv\\Scripts\\python backend\\onetime\\load_shiller_data.py --db postgres
-    venv\\Scripts\\python backend\\onetime\\load_shiller_data.py --db sqlserver
-    venv\\Scripts\\python backend\\onetime\\load_shiller_data.py --dry-run
-    venv\\Scripts\\python backend\\onetime\\load_shiller_data.py --truncate
+No API exists for this data -- the spreadsheet is downloaded by hand, which is
+why this table is the one source Update All cannot refresh. It powers six
+pages: Monte Carlo, S&P 500 History, the Historical Simulator, both extremes
+pages, and downturns & recovery.
+
+ROUTINE UPDATE (safe -- appends only, never touches existing history):
+    venv\\Scripts\\python backend\\onetime\\load_shiller_data.py --append --db both
+
+Other modes:
+    ... --dry-run     parse and report, write nothing
+    ... --db postgres target Railway only
+    ... --truncate    delete all rows and reload from scratch. Only when
+                      history is corrupt, or Shiller revised past months.
 
 Requires: xlrd  (pip install xlrd)
 """
@@ -310,8 +319,24 @@ def _add_column_if_missing(engine, col_name, col_ddl_pg, col_ddl_ss):
     return True   # was missing, now added
 
 
-def load_to_db(records, engine, truncate=False, dry_run=False):
-    """Create table, optionally truncate, then bulk insert."""
+def _max_ym_on_file(engine):
+    """Newest (Year, Month) already loaded, as Year*100+Month. None if empty."""
+    col_y, col_m = ('"Year"', '"Month"') if engine.dialect.name == "postgresql" else ("Year", "Month")
+    with engine.connect() as conn:
+        return conn.execute(
+            text(f"SELECT MAX({col_y} * 100 + {col_m}) FROM shiller_market_data")
+        ).scalar()
+
+
+def load_to_db(records, engine, truncate=False, dry_run=False, append=False):
+    """Create table, then insert.
+
+    append=True is the routine path: look at the newest (Year, Month) already
+    on file and insert only the months after it. Settled history is never
+    deleted, updated or re-read -- the same shape as the daily-price loaders.
+    Shiller revises recent months occasionally; if you need those corrections
+    rather than just new months, that is what --truncate is for.
+    """
     dialect = engine.dialect.name
 
     # Create table if not exists
@@ -333,6 +358,21 @@ def load_to_db(records, engine, truncate=False, dry_run=False):
         ).scalar()
     print(f"  Existing rows: {existing:,}")
 
+    # --- Append: keep only months newer than the newest on file ---
+    if append and existing > 0 and not truncate:
+        max_ym = _max_ym_on_file(engine)
+        if max_ym is None:
+            print("  Table is empty — appending everything")
+        else:
+            before = len(records)
+            records = [r for r in records if r["Year"] * 100 + r["Month"] > max_ym]
+            newest = f"{max_ym // 100}-{max_ym % 100:02d}"
+            print(f"  Newest on file: {newest}")
+            print(f"  New months in file: {len(records):,} (of {before:,} total)")
+            if not records:
+                print("  Already up to date — nothing to append.")
+                return
+
     if dry_run:
         print(f"  DRY RUN: would insert/update {len(records):,} rows (skipping actual write)")
         return
@@ -343,7 +383,7 @@ def load_to_db(records, engine, truncate=False, dry_run=False):
         print(f"  Truncated {existing:,} existing rows")
         existing = 0
 
-    if existing > 0 and not truncate:
+    if existing > 0 and not truncate and not append:
         if col_added:
             # Column was just added — update existing rows with computed values
             print(f"  Updating NominalTotalReturn for {existing:,} existing rows...")
@@ -416,7 +456,12 @@ Examples:
   # Preview without writing
   venv\\Scripts\\python backend\\onetime\\load_shiller_data.py --dry-run
 
-  # Reload from scratch (drops existing rows first)
+  # ROUTINE UPDATE -- append only the months not yet on file, both databases.
+  # Never deletes or rewrites existing history.
+  venv\\Scripts\\python backend\\onetime\\load_shiller_data.py --append --db both
+
+  # Reload from scratch (drops existing rows first). Only if history is
+  # corrupt, or Shiller revised past months and you want those corrections.
   venv\\Scripts\\python backend\\onetime\\load_shiller_data.py --truncate
         """
     )
@@ -431,8 +476,14 @@ Examples:
         help="Parse the file and show counts without writing to DB"
     )
     parser.add_argument(
+        "--append", action="store_true",
+        help="Insert only months newer than the newest on file. Never deletes or "
+             "updates existing rows -- the routine way to bring Shiller current."
+    )
+    parser.add_argument(
         "--truncate", action="store_true",
-        help="Delete existing rows before inserting (full reload)"
+        help="Delete existing rows before inserting (full reload). Only needed if "
+             "history is corrupt or Shiller revised past months."
     )
     parser.add_argument(
         "--file",
@@ -452,7 +503,7 @@ Examples:
     print("=" * 60)
     print(f"  File:     {file_path}")
     print(f"  Target:   {args.db}")
-    print(f"  Truncate: {args.truncate}")
+    print(f"  Mode:     {'append' if args.append else ('truncate+reload' if args.truncate else 'insert-if-empty')}")
     print(f"  Dry run:  {args.dry_run}")
     print()
 
@@ -484,7 +535,7 @@ Examples:
         except Exception as e:
             print(f"  FAILED to connect to {db_type}: {e}")
             continue
-        load_to_db(records, engine, truncate=args.truncate, dry_run=args.dry_run)
+        load_to_db(records, engine, truncate=args.truncate, dry_run=args.dry_run, append=args.append)
         print()
 
     print("=" * 60)
