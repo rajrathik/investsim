@@ -45,6 +45,9 @@ var SITE_NAV = [
   },
   {
     label: 'Learn',
+    /* atEnd: rendered after Browse ETFs rather than in sequence, so the tool
+       categories stay together and Learn closes the bar. */
+    atEnd: true,
     items: [
       { label: 'Learn from Market History', href: '/learn.html' },
       { label: 'How the Simulator Works', href: '/simulator-guide.html' },
@@ -78,18 +81,26 @@ var SITE_HOME = { label: 'Browse ETFs', href: '/etf-directory.html' };
     return path === href;
   }
 
+  function renderGroup(group, i) {
+    return '<div class="site-nav-group' + (group.memberOnly ? ' site-nav-member-only' : '') + '" data-i="' + i + '">' +
+      '<button type="button" class="site-nav-top">' + esc(group.label) + ' <span class="chev">&#9662;</span></button>' +
+      '<div class="site-nav-drop">' +
+      group.items.map(function (it) {
+        return '<a href="' + it.href + '"' + (isActive(it.href) ? ' class="active"' : '') + '>' + esc(it.label) + '</a>';
+      }).join('') +
+      '</div></div>';
+  }
+
   function renderMenu() {
     var html = '';
+    /* Tool categories first, then Browse ETFs, then anything marked atEnd. */
     SITE_NAV.forEach(function (group, i) {
-      html += '<div class="site-nav-group' + (group.memberOnly ? ' site-nav-member-only' : '') + '" data-i="' + i + '">' +
-        '<button type="button" class="site-nav-top">' + esc(group.label) + ' <span class="chev">&#9662;</span></button>' +
-        '<div class="site-nav-drop">' +
-        group.items.map(function (it) {
-          return '<a href="' + it.href + '"' + (isActive(it.href) ? ' class="active"' : '') + '>' + esc(it.label) + '</a>';
-        }).join('') +
-        '</div></div>';
+      if (!group.atEnd) html += renderGroup(group, i);
     });
     html += '<a href="' + SITE_HOME.href + '" class="site-nav-top site-nav-home' + (isActive(SITE_HOME.href) ? ' active' : '') + '">' + esc(SITE_HOME.label) + '</a>';
+    SITE_NAV.forEach(function (group, i) {
+      if (group.atEnd) html += renderGroup(group, i);
+    });
     html += '<a href="/admin.html" class="site-nav-top site-nav-admin" id="siteNavAdmin" style="display:none">Admin</a>';
     return html;
   }
