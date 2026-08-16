@@ -17,7 +17,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="shared-analytics.css?v=12">
+<link rel="stylesheet" href="shared-analytics.css?v=13">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -83,9 +83,11 @@
 
 </div>
 
-<script src="site-nav.js?v=13"></script>
+<script src="site-nav.js?v=14"></script>
 <script src="shared-auth.js?v=2"></script>
 <script>try{navigator.sendBeacon('/api/track/pageview',JSON.stringify({page:location.pathname,referrer:document.referrer}))}catch(e){}</script>
+
+
 
 <!-- STATIC FOOTER — real <a href> links. The nav is JavaScript-generated, so
      this is what a crawler actually sees. Keep in sync with site-nav.js. -->
@@ -110,15 +112,21 @@
       </ul>
     </div>
     <div>
-      <h2>Explore</h2>
+      <h2>Sectors</h2>
       <ul>
         <li><a href="/sector-performance.html">Sector Performance</a></li>
-        <li><a href="/correlation.html">Correlation</a></li>
-        <li><a href="/risk-return.html">Risk vs Return</a></li>
-        <li><a href="/drawdown.html">Drawdown Analysis</a></li>
+        <li><a href="/sector-rotation.html">Sector Rotation</a></li>
+        <li><a href="/correlation.html">Sector Correlation</a></li>
         <li><a href="/dividend-growth.html">Dividend Growth</a></li>
         <li><a href="/growth-chart.html">$10,000 Growth</a></li>
-        <li><a href="/etf-directory.html">Browse ETFs</a></li>
+        <li><a href="/risk-return.html">Risk vs Return</a></li>
+        <li><a href="/drawdown.html">Drawdown Analysis</a></li>
+      </ul>
+    </div>
+    <div>
+      <h2>Browse</h2>
+      <ul>
+        <li><a href="/etf-directory.html">ETF Directory</a></li>
       </ul>
     </div>
   </div>

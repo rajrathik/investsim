@@ -44,9 +44,18 @@ var SITE_NAV = [
     ],
   },
   {
+    /* Everything here is pulled from current market data rather than history,
+       which is the one axis the other categories do not cover. One item today;
+       the category exists so the next ones have somewhere to go. */
+    label: 'Browse',
+    items: [
+      { label: 'ETF Directory', href: '/etf-directory.html' },
+    ],
+  },
+  {
     label: 'Learn',
-    /* atEnd: rendered after Browse ETFs rather than in sequence, so the tool
-       categories stay together and Learn closes the bar. */
+    /* atEnd: rendered after the tool categories rather than in sequence, so
+       they stay together and Learn closes the bar. */
     atEnd: true,
     items: [
       { label: 'Learn from Market History', href: '/learn.html' },
@@ -55,8 +64,6 @@ var SITE_NAV = [
     ],
   },
 ];
-
-var SITE_HOME = { label: 'Browse ETFs', href: '/etf-directory.html' };
 
 /* Personal items. These live under the signed-in user's own name rather than
    in the main bar: they are "your things", not a category of tool. Admin and
@@ -109,11 +116,10 @@ var USER_MENU = [
 
   function renderMenu() {
     var html = '';
-    /* Tool categories first, then Browse ETFs, then anything marked atEnd. */
+    /* Tool categories first, then anything marked atEnd. */
     SITE_NAV.forEach(function (group, i) {
       if (!group.atEnd) html += renderGroup(group, i);
     });
-    html += '<a href="' + SITE_HOME.href + '" class="site-nav-top site-nav-home' + (isActive(SITE_HOME.href) ? ' active' : '') + '">' + esc(SITE_HOME.label) + '</a>';
     SITE_NAV.forEach(function (group, i) {
       if (group.atEnd) html += renderGroup(group, i);
     });
