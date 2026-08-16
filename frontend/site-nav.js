@@ -46,7 +46,7 @@ var SITE_NAV = [
   {
     label: 'Learn',
     items: [
-      { label: 'Understand Investing Through History', href: '/learn.html' },
+      { label: 'Learn from Market History', href: '/learn.html' },
       { label: 'How the Simulator Works', href: '/simulator-guide.html' },
       { label: 'About These Tools', href: '/about.html' },
     ],
