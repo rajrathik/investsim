@@ -119,6 +119,7 @@ async function runSim() {
   btn.disabled = true;
   btn.textContent = 'Running…';
   hideResults();
+  hideEmptyPrompt();
   showStatus('Simulating…');
 
   try {
@@ -156,6 +157,16 @@ function showStatus(msg) {
 }
 function hideStatus() { $('simStatus').style.display = 'none'; }
 function hideResults() { $('results').style.display = 'none'; }
+
+/* Shown before the first run, in place of the result cards. */
+function showEmptyPrompt() {
+  const el = $('emptyPrompt');
+  if (el) el.style.display = '';
+}
+function hideEmptyPrompt() {
+  const el = $('emptyPrompt');
+  if (el) el.style.display = 'none';
+}
 
 // ---- Period used banner ---------------------------------------------
 
@@ -386,5 +397,8 @@ function drawTable() {
 window.addEventListener('DOMContentLoaded', () => {
   renderPresetChips();
   updateSimDuration();
-  runSim();
+  // No simulation runs on load. The results area stays hidden and the
+  // prompt below it stays visible until the reader chooses a period and
+  // clicks Run -- so nobody is shown result cards full of dashes.
+  showEmptyPrompt();
 });

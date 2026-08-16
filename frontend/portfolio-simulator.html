@@ -82,9 +82,9 @@
   <details class="detail-panel" id="advPanel">
     <summary>Advanced options</summary>
     <div class="detail-body">
-      <div class="label">Annual deposit growth</div>
+      <div class="label">Annual increase in monthly contribution</div>
       <input type="number" id="growthInp" class="inp" value="0" min="0" step="50" placeholder="$ increase per year (0 = flat)" style="max-width:320px">
-      <p style="margin-top:8px;font-size:14px">Increases your monthly contribution each year. Year 1 uses the base amount, year 2 adds the growth figure, year 3 adds twice it, and so on. Leave at 0 for a flat contribution.</p>
+      <p style="margin-top:8px;font-size:14px">Raises your monthly contribution each year. Year 1 uses the base amount, year 2 adds this figure, year 3 adds twice it, and so on. Leave at 0 for a flat contribution.</p>
     </div>
   </details>
 
@@ -95,8 +95,8 @@
 <div id="modalOverlay" class="modal-overlay" onclick="if(event.target===this)closeModal()">
   <div class="modal"><h3 class="space"><span id="modalTitle">Portfolio Breakdown</span><button class="close-btn" onclick="closeModal()">✕</button></h3><div id="modalSub" class="modal-sub"></div><div id="modalBody"></div></div>
 </div>
-<script src="portfolio-simulator.js?v=14"></script>
-<script src="site-nav.js?v=8"></script>
+<script src="portfolio-simulator.js?v=15"></script>
+<script src="site-nav.js?v=9"></script>
 <script src="shared-auth.js"></script>
 <script>try{navigator.sendBeacon('/api/track/pageview',JSON.stringify({page:location.pathname,referrer:document.referrer}))}catch(e){}</script>
 </body>
