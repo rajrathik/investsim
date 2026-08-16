@@ -202,7 +202,7 @@ function render() {
         <div style="margin-top:6px">
           <div class="tt-row"><span class="tt-label">Total CAGR</span><span class="tt-val" style="color:${found.cagr >= 0 ? 'var(--accent)' : 'var(--red)'}">${formatPct(found.cagr, 2)}</span></div>
           <div class="tt-row"><span class="tt-label">Volatility</span><span class="tt-val">${found.vol.toFixed(1)}%</span></div>
-          <div class="tt-row"><span class="tt-label">Return/Risk</span><span class="tt-val">${found.sharpe.toFixed(2)}</span></div>
+          <div class="tt-row"><span class="tt-label">Return/Volatility</span><span class="tt-val">${found.sharpe.toFixed(2)}</span></div>
           <div class="tt-row"><span class="tt-label">Data Years</span><span class="tt-val">${found.years}</span></div>
         </div>
       `);
@@ -228,7 +228,7 @@ function renderSummary(points) {
         <div style="font-size:10px;color:var(--text3);margin-bottom:10px">${p.name}</div>
         <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px"><span style="color:var(--text3)">Total CAGR</span><span style="font-weight:600;color:${p.cagr >= 0 ? 'var(--accent)' : 'var(--red)'};font-family:'JetBrains Mono',monospace">${formatPct(p.cagr, 2)}</span></div>
         <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px"><span style="color:var(--text3)">Volatility</span><span style="font-weight:600;color:var(--text1);font-family:'JetBrains Mono',monospace">${p.vol.toFixed(1)}%</span></div>
-        <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px"><span style="color:var(--text3)">Return/Risk</span><span style="font-weight:600;color:var(--accent);font-family:'JetBrains Mono',monospace">${p.sharpe.toFixed(2)}</span></div>
+        <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px"><span style="color:var(--text3)">Return/Volatility</span><span style="font-weight:600;color:var(--accent);font-family:'JetBrains Mono',monospace">${p.sharpe.toFixed(2)}</span></div>
         <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px"><span style="color:var(--text3)">Data Years</span><span style="font-weight:600;color:var(--text1);font-family:'JetBrains Mono',monospace">${p.years}</span></div>
       </div>
     `;
